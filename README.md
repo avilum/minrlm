@@ -9,7 +9,7 @@ RLM lets an LLM write and execute Python code in a loop until it solves the task
 ```python
 from minrlm import RLM
 
-rlm = RLM(model="gpt-4o")
+rlm = RLM(model="gpt-5-nano")
 result = rlm.completion(
     task="Find the secret code hidden in this text",
     context=haystack_50k_chars
@@ -18,9 +18,9 @@ print(result.response)  # "SECRET-X7K2M9"
 ```
 
 The LLM sees a persistent REPL with:
-- `input_0` — the context data
-- `sub_llm(task, context)` — recursive calls
-- `set_output(answer)` — return final answer
+- `input_0`  -  the context data
+- `sub_llm(task, context)`  -  recursive calls
+- `set_output(answer)`  -  return final answer
 
 ## Why
 
@@ -31,7 +31,7 @@ On 50K character contexts, minrlm uses **2-3x fewer tokens** than vanilla prompt
 | Vanilla LLM | 100% | 100% | 6,500 |
 | minrlm | 100% | 100% | 2,800 |
 
-The LLM doesn't re-read the full context each turn—it writes code to extract what it needs.
+The LLM doesn't re-read the full context each turn - it writes code to extract what it needs.
 
 ## Install
 
@@ -54,7 +54,7 @@ cd minrlm && uv sync
 from minrlm import RLM
 
 # Basic
-rlm = RLM(model="gpt-4o")
+rlm = RLM(model="gpt-5-nano")
 result = rlm.completion("What is 2+2?")
 
 # With context

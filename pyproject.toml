@@ -1,0 +1,103 @@
+[project]
+name = "minrlm"
+version = "0.1.0"
+description = "Minimal Recursive Language Model - Let LLMs think through code"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    {name = "Avi Lumelsky", email = "avilum@users.noreply.github.com"}
+]
+keywords = ["llm", "language-model", "reasoning", "code-execution", "recursive", "openai", "gpt"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+visualizer = [
+    "gradio>=5.0.0",
+]
+dev = [
+    "matplotlib>=3.8.0",
+    "numpy>=1.24.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+all = [
+    "minrlm[visualizer,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/avilum/minrlm"
+Repository = "https://github.com/avilum/minrlm"
+Documentation = "https://github.com/avilum/minrlm#readme"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["minrlm*"]
+
+# =============================================================================
+# Ruff - Fast Python linter and formatter
+# =============================================================================
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module level import not at top (needed for path manipulation)
+    "B008",   # do not perform function calls in argument defaults
+    "B905",   # zip without explicit strict parameter
+    "B027",   # empty method in abstract class (intentional for cleanup)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/*" = ["E722"]  # Allow bare except in examples
+"eval/*" = ["E722", "F841"]  # Allow bare except and unused vars in eval
+
+[tool.ruff.lint.isort]
+known-first-party = ["minrlm"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# =============================================================================
+# MyPy - Static type checker
+# =============================================================================
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_optional = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["examples.*", "eval.*"]
+ignore_errors = true
