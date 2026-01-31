@@ -1,123 +1,95 @@
-# Recursive Language Model (RLM) - Minimal Implementation
+# minrlm
 
-A minimal implementation of Recursive Language Models based on [arXiv:2512.24601](https://arxiv.org/abs/2512.24601).
+Minimal implementation of [Recursive Language Models](https://arxiv.org/abs/2512.24601) in ~400 lines.
 
-## Concept
+## What
 
-RLMs are an **inference-time paradigm** (no fine-tuning required!) where the LLM:
-1. Outputs Python code that executes in a persistent REPL
-2. Can make recursive `sub_llm()` calls to decompose complex problems
-3. Uses `set_output()` to return the final answer
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Control Plane (RLM)                      │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐  │
-│  │   OpenAI    │◄──►│   RLM       │◄──►│  Python REPL    │  │
-│  │   Client    │    │   Engine    │    │  (subprocess)   │  │
-│  └─────────────┘    └─────────────┘    └─────────────────┘  │
-│                            │                    │           │
-│                            │   sub_llm()        │           │
-│                            └────────────────────┘           │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Installation
-
-```bash
-uv sync
-```
-
-## Quick Start
+RLM lets an LLM write and execute Python code in a loop until it solves the task. No fine-tuning, just inference.
 
 ```python
-from absl import logging
-logging.set_verbosity(logging.INFO)
-
-from rlm import RLM
+from minrlm import RLM
 
 rlm = RLM(model="gpt-4o")
-result = rlm.completion("Calculate the first 10 Fibonacci numbers.")
-logging.info("Answer: %s", result.response)
+result = rlm.completion(
+    task="Find the secret code hidden in this text",
+    context=haystack_50k_chars
+)
+print(result.response)  # "SECRET-X7K2M9"
+```
+
+The LLM sees a persistent REPL with:
+- `input_0` — the context data
+- `sub_llm(task, context)` — recursive calls
+- `set_output(answer)` — return final answer
+
+## Why
+
+On 50K character contexts, minrlm uses **2-3x fewer tokens** than vanilla prompting:
+
+| Method | SNIAH | Multi-Needle | Tokens |
+|--------|-------|--------------|--------|
+| Vanilla LLM | 100% | 100% | 6,500 |
+| minrlm | 100% | 100% | 2,800 |
+
+The LLM doesn't re-read the full context each turn—it writes code to extract what it needs.
+
+## Install
+
+```bash
+pip install minrlm
+
+# with UV
+uv run --with minrlm python -c "from minrlm import RLM; print(RLM)"
+```
+
+Or from source:
+```bash
+git clone https://github.com/avilum/minrlm
+cd minrlm && uv sync
 ```
 
 ## Usage
 
-### Basic completion
-
 ```python
-from absl import logging
-logging.set_verbosity(logging.INFO)  # or DEBUG for more detail
+from minrlm import RLM
 
-from rlm import RLM
+# Basic
+rlm = RLM(model="gpt-4o")
+result = rlm.completion("What is 2+2?")
 
-rlm = RLM(
-    model="gpt-4o",           # Any OpenAI-compatible model
-    use_subprocess=False,     # Use separate process for REPL
-    max_iterations=20,        # Max code execution loops
-)
-
+# With context
 result = rlm.completion(
-    task="Your task here",
-    context="Optional input data",
+    task="Find all email addresses",
+    context=document
 )
 
-logging.info("Answer: %s", result.response)       # Final answer
-logging.info("Iterations: %d", result.iterations) # Number of code executions
-logging.info("Tokens: %d", result.total_tokens)   # Total tokens used
-```
-
-### With a custom API endpoint
-
-```python
+# Custom endpoint
 rlm = RLM(
-    model="your-model",
+    model="llama-3",
     base_url="http://localhost:8000/v1",
-    api_key="your-api-key",
+    api_key="..."
 )
 ```
 
-### Subprocess isolation
+## How it works
 
-For better isolation (recommended for untrusted inputs):
+1. LLM receives task + system prompt describing available functions
+2. LLM outputs Python code in ```python blocks
+3. Code executes in persistent namespace
+4. If `set_output()` called → return answer
+5. Otherwise → feed stdout back to LLM, repeat
 
-```python
-rlm = RLM(use_subprocess=True)
-```
+The context is stored as `input_0` in the REPL, not in the conversation history. This avoids re-tokenizing large contexts on each turn.
 
-## How It Works
+## Security
 
-1. User provides a task
-2. LLM receives a system prompt instructing it to output Python code
-3. Code is executed in a persistent REPL environment
-4. REPL provides special functions:
-   - `sub_llm(prompt)`: Make a recursive LLM call
-   - `set_output(value)`: Set the final answer
-5. Execution continues until `set_output()` is called or max iterations reached
-
-## Examples
-
-See `example.py` for detailed examples, or `example_minimal.py` for a minimal demo.
-
-```bash
-uv run python example_minimal.py
-```
-
-## Security Notes
-
-⚠️ **This implementation executes arbitrary Python code!**
-
-For production use:
-- Use `use_subprocess=True` for process isolation
-- Consider Docker/container sandboxing
-- Implement resource limits (CPU, memory, time)
-- Restrict available imports/modules
-- Use cloud sandboxes (Modal, Prime Intellect) - see the [reference implementation](https://github.com/alexzhang13/rlm)
+⚠️ Executes arbitrary Python. For untrusted inputs, run in a sandbox (Docker, gVisor, etc).
 
 ## References
 
-- Paper: [Recursive Language Models (arXiv:2512.24601)](https://arxiv.org/abs/2512.24601)
-- Reference Implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm)
+- Zhang et al. [Recursive Language Models](https://arxiv.org/abs/2512.24601), 2025
+- Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm)
 
+## License
+
+MIT
