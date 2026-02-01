@@ -1,30 +1,32 @@
 # RLM Evaluation Suite
 
-A reproducible benchmark suite for comparing **Recursive Language Model (RLM)** implementations against vanilla LLM baselines.
+A reproducible benchmark suite implementing tasks from the **Recursive Language Model (RLM) paper** ([Zhang et al., 2025](https://arxiv.org/abs/2512.24601)).
 
-Based on evaluation tasks from [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601).
+Compares vanilla LLM, minRLM, and official RLM across the paper's core benchmarks.
 
-## Latest Results (gpt-5-mini)
+## Paper Tasks Implemented
 
-| Runner | Avg Tokens | Cost | Token Efficiency |
-|--------|------------|------|------------------|
-| **minRLM (ours)** | **893** | **$0.008** | **16x** |
-| vanilla | 14,315 | $0.024 | - |
-| official | 5,496 | $0.018 | 2.6x |
+| Paper Task | Our Task | Paper Reference | Status |
+|------------|----------|-----------------|--------|
+| **S-NIAH** | `sniah`, `scaling` | Figure 1 | ✅ |
+| **OOLONG** | `oolong` | Bertsch et al., 2025 | ✅ |
+| **OOLONG-Pairs** | `pairs` | Figure 1 (hardest) | ✅ |
+| **CodeQA** | `codeqa` | Bai et al., 2025 | ✅ |
+| **BrowseComp+** | `browsecomp` | Chen et al., 2025 | ✅ |
 
-Evaluated across 46 tasks including retrieval, JSON extraction, and aggregation at 8K-262K contexts.
+Plus additional tasks: `multi_needle`, `json_extraction`, `json_aggregation`, `qa_retrieval`
 
 ## Quick Start
 
 ```bash
-# Run full evaluation with default settings
-uv run python eval/run.py --model gpt-5-mini
+# Run paper's core benchmarks
+uv run python eval/run.py --model gpt-5-mini --tasks paper
 
-# Run specific tasks only
-uv run python eval/run.py --model gpt-5-mini --tasks sniah,multi_needle,pairs
+# Run scaling test with paper's context sizes (8K to 1M)
+uv run python eval/run.py --model gpt-5-mini --tasks scaling --paper-scale
 
-# Run with extended scaling tests (up to 256K context)
-uv run python eval/run.py --model gpt-5-mini --extended
+# Run all tasks
+uv run python eval/run.py --model gpt-5-mini --tasks all
 
 # Skip official RLM (if not installed)
 uv run python eval/run.py --model gpt-5-mini --skip-official
@@ -45,16 +47,26 @@ uv run python eval/run.py --model gpt-5-mini --runs 5
 
 ### Tasks
 
+#### Core Paper Tasks (Table 1)
+
+| Task | Description | Paper Context | Our Context | Difficulty |
+|------|-------------|---------------|-------------|------------|
+| **S-NIAH** (`sniah`) | Single needle in haystack | 8K-1M | 8K-1M | Easy |
+| **OOLONG** (`oolong`) | Information aggregation | 131K | 131K | Hard |
+| **OOLONG-Pairs** (`pairs`) | Pairwise matching | 32K | 50K | Very Hard |
+| **CodeQA** (`codeqa`) | Code repository understanding | 23K-4.2M | 100K-500K | Hard |
+| **BrowseComp+** (`browsecomp`) | Deep research / multi-hop | 6M-11M | 500K-1M | Very Hard |
+
+#### Additional Tasks
+
 | Task | Description | Context Sizes | Difficulty |
 |------|-------------|---------------|------------|
-| **S-NIAH** | Find single needle in haystack | 50K | Easy |
+| **Scaling** (`scaling`) | S-NIAH across context lengths | 8K-1M | Variable |
 | **Multi-Needle** | Find 5 hidden secrets | 50K | Medium |
-| **OOLONG-Pairs** | Match 8 definition-concept pairs | 50K | Hard |
-| **Scaling** | Test across context lengths | 8K-256K | Variable |
-| **Long Context** | Needle at start/middle/end | 8K-256K | Medium |
-| **Multi-Needle Long** | Find 10 needles at scale | 8K-256K | Hard |
-| **JSON Extraction** | Find data in JSON records | 8K-262K | Medium |
-| **JSON Aggregation** | Count/sum from JSON data | 8K-262K | Hard |
+| **Long Context** | Needle at start/middle/end | 128K-256K | Medium |
+| **Multi-Needle Long** | Find 10 needles at scale | 128K-256K | Hard |
+| **JSON Extraction** | Find data in JSON records | 50K-200K | Medium |
+| **JSON Aggregation** | Count/sum from JSON data | 50K-200K | Hard |
 | **QA Retrieval** | Answer questions from facts | 50K | Medium |
 
 ## Metrics Collected
@@ -184,16 +196,22 @@ To reproduce our benchmark results:
 
 ## Citation
 
-If you use this evaluation suite, please cite:
+If you use this evaluation suite, please cite the original RLM paper:
 
 ```bibtex
-@article{rlm2024,
-  title={Recursive Language Models},
-  author={...},
-  journal={arXiv preprint arXiv:2512.24601},
-  year={2024}
+@misc{zhang2025recursivelanguagemodels,
+      title={Recursive Language Models}, 
+      author={Alex L. Zhang and Tim Kraska and Omar Khattab},
+      year={2025},
+      eprint={2512.24601},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2512.24601}, 
 }
 ```
+
+- **Paper**: [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601)
+- **Official Implementation**: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm)
 
 ## License
 

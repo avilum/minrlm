@@ -68,6 +68,44 @@ Instead of stuffing context into the prompt, minRLM:
 
 The context never enters the conversation. Token usage stays constant regardless of context size.
 
+## Minimal Prompts
+
+The original RLM paper uses elaborate prompts with detailed chunking strategies and examples:
+
+| | Paper's RLM | minrlm |
+|--|-------------|--------|
+| **Prompt size** | ~2000 chars | ~150 chars |
+| **Lines** | 50+ lines | 6 lines |
+| **Examples in prompt** | 3 detailed examples | None |
+
+**Paper's prompt** (excerpt):
+```
+You are tasked with answering a query with associated context. You can access,
+transform, and analyze this context interactively in a REPL environment that
+can recursively query sub-LLMs, which you are strongly encouraged to use...
+[continues for 50+ lines with chunking strategies and examples]
+```
+
+**minrlm's prompt** (complete):
+```
+Python code only.
+
+input_0 = <context metadata>
+search(text, pattern) -> find all matches
+set_output(answer) -> return answer
+
+Find patterns, extract values, call set_output().
+```
+
+### Why This Matters
+
+- **No fine-tuning required** — vanilla GPT-5-nano/Claude/Qwen works out of the box
+- **Fewer tokens per call** — the prompt itself is 13x smaller
+- **Less prompt fragility** — fewer instructions = fewer places to misinterpret  
+- **Model-agnostic** — works across providers without tuning examples per model
+
+Modern LLMs are smart enough that `"Python code only. Call set_output(answer)."` is sufficient. The model figures out the rest.
+
 ## Benchmarks
 
 Real results on gpt-5-mini across 46 evaluation tasks:
@@ -106,18 +144,43 @@ cd minrlm && uv sync
 ```python
 from minrlm import RLM
 
-rlm = RLM(model="gpt-5-mini")
+rlm = RLM(model="gpt-5-nano")
+result = rlm.completion("Print me the first 100 powers of two, each on a newline.")
 
-# Simple task (no context)
-result = rlm.completion("What is 100 factorial mod 97?")
-print(result.response)      # "61"
-print(result.total_tokens)  # ~500
-print(result.iterations)    # 1
+print(result.response)
+# 1
+# 2
+# 4
+# 8
+# ...
+# 633825300114114700748351602688
 
-# With large context
+print(result.iterations)     # 2
+print(result.input_tokens)   # 137
+print(result.output_tokens)  # 1,473
+```
+
+**What happened under the hood:**
+
+```python
+# Iteration 1: LLM wrote this code
+for i in range(100):
+    print(1 << i)
+# → stdout captured, but no set_output() called
+
+# Iteration 2: LLM realized it needs set_output()
+powers = [str(1 << i) for i in range(100)]
+answer = "\n".join(powers)
+set_output(answer)  # ← returns the final answer
+```
+
+### With Large Context
+
+```python
+# Find a needle in 500K chars of JSON - only ~800 tokens instead of 150,000
 result = rlm.completion(
     task="Find all employees in Engineering department",
-    context=massive_json_file  # 500K chars
+    context=massive_json_file  # 500K chars, stored as input_0
 )
 print(result.response)      # "['Alice', 'Bob', 'Carol', ...]"
 print(result.total_tokens)  # ~800 (not 150,000!)
@@ -181,6 +244,8 @@ Opens a Gradio UI showing token usage, iterations, and model trajectories in rea
 | 50K - 200K chars | minRLM (**5-20x cheaper**) |
 | > 200K chars | minRLM (**20-100x cheaper**) |
 
+See eval/ folder.
+
 **Use minRLM when:**
 - Processing large documents, logs, or JSON
 - Cost matters more than latency
@@ -193,7 +258,32 @@ Opens a Gradio UI showing token usage, iterations, and model trajectories in rea
 
 ## Security
 
-⚠️ minRLM executes LLM-generated Python code. For untrusted inputs, run in a sandbox (Docker, gVisor, etc).
+⚠️ minRLM executes LLM-generated Python code using the permissions (PID) of the python process.<br>
+For untrusted inputs, use Docker mode:
+
+```python
+from minrlm import RLM, check_docker_available
+
+# Check if Docker is available
+if check_docker_available():
+    rlm = RLM(
+        model="gpt-5-mini",
+        use_docker=True,              # Run code in Docker container
+        docker_image="python:3.11-slim",
+        docker_memory="256m",         # Memory limit
+        docker_timeout=60,            # Execution timeout in seconds
+    )
+
+# Security features in Docker mode:
+# - No network access (seccomp blocks all socket syscalls)
+# - Memory limited (default 256MB)
+# - CPU limited (default 1 core)
+# - Process limit (100 max)
+# - Read-only filesystem (except /tmp)
+# - Execution timeout
+```
+
+Note: `sub_llm()` is not available in Docker mode. Use standard mode for recursive LLM calls.
 
 ## References
 

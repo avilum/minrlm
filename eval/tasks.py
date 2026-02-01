@@ -1,11 +1,20 @@
 """
 Task Definitions for RLM Evaluation
 
-Each task is a standardized benchmark that tests specific capabilities:
+Implements benchmarks from the RLM paper (Zhang et al., 2025):
+https://arxiv.org/abs/2512.24601
+
+Core tasks from the paper:
 - S-NIAH: Single needle-in-a-haystack retrieval
+- OOLONG: Information aggregation across many examples (Bertsch et al., 2025)
+- OOLONG-Pairs: Complex pairwise matching (hardest - "frontier models fail")
+- CodeQA: Code repository understanding (Bai et al., 2025)
+- BrowseComp+: Deep research / multi-hop retrieval (Chen et al., 2025)
+
+Additional tasks:
 - Multi-Needle: Multiple item retrieval
-- OOLONG-Pairs: Complex matching across long context
-- Scaling: Context length stress test
+- Scaling: Context length stress test (8K to 1M)
+- JSON Extraction/Aggregation: Structured data processing
 
 To add a new task, subclass BaseTask and use @register_task decorator.
 """
@@ -713,6 +722,423 @@ Return ONLY the total as a number (no formatting, no $ sign)."""
 
         numbers = re.findall(r"\d+", response.replace(",", ""))
         return expected in numbers
+
+
+@register_task("oolong")
+class OOLONGTask(BaseTask):
+    """
+    OOLONG: Information Aggregation
+
+    From Bertsch et al., 2025. Aggregate statistics from many labeled examples.
+    Tests ability to process and count across large datasets.
+    This is different from OOLONG-Pairs - it tests aggregation, not matching.
+    """
+
+    description = "Aggregate label statistics across many examples"
+    difficulty = "hard"
+
+    def __init__(self, context_size: int = 131072):
+        self.context_size = context_size
+
+    def generate(self, seed: int = 42, context_size: int = None, **kwargs) -> TaskInstance:
+        random.seed(seed)
+        size = context_size or self.context_size
+
+        # Categories from TREC-style classification
+        categories = [
+            "description and abstract concept",
+            "entity",
+            "human being",
+            "numeric value",
+            "location",
+            "abbreviation",
+        ]
+
+        # Generate many labeled examples (~100 chars each)
+        n_examples = size // 120
+        examples = []
+        category_counts = dict.fromkeys(categories, 0)
+
+        for i in range(n_examples):
+            cat = random.choice(categories)
+            category_counts[cat] += 1
+
+            # Generate realistic-looking question text
+            question_starters = [
+                "What is",
+                "Who was",
+                "Where is",
+                "How many",
+                "When did",
+                "Which",
+                "Define",
+                "Explain",
+                "Name the",
+                "What year",
+            ]
+            question_words = [
+                "the process of",
+                "responsible for",
+                "located in",
+                "invented by",
+                "known as",
+                "used for",
+                "related to",
+                "the capital of",
+                "the founder of",
+                "the number of",
+            ]
+            question = (
+                f"{random.choice(question_starters)} {random.choice(question_words)} {generate_code('Q', 4, seed + i)}?"
+            )
+
+            example = f"Example {i + 1}: Question: '{question}' || Label: {cat}"
+            examples.append(example)
+
+        # Shuffle examples
+        random.shuffle(examples)
+        context = "\n".join(examples)
+
+        # Pick two random categories to compare
+        cat1, cat2 = random.sample(categories, 2)
+        count1, count2 = category_counts[cat1], category_counts[cat2]
+
+        if count1 > count2:
+            expected = cat1
+            comparison = "more common"
+        elif count2 > count1:
+            expected = cat2
+            comparison = "more common"
+        else:
+            expected = "equal"
+            comparison = "equal"
+
+        task = f"""This dataset contains {n_examples} labeled question examples.
+Each example has a category label from: {", ".join(categories)}
+
+Question: Which category is {comparison} - "{cat1}" or "{cat2}"?
+
+Count the occurrences of each and answer with the category name that appears more frequently.
+If equal, answer "equal"."""
+
+        return TaskInstance(
+            task=task,
+            context=context,
+            expected=expected,
+            metadata={
+                "context_size": len(context),
+                "num_examples": n_examples,
+                "category_counts": category_counts,
+                "cat1": cat1,
+                "cat2": cat2,
+                "count1": count1,
+                "count2": count2,
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        return expected.lower() in response.lower()
+
+
+@register_task("codeqa")
+class CodeQATask(BaseTask):
+    """
+    CodeQA: Code Repository Understanding
+
+    From Bai et al., 2025. Answer questions about large codebases.
+    Tests ability to understand code structure and relationships.
+    """
+
+    description = "Answer questions about code repositories"
+    difficulty = "hard"
+
+    def __init__(self, context_size: int = 100000):
+        self.context_size = context_size
+
+    def generate(self, seed: int = 42, context_size: int = None, **kwargs) -> TaskInstance:
+        random.seed(seed)
+        size = context_size or self.context_size
+
+        # Generate a synthetic codebase with files, classes, functions
+        modules = ["auth", "database", "api", "utils", "models", "services", "handlers", "config"]
+        class_names = ["Manager", "Handler", "Service", "Repository", "Controller", "Factory", "Builder", "Processor"]
+        function_types = ["get", "set", "create", "delete", "update", "validate", "process", "handle"]
+
+        files = []
+        all_classes = []
+        all_functions = []
+        inheritance_map = {}
+
+        # Generate ~20-50 files depending on context size
+        n_files = max(10, size // 5000)
+
+        for i in range(n_files):
+            module = random.choice(modules)
+            filename = f"{module}/{random.choice(['core', 'helpers', 'base', 'impl', 'main'])}_{i}.py"
+
+            # Generate classes in this file
+            n_classes = random.randint(1, 4)
+            file_content = [f"# File: {filename}", f"# Module: {module}", ""]
+
+            for j in range(n_classes):
+                class_name = f"{module.capitalize()}{random.choice(class_names)}{i}_{j}"
+                all_classes.append((class_name, filename, module))
+
+                # Maybe inherit from another class
+                parent = ""
+                if all_classes and random.random() > 0.5:
+                    parent_class = random.choice(all_classes[:-1])[0] if len(all_classes) > 1 else ""
+                    if parent_class:
+                        parent = f"({parent_class})"
+                        inheritance_map[class_name] = parent_class
+
+                file_content.append(f"class {class_name}{parent}:")
+                file_content.append(f'    """Class for {module} operations."""')
+
+                # Generate methods
+                n_methods = random.randint(2, 6)
+                for k in range(n_methods):
+                    func_name = f"{random.choice(function_types)}_{module}_{k}"
+                    all_functions.append((func_name, class_name, filename))
+                    file_content.append(f"    def {func_name}(self, data):")
+                    file_content.append(f"        # Process {module} data")
+                    file_content.append("        result = self._validate(data)")
+                    file_content.append("        return result")
+                    file_content.append("")
+
+                file_content.append("")
+
+            files.append("\n".join(file_content))
+
+        context = "\n\n" + "=" * 80 + "\n\n".join(files)
+
+        # Generate a question about the codebase
+        question_types = ["inheritance", "function_location", "class_count", "module_classes"]
+        q_type = random.choice(question_types)
+
+        if q_type == "inheritance" and inheritance_map:
+            child, parent = random.choice(list(inheritance_map.items()))
+            task = f"""This is a code repository with {n_files} Python files.
+
+Question: What class does "{child}" inherit from?
+
+Return ONLY the parent class name."""
+            expected = parent
+
+        elif q_type == "function_location" and all_functions:
+            func, cls, fname = random.choice(all_functions)
+            task = f"""This is a code repository with {n_files} Python files.
+
+Question: In which class is the method "{func}" defined?
+
+Return ONLY the class name."""
+            expected = cls
+
+        elif q_type == "class_count":
+            target_module = random.choice(modules)
+            count = sum(1 for c in all_classes if c[2] == target_module)
+            task = f"""This is a code repository with {n_files} Python files.
+
+Question: How many classes are defined in the "{target_module}" module?
+
+Return ONLY the number."""
+            expected = str(count)
+
+        else:  # module_classes
+            target_module = random.choice(modules)
+            module_classes = [c[0] for c in all_classes if c[2] == target_module]
+            if module_classes:
+                target_class = random.choice(module_classes)
+                task = f"""This is a code repository with {n_files} Python files.
+
+Question: Which file contains the class "{target_class}"?
+
+Return ONLY the filename (e.g., auth/core_0.py)."""
+                expected = next(c[1] for c in all_classes if c[0] == target_class)
+            else:
+                # Fallback
+                cls = random.choice(all_classes)
+                task = f"""This is a code repository with {n_files} Python files.
+
+Question: Which module does the class "{cls[0]}" belong to?
+
+Return ONLY the module name."""
+                expected = cls[2]
+
+        return TaskInstance(
+            task=task,
+            context=context,
+            expected=expected,
+            metadata={
+                "context_size": len(context),
+                "num_files": n_files,
+                "num_classes": len(all_classes),
+                "num_functions": len(all_functions),
+                "question_type": q_type,
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        return expected.lower() in response.lower()
+
+
+@register_task("browsecomp")
+class BrowseCompTask(BaseTask):
+    """
+    BrowseComp+: Deep Research Task
+
+    From Chen et al., 2025. Answer questions requiring multi-hop research.
+    Simulates web research by embedding facts across many "documents".
+    """
+
+    description = "Multi-hop research across many documents"
+    difficulty = "very_hard"
+
+    def __init__(self, context_size: int = 500000):
+        self.context_size = context_size
+
+    def generate(self, seed: int = 42, context_size: int = None, **kwargs) -> TaskInstance:
+        random.seed(seed)
+        size = context_size or self.context_size
+
+        # Generate many "web pages" with interconnected facts
+        topics = [
+            "company",
+            "person",
+            "product",
+            "event",
+            "location",
+            "organization",
+            "technology",
+            "research",
+            "history",
+            "science",
+        ]
+
+        entities = {}
+        documents = []
+        n_docs = max(20, size // 3000)
+
+        # Generate entities with attributes
+        for i in range(n_docs * 2):
+            topic = random.choice(topics)
+            name = f"{topic.capitalize()}_{generate_code('E', 4, seed + i)}"
+            entities[name] = {
+                "type": topic,
+                "founded": random.randint(1900, 2024) if topic in ["company", "organization"] else None,
+                "location": random.choice(["New York", "London", "Tokyo", "Berlin", "Paris", "Sydney"]),
+                "revenue": random.randint(10, 1000) if topic == "company" else None,
+                "employees": random.randint(10, 10000) if topic in ["company", "organization"] else None,
+                "related_to": [],
+            }
+
+        # Create relationships
+        entity_names = list(entities.keys())
+        for name in entity_names:
+            n_relations = random.randint(1, 3)
+            entities[name]["related_to"] = random.sample(
+                [e for e in entity_names if e != name], min(n_relations, len(entity_names) - 1)
+            )
+
+        # Generate documents about entities
+        for i in range(n_docs):
+            entity_name = random.choice(entity_names)
+            entity = entities[entity_name]
+
+            doc_lines = [
+                f"=== Document {i + 1}: {entity_name} ===",
+                f"Type: {entity['type']}",
+                f"Location: {entity['location']}",
+            ]
+
+            if entity["founded"]:
+                doc_lines.append(f"Founded: {entity['founded']}")
+            if entity["revenue"]:
+                doc_lines.append(f"Annual Revenue: ${entity['revenue']} million")
+            if entity["employees"]:
+                doc_lines.append(f"Employees: {entity['employees']}")
+
+            if entity["related_to"]:
+                doc_lines.append(f"Related entities: {', '.join(entity['related_to'][:3])}")
+
+            # Add some filler text
+            doc_lines.append("")
+            doc_lines.append(generate_noise(random.randint(200, 500), seed + i))
+            doc_lines.append("")
+
+            documents.append("\n".join(doc_lines))
+
+        context = "\n\n".join(documents)
+
+        # Generate multi-hop questions
+        # Find an entity with relationships for multi-hop
+        entity_with_relations = None
+        for name, entity in entities.items():
+            if entity["related_to"] and entity["founded"]:
+                entity_with_relations = (name, entity)
+                break
+
+        if entity_with_relations:
+            name, entity = entity_with_relations
+            related = entity["related_to"][0]
+            related_entity = entities[related]
+
+            q_type = random.choice(["founding_year", "location", "compare"])
+
+            if q_type == "founding_year":
+                task = f"""This collection contains {n_docs} documents about various entities.
+
+Question: What year was {name} founded?
+
+Search through the documents and return ONLY the year."""
+                expected = str(entity["founded"])
+
+            elif q_type == "location":
+                task = f"""This collection contains {n_docs} documents about various entities.
+
+Question: Where is {name} located?
+
+Return ONLY the city name."""
+                expected = entity["location"]
+
+            else:  # compare
+                if entity["employees"] and related_entity.get("employees"):
+                    task = f"""This collection contains {n_docs} documents about various entities.
+
+Question: Does {name} have more employees than {related}?
+
+Answer "yes" or "no"."""
+                    expected = "yes" if entity["employees"] > related_entity["employees"] else "no"
+                else:
+                    task = f"""This collection contains {n_docs} documents about various entities.
+
+Question: What is the location of {name}?
+
+Return ONLY the city name."""
+                    expected = entity["location"]
+        else:
+            # Fallback to simple question
+            name = random.choice(entity_names)
+            task = f"""This collection contains {n_docs} documents about various entities.
+
+Question: What type of entity is {name}?
+
+Return ONLY the type (e.g., company, person, etc.)."""
+            expected = entities[name]["type"]
+
+        return TaskInstance(
+            task=task,
+            context=context,
+            expected=expected,
+            metadata={
+                "context_size": len(context),
+                "num_documents": n_docs,
+                "num_entities": len(entities),
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        return expected.lower() in response.lower()
 
 
 @register_task("qa_retrieval")

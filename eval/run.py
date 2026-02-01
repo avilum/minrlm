@@ -2,10 +2,20 @@
 """
 RLM Evaluation Suite - Main Entry Point
 
+Implements benchmarks from the RLM paper (Zhang et al., 2025):
+https://arxiv.org/abs/2512.24601
+
 A reproducible benchmark comparing:
 1. Vanilla LLM (direct API calls)
 2. Our minimal RLM implementation
 3. Official RLM implementation (optional)
+
+Paper Tasks:
+- S-NIAH: Single needle-in-a-haystack (basic retrieval)
+- OOLONG: Information aggregation (Bertsch et al., 2025)
+- OOLONG-Pairs: Pairwise matching (hardest task)
+- CodeQA: Code repository understanding (Bai et al., 2025)
+- BrowseComp+: Deep research / multi-hop (Chen et al., 2025)
 
 Usage:
     # Quick start
@@ -13,6 +23,12 @@ Usage:
 
     # Full evaluation with multiple runs
     uv run python eval/run.py --model gpt-5-nano --runs 3 --tasks all
+
+    # Paper benchmarks (all core tasks from the RLM paper)
+    uv run python eval/run.py --model gpt-5-nano --tasks paper
+
+    # Paper scaling test (8K to 1M, Figure 1)
+    uv run python eval/run.py --model gpt-5-nano --tasks scaling --paper-scale
 
     # Skip official RLM (if not installed)
     uv run python eval/run.py --model gpt-5-nano --skip-official
@@ -22,12 +38,6 @@ Usage:
 
     # Extended evaluation (8K to 256K contexts)
     uv run python eval/run.py --model gpt-5-nano --tasks scaling --extended
-
-    # Long context stress test (128K-256K)
-    uv run python eval/run.py --model gpt-5-nano --tasks long_context --context-sizes 131072,262144
-
-    # Multi-needle at large scale
-    uv run python eval/run.py --model gpt-5-nano --tasks multi_needle_long
 
     # Output to specific directory
     uv run python eval/run.py --model gpt-5-nano --output-dir my_results/
@@ -45,7 +55,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 from eval.metrics import EvalResult, calculate_cost, compute_statistics, save_results
-from eval.runners import RUNNER_REGISTRY, get_runner
+from eval.runners import RUNNER_REGISTRY, RunResult, get_runner
 from eval.tasks import TASK_REGISTRY, get_task
 from eval.visualize import plot_comprehensive_dashboard
 
@@ -85,7 +95,10 @@ Examples:
         "--tasks",
         "-t",
         default="sniah,multi_needle,pairs",
-        help=f"Tasks to run (comma-separated). Options: {', '.join(TASK_REGISTRY.keys())}, all",
+        help=(
+            f"Tasks to run (comma-separated). Options: {', '.join(TASK_REGISTRY.keys())}, "
+            "all, paper (core paper tasks: sniah, oolong, pairs, codeqa, browsecomp)"
+        ),
     )
 
     parser.add_argument(
@@ -117,6 +130,12 @@ Examples:
         help="Run extended scaling tests (8K to 256K contexts)",
     )
 
+    parser.add_argument(
+        "--paper-scale",
+        action="store_true",
+        help="Use paper's context sizes for scaling (8K to 1M, as in Figure 1)",
+    )
+
     parser.add_argument("--context-size", type=int, default=50000, help="Default context size for non-scaling tasks")
 
     parser.add_argument("--no-plot", action="store_true", help="Skip generating visualization plots")
@@ -140,6 +159,7 @@ def run_evaluation(
     context_size: int = 50000,
     context_sizes: list[int] | None = None,
     verbose: bool = True,
+    results_accumulator: list[EvalResult] | None = None,
 ) -> list[EvalResult]:
     """
     Run the full evaluation suite.
@@ -153,11 +173,13 @@ def run_evaluation(
         context_size: Default context size
         context_sizes: List of sizes for scaling test
         verbose: Print progress
+        results_accumulator: Optional mutable list to accumulate results (for crash recovery)
 
     Returns:
         List of EvalResult objects
     """
-    all_results: list[EvalResult] = []
+    # Use provided accumulator or create new list
+    all_results = results_accumulator if results_accumulator is not None else []
 
     if verbose:
         log.info("=" * 70)
@@ -258,6 +280,45 @@ def run_evaluation(
                     verbose=verbose,
                 )
                 all_results.extend(results)
+        elif task_name == "oolong":
+            # OOLONG: Information aggregation at 131K (paper size)
+            oolong_sizes = context_sizes or [131072]
+            for size in oolong_sizes:
+                results = _run_task_evaluations(
+                    task_name=f"oolong_{size // 1024}k" if len(oolong_sizes) > 1 else "oolong",
+                    task_kwargs={"context_size": size},
+                    runners=active_runners,
+                    model=model,
+                    runs=runs,
+                    verbose=verbose,
+                )
+                all_results.extend(results)
+        elif task_name == "codeqa":
+            # CodeQA: Code repository understanding at various sizes
+            codeqa_sizes = context_sizes or [100000, 500000]
+            for size in codeqa_sizes:
+                results = _run_task_evaluations(
+                    task_name=f"codeqa_{size // 1000}k",
+                    task_kwargs={"context_size": size},
+                    runners=active_runners,
+                    model=model,
+                    runs=runs,
+                    verbose=verbose,
+                )
+                all_results.extend(results)
+        elif task_name == "browsecomp":
+            # BrowseComp+: Deep research at large contexts
+            browsecomp_sizes = context_sizes or [500000, 1000000]
+            for size in browsecomp_sizes:
+                results = _run_task_evaluations(
+                    task_name=f"browsecomp_{size // 1000}k",
+                    task_kwargs={"context_size": size},
+                    runners=active_runners,
+                    model=model,
+                    runs=runs,
+                    verbose=verbose,
+                )
+                all_results.extend(results)
         else:
             results = _run_task_evaluations(
                 task_name=task_name,
@@ -285,6 +346,12 @@ def _get_base_task_name(task_name: str) -> str:
         return "json_extraction"
     elif task_name.startswith("json_aggregation_"):
         return "json_aggregation"
+    elif task_name.startswith("oolong_"):
+        return "oolong"
+    elif task_name.startswith("codeqa_"):
+        return "codeqa"
+    elif task_name.startswith("browsecomp_"):
+        return "browsecomp"
     else:
         return task_name
 
@@ -324,12 +391,30 @@ def _run_task_evaluations(
         run_pbar.set_postfix({"context": f"{len(instance.context):,} chars", "run": f"{run_idx + 1}/{runs}"})
 
         for runner_name, runner in tqdm(runners.items(), desc="  runners", leave=False, disable=not verbose):
-            # Execute
-            run_result = runner.run(instance.task, instance.context)
+            try:
+                # Execute
+                run_result = runner.run(instance.task, instance.context)
 
-            # Check correctness
-            correct = task.check(run_result.response, instance.expected)
-            partial_score = task.check_partial(run_result.response, instance.expected)
+                # Check correctness
+                correct = task.check(run_result.response, instance.expected)
+                partial_score = task.check_partial(run_result.response, instance.expected)
+            except KeyboardInterrupt:
+                tqdm.write(f"\n⚠️  Interrupted by user during {runner_name} on {task_name}")
+                raise
+            except Exception as e:
+                tqdm.write(f"\n❌ ERROR in {runner_name} on {task_name}: {type(e).__name__}: {e}")
+                # Create a failed result
+                run_result = RunResult(
+                    response="",
+                    total_tokens=0,
+                    input_tokens=0,
+                    output_tokens=0,
+                    time_seconds=0.0,
+                    iterations=0,
+                    error=str(e),
+                )
+                correct = False
+                partial_score = 0.0
 
             # Calculate cost
             cost = calculate_cost(model, run_result.input_tokens, run_result.output_tokens)
@@ -358,11 +443,12 @@ def _run_task_evaluations(
 
             if verbose:
                 status = "✓" if correct else "✗"
+                error_info = f" | ⚠️ {run_result.error}" if run_result.error else ""
                 tqdm.write(
                     f"    {runner_name}: {status} | "
                     f"{run_result.input_tokens:,}+{run_result.output_tokens:,} tokens | "
                     f"{run_result.time_seconds:.1f}s | "
-                    f"{run_result.iterations} iters"
+                    f"{run_result.iterations} iters{error_info}"
                 )
 
     return results
@@ -448,6 +534,9 @@ def main():
     tasks = [t.strip() for t in args.tasks.split(",")]
     if "all" in tasks:
         tasks = list(TASK_REGISTRY.keys())
+    elif "paper" in tasks:
+        # Core tasks from the RLM paper (Table 1)
+        tasks = ["sniah", "oolong", "pairs", "codeqa", "browsecomp"]
 
     # Parse runners
     runners = [r.strip() for r in args.runners.split(",")]
@@ -459,7 +548,11 @@ def main():
         runners.remove("official")
 
     # Parse context sizes
-    if args.extended:
+    if args.paper_scale:
+        # Paper Figure 1: 8K to 1M (2^13 to 2^20)
+        # 8K, 16K, 33K, 66K, 131K, 262K, 524K, 1M
+        context_sizes = [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576]
+    elif args.extended:
         # Extended test: 8K to 256K (paper-style evaluation)
         context_sizes = [8192, 16384, 32768, 65536, 131072, 262144]
     elif args.context_sizes == "large":
@@ -476,17 +569,32 @@ def main():
 
     verbose = not args.quiet
 
-    # Run evaluation
-    results = run_evaluation(
-        model=args.model,
-        tasks=tasks,
-        runners=runners,
-        runs=args.runs,
-        output_dir=output_dir,
-        context_size=args.context_size,
-        context_sizes=context_sizes,
-        verbose=verbose,
-    )
+    # Run evaluation with crash protection
+    # Use mutable list so partial results survive crashes
+    results: list[EvalResult] = []
+    try:
+        run_evaluation(
+            model=args.model,
+            tasks=tasks,
+            runners=runners,
+            runs=args.runs,
+            output_dir=output_dir,
+            context_size=args.context_size,
+            context_sizes=context_sizes,
+            verbose=verbose,
+            results_accumulator=results,  # Pass mutable list
+        )
+    except KeyboardInterrupt:
+        log.warning("\n⚠️  Evaluation interrupted by user")
+        if results:
+            log.info(f"Saving {len(results)} partial results...")
+    except Exception as e:
+        log.error(f"\n❌ Evaluation crashed: {type(e).__name__}: {e}")
+        import traceback
+
+        traceback.print_exc()
+        if results:
+            log.info(f"Saving {len(results)} partial results...")
 
     if not results:
         log.error("No results collected!")

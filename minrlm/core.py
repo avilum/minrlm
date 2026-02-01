@@ -254,6 +254,9 @@ class RLM:
         rlm = RLM(model="gpt-5-nano")
         result = rlm.completion("Solve this problem...")
         print(result.response)
+
+        # With Docker sandboxing (requires Docker):
+        rlm = RLM(model="gpt-5-nano", use_docker=True)
     """
 
     def __init__(
@@ -267,6 +270,11 @@ class RLM:
         log_dir: str | None = None,
         async_batch: bool = True,  # Enable parallel sub_llm_batch calls
         on_step: Callable[[str, dict], None] | None = None,  # Callback for streaming steps
+        # Docker options
+        use_docker: bool = False,  # Run code in Docker container
+        docker_image: str = "python:3.11-slim",
+        docker_memory: str = "256m",
+        docker_timeout: int = 60,
     ):
         self.model = model
         self.max_iterations = max_iterations
@@ -275,17 +283,45 @@ class RLM:
         self.log_dir = Path(log_dir) if log_dir else None
         self.async_batch = async_batch
         self.on_step = on_step
+        self.use_docker = use_docker
 
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.async_client = AsyncOpenAI(api_key=api_key, base_url=base_url) if async_batch else None
         self._depth = 0
         self._log_entries: list[dict[str, Any]] = []
 
-        # Initialize REPL once at startup (not per-query)
-        self._repl = PythonREPL(
-            sub_llm_callback=self._handle_sub_llm,
-            sub_llm_batch_callback=self._handle_sub_llm_batch,
-        )
+        # Initialize REPL - use Docker or local based on config
+        if use_docker:
+            from .docker_repl import DockerREPL
+
+            docker_repl = DockerREPL(
+                image=docker_image,
+                memory_limit=docker_memory,
+                timeout=docker_timeout,
+                network_disabled=True,
+            )
+            # Verify Docker is available, fall back to local REPL with warning if not
+            if docker_repl.is_available():
+                self._repl: PythonREPL | DockerREPL = docker_repl
+            else:
+                import warnings
+
+                warnings.warn(
+                    "⚠️  Docker is not available. Falling back to local PythonREPL (unsandboxed). "
+                    "Install Docker for secure sandboxed execution: https://docs.docker.com/get-docker/",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                self.use_docker = False  # Update flag to reflect actual state
+                self._repl = PythonREPL(
+                    sub_llm_callback=self._handle_sub_llm,
+                    sub_llm_batch_callback=self._handle_sub_llm_batch,
+                )
+        else:
+            self._repl = PythonREPL(
+                sub_llm_callback=self._handle_sub_llm,
+                sub_llm_batch_callback=self._handle_sub_llm_batch,
+            )
 
         if self.log_dir:
             self.log_dir.mkdir(parents=True, exist_ok=True)

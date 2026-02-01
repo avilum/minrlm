@@ -153,11 +153,54 @@ print("""
 """)
 
 # =============================================================================
-# Environment Variables
+# Docker Sandboxing (requires Docker)
 # =============================================================================
 
 print("=" * 60)
-print("7. Environment variables")
+print("7. Docker sandboxing for secure code execution")
+print("=" * 60)
+
+print("""
+  # Run code in a Docker container with strict security:
+
+  from minrlm import RLM, check_docker_available
+
+  if check_docker_available():
+      rlm = RLM(
+          model="gpt-5-nano",
+          use_docker=True,          # Enable Docker mode
+          docker_image="python:3.11-slim",  # Custom image
+          docker_memory="256m",     # Memory limit
+          docker_timeout=60,        # Execution timeout
+      )
+      result = rlm.completion("Calculate 2^1000")
+
+  # Security features:
+  # - No network access (seccomp blocks all socket syscalls)
+  # - Memory limited (default 256MB)
+  # - CPU limited (default 1 core)
+  # - Process limit (100 processes max)
+  # - Read-only filesystem (except /tmp)
+  # - Execution timeout
+
+  # Note: sub_llm() is NOT available in Docker mode.
+  # Use non-Docker mode for recursive LLM calls.
+""")
+
+# Check if Docker is available
+from minrlm import check_docker_available
+
+if check_docker_available():
+    print("  ✓ Docker is available on this system")
+else:
+    print("  ⚠ Docker is not available")
+
+# =============================================================================
+# Environment Variables
+# =============================================================================
+
+print("\n" + "=" * 60)
+print("8. Environment variables")
 print("=" * 60)
 
 print("""
