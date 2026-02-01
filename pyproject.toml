@@ -27,6 +27,8 @@ dependencies = [
 [project.optional-dependencies]
 visualizer = [
     "gradio>=5.0.0",
+    "pandas>=2.0.0",
+    "plotly>=5.0.0",
 ]
 dev = [
     "matplotlib>=3.8.0",

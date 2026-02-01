@@ -14,22 +14,29 @@ Key insights from the paper:
 SYSTEM_PROMPT_WITH_CONTEXT = """Python code only.
 
 input_0 = {context_meta}
-search(text, pattern) -> find all matches
-set_output(answer) -> return answer
 
-Find patterns, extract values, call set_output().
+Tools:
+- search(text, "pattern") -> [(match, before, after), ...] LITERAL only, no regex
+  match = full token (e.g., search for "NEEDLE-" returns "NEEDLE-ABC123")
+  <before>/<after> = surrounding context
+  For regex: import re; re.findall(r"pattern", text)
+- sub_llm("question", chunk) -> semantic analysis on small chunks
+- peek(data) -> preview structure
+- FINAL(answer) -> return final answer
+
+Always search input_0 first. Never guess from task description.
 """
 
 SYSTEM_PROMPT_NO_CONTEXT = """Write Python code. No explanations.
 
-Available: peek(x), sub_llm(task, ctx), set_output(answer)
+Available: peek(x), sub_llm(task, ctx), FINAL(answer)
 """
 
 # Keep for backwards compatibility
 SYSTEM_PROMPT = SYSTEM_PROMPT_WITH_CONTEXT
 
 # Minimal prompt for sub-calls
-SYSTEM_PROMPT_MINIMAL = """Write Python code. input_0 has the data. Call set_output(answer) when done."""
+SYSTEM_PROMPT_MINIMAL = """Write Python code. input_0 has the data. Call FINAL(answer) when done."""
 
 USER_PROMPT_TEMPLATE = """{task}"""
 
@@ -61,7 +68,7 @@ def format_system_prompt(context: str = "", context_type: str = "string") -> str
 
 CONTINUE_PROMPT = """stdout: {output}{error_info}
 Vars: {state_info}
-Call set_output(answer) now, or try different approach if stuck."""
+Call FINAL(answer) when done."""
 
 
 def format_continue_prompt(

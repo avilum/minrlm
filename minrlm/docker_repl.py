@@ -97,11 +97,11 @@ for k, v in namespace.items():
 
 # Track output
 _output = None
-def set_output(value):
+def FINAL(value):
     global _output
     _output = str(value)
 
-def set_output_var(var_name):
+def FINAL_var(var_name):
     global _output
     if var_name not in exec_namespace:
         raise NameError(f"Variable '{var_name}' not found")
@@ -190,8 +190,8 @@ def sub_llm_batch(tasks):
     raise RuntimeError("sub_llm_batch() is not available in Docker mode. Use non-Docker RLM for recursive calls.")
 
 # Add helper functions to namespace
-exec_namespace["set_output"] = set_output
-exec_namespace["set_output_var"] = set_output_var
+exec_namespace["FINAL"] = FINAL
+exec_namespace["FINAL_var"] = FINAL_var
 exec_namespace["search"] = search
 exec_namespace["peek"] = peek
 exec_namespace["sub_llm"] = sub_llm
@@ -215,7 +215,7 @@ finally:
 
 # Build state dict (visible variables)
 state = {}
-HIDDEN = {"__builtins__", "set_output", "set_output_var", "search", "peek", "sub_llm", "sub_llm_batch"}
+HIDDEN = {"__builtins__", "FINAL", "FINAL_var", "search", "peek", "sub_llm", "sub_llm_batch"}
 for name, value in exec_namespace.items():
     if name in HIDDEN or name.startswith("_"):
         continue
@@ -267,7 +267,7 @@ class DockerREPL:
     - Complex objects cannot be transferred back from container
     """
 
-    HIDDEN_KEYS = {"__builtins__", "sub_llm", "sub_llm_batch", "set_output", "set_output_var", "peek", "search"}
+    HIDDEN_KEYS = {"__builtins__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search"}
 
     def __init__(
         self,

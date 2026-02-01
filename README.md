@@ -42,7 +42,7 @@ Instead of stuffing context into the prompt, minRLM:
 1. Stores the context as `input_0` in a Python REPL
 2. Asks the LLM to write code that searches/processes it
 3. Executes the code and returns `stdout` to the LLM
-4. Repeats until `set_output(answer)` is called
+4. Repeats until `FINAL(answer)` is called
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -50,7 +50,7 @@ Instead of stuffing context into the prompt, minRLM:
 │                                                             │
 │  input_0 = "<262K chars of JSON>"                           │
 │  search(text, pattern) → find patterns                      │
-│  set_output(answer) → return final answer                   │
+│  FINAL(answer) → return final answer                        │
 │                                                             │
 │  Task: Find the employee with id EMP-0042-02317             │
 ├─────────────────────────────────────────────────────────────┤
@@ -61,12 +61,33 @@ Instead of stuffing context into the prompt, minRLM:
 │  data = json.loads(input_0)                                 │
 │  for emp in data:                                           │
 │      if emp["id"] == "EMP-0042-02317":                      │
-│          set_output(emp["code"])                            │
+│          FINAL(emp["code"])                                 │
 │  ```                                                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 The context never enters the conversation. Token usage stays constant regardless of context size.
+
+## Why This Works: Attention → Code
+
+Traditional LLMs process context through **attention layers** - expensive O(n²) operations where every token attends to every other token. For a 256K document, that's billions of floating-point operations just to find one value.
+
+RLMs replace attention with **deterministic code execution**:
+
+| Approach | How it finds data | Compute cost | Inspectable? |
+|----------|-------------------|--------------|--------------|
+| Vanilla LLM | Attention over all tokens | O(n²) FLOPS | ❌ Black box |
+| RLM | Python `search()` / `json.loads()` | O(n) string ops | ✅ Readable code |
+
+**The key insight:** LLMs already know how to write code that solves retrieval tasks. RLM just lets them *use* that knowledge instead of brute-forcing through attention.
+
+This also means RLM reasoning is **traceable** - you can see exactly which search patterns the model used, which JSON keys it accessed, and how it computed the answer. Unlike chain-of-thought prompting (natural language), code reasoning is:
+
+- **Deterministic** - same code always produces same result
+- **Verifiable** - execute it yourself to check
+- **Learnable** - patterns transfer across tasks (regex, JSON parsing, iteration)
+
+When an LLM writes `[emp for emp in data if emp["dept"] == "Engineering"]`, you can trust the output in a way you can't trust "I looked through the document and found..."
 
 ## Minimal Prompts
 
@@ -92,9 +113,9 @@ Python code only.
 
 input_0 = <context metadata>
 search(text, pattern) -> find all matches
-set_output(answer) -> return answer
+FINAL(answer) -> return answer
 
-Find patterns, extract values, call set_output().
+Find patterns, extract values, call FINAL().
 ```
 
 ### Why This Matters
@@ -104,7 +125,7 @@ Find patterns, extract values, call set_output().
 - **Less prompt fragility** — fewer instructions = fewer places to misinterpret  
 - **Model-agnostic** — works across providers without tuning examples per model
 
-Modern LLMs are smart enough that `"Python code only. Call set_output(answer)."` is sufficient. The model figures out the rest.
+Modern LLMs are smart enough that `"Python code only. Call FINAL(answer)."` is sufficient. The model figures out the rest.
 
 ## Benchmarks
 
@@ -166,12 +187,12 @@ print(result.output_tokens)  # 1,473
 # Iteration 1: LLM wrote this code
 for i in range(100):
     print(1 << i)
-# → stdout captured, but no set_output() called
+# → stdout captured, but no FINAL() called
 
-# Iteration 2: LLM realized it needs set_output()
+# Iteration 2: LLM realized it needs FINAL()
 powers = [str(1 << i) for i in range(100)]
 answer = "\n".join(powers)
-set_output(answer)  # ← returns the final answer
+FINAL(answer)  # ← returns the final answer
 ```
 
 ### With Large Context
@@ -196,7 +217,7 @@ The LLM has access to:
 | `search(text, pattern)` | Find pattern matches with surrounding context |
 | `peek(data)` | Preview first/last portions of large data |
 | `sub_llm(task, context)` | Make recursive LLM calls |
-| `set_output(answer)` | Return the final answer |
+| `FINAL(answer)` | Return the final answer |
 
 ### Custom Endpoint
 
@@ -219,17 +240,24 @@ uv run python eval/run.py --model gpt-5-mini --tasks scaling --runs 1
 # Full evaluation (8K to 256K contexts)  
 uv run python eval/run.py --model gpt-5-mini --extended
 
+# Paper-scale evaluation (8K to 1M contexts)
+uv run python eval/run.py --model gpt-5-mini --paper-scale
+
 # Specific tasks
 uv run python eval/run.py --model gpt-5-mini --tasks json_extraction,json_aggregation
 ```
 
-Generates plots and detailed results in `eval/results/`. See [`eval/README.md`](eval/README.md) for task descriptions and methodology.
+Generates plots and detailed results in `eval/results/`. The evaluation suite saves partial results if interrupted (Ctrl+C) or crashed. See [`eval/README.md`](eval/README.md) for task descriptions and methodology.
 
 ## Interactive Visualizer
 
 Compare methods side-by-side with live execution tracing:
 
 ```bash
+# Install visualizer dependencies
+uv sync --extra visualizer
+
+# Run the UI
 uv run python examples/visualizer.py
 ```
 
@@ -284,6 +312,34 @@ if check_docker_available():
 ```
 
 Note: `sub_llm()` is not available in Docker mode. Use standard mode for recursive LLM calls.
+
+### Docker vs Local Performance
+
+```python
+from minrlm import RLM, check_docker_available
+import time
+
+task = "Calculate 2^1000"
+
+# Local REPL (faster, less secure)
+rlm = RLM(model="gpt-5-nano", use_docker=False)
+start = time.time()
+r = rlm.completion(task)
+print(f"Local:  {r.total_tokens} tokens | {time.time()-start:.1f}s")
+
+# Docker REPL (slower, sandboxed)
+if check_docker_available():
+    rlm = RLM(model="gpt-5-nano", use_docker=True)
+    start = time.time()
+    r = rlm.completion(task)
+    print(f"Docker: {r.total_tokens} tokens | {time.time()-start:.1f}s")
+
+# Typical results:
+# Local:  1,566 tokens | 12.5s
+# Docker: 1,943 tokens | 16.6s  (~4s container startup overhead)
+```
+
+**Recommendation:** Use Docker for untrusted inputs, local REPL for trusted code / low latency.
 
 ## References
 

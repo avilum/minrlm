@@ -139,7 +139,7 @@ class OursRunner(BaseRunner):
     Our Minimal RLM Runner
 
     Uses our minimal RLM implementation (~400 LOC).
-    Key features: sub_llm(), set_output(), Python REPL.
+    Key features: sub_llm(), FINAL(), Python REPL.
     """
 
     description = "Our minimal RLM implementation"

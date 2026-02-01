@@ -8,6 +8,7 @@ import asyncio
 import json
 import re
 import sys
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -18,6 +19,12 @@ from typing import Any
 from openai import AsyncOpenAI, OpenAI
 
 from .prompts import format_continue_prompt, format_system_prompt, format_user_prompt
+
+# Context chars to show before/after each search() match
+SEARCH_CONTEXT_CHARS = 500
+
+# Default timeout per completion (prevents infinite loops)
+DEFAULT_MAX_TIME_SECONDS = 120
 
 
 @dataclass
@@ -33,18 +40,19 @@ class RLMResult:
 
 
 class PythonREPL:
-    """Persistent Python REPL with sub_llm() and set_output() support."""
+    """Persistent Python REPL with sub_llm() and FINAL() support."""
 
-    HIDDEN_KEYS = {"__builtins__", "sub_llm", "sub_llm_batch", "set_output", "set_output_var", "peek", "search"}
+    HIDDEN_KEYS = {"__builtins__", "__name__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search"}
 
     def __init__(self, sub_llm_callback: Callable | None = None, sub_llm_batch_callback: Callable | None = None):
         self._output: str | None = None
         self._namespace = {
             "__builtins__": __builtins__,
+            "__name__": "__main__",  # So `if __name__ == "__main__":` works
             "sub_llm": self._make_sub_llm(sub_llm_callback),
             "sub_llm_batch": self._make_sub_llm_batch(sub_llm_batch_callback),
-            "set_output": self._set_output,
-            "set_output_var": self._set_output_var,
+            "FINAL": self._set_output,
+            "FINAL_var": self._set_output_var,
             "peek": self._peek,
             "search": self._search,
         }
@@ -70,18 +78,36 @@ class PythonREPL:
         return sub_llm_batch
 
     def _set_output(self, value: str) -> None:
-        self._output = str(value)
+        self._output = str(value).strip()
+        
+        # Clean common artifacts from search() tuple returns
+        # e.g., "['New York']" -> "New York", "[]" -> ""
+        if self._output.startswith("[") and self._output.endswith("]"):
+            inner = self._output[1:-1].strip()
+            # Handle ['value'] or ["value"]
+            if (inner.startswith("'") and inner.endswith("'")) or \
+               (inner.startswith('"') and inner.endswith('"')):
+                inner = inner[1:-1]
+            self._output = inner
+            if inner:
+                print(f"ℹ️ Cleaned output: '{self._output}'")
+        
+        if self._output == "":
+            print("⚠️ REJECTED: FINAL() called with empty string - try again")
+            self._output = None  # Reject empty output
 
-    def _search(self, text: str, pattern: str, context: int = 100) -> list[str]:
-        """Search for pattern in text and return all matches with surrounding context.
+    def _search(self, text: str, pattern: str, context: int = SEARCH_CONTEXT_CHARS) -> list[tuple[str, str, str]]:
+        """Search for literal pattern in text (case-insensitive).
+
+        For regex, use: import re; re.findall(pattern, text)
 
         Args:
             text: The text to search in
-            pattern: The pattern to find (case-insensitive)
-            context: Number of characters to show around each match
+            pattern: Literal string to find (case-insensitive)
+            context: Characters to show around each match (default: SEARCH_CONTEXT_CHARS)
 
         Returns:
-            List of matches with context, prints them too
+            List of tuples: (match, before_context, after_context)
         """
         matches = []
         text_lower = text.lower()
@@ -92,18 +118,28 @@ class PythonREPL:
             pos = text_lower.find(pattern_lower, start)
             if pos == -1:
                 break
-            # Extract match with context
-            ctx_start = max(0, pos - context)
-            ctx_end = min(len(text), pos + len(pattern) + context)
-            match_text = text[ctx_start:ctx_end]
-            matches.append(match_text)
-            print(f"[Match at {pos}]: ...{match_text}...")
+            # Find the end of the "token" (continue until whitespace/punctuation)
+            end = pos + len(pattern)
+            while end < len(text) and text[end] not in " \t\n\r,;:!?()[]{}\"'<>":
+                end += 1
+            actual_match = text[pos:end]
+            
+            # Get context before and after
+            ctx_before = text[max(0, pos - context):pos]
+            ctx_after = text[end:min(len(text), end + context)]
+            matches.append((actual_match, ctx_before, ctx_after))
+
+            print(f"\n[Match {len(matches)}]: {actual_match}")
+            print(f"<before>{ctx_before}</before>")
+            print(f"<match>{actual_match}</match>")
+            print(f"<after>{ctx_after}</after>")
             start = pos + 1
 
         if not matches:
-            print(f"No matches found for '{pattern}'")
+            print(f"⚠️ NO MATCHES for '{pattern}'")
+            print(f"   -> Try shorter/partial pattern")
         else:
-            print(f"\nFound {len(matches)} match(es) for '{pattern}'")
+            print(f"\n✓ Found {len(matches)} match(es)")
 
         return matches
 
@@ -189,7 +225,7 @@ class PythonREPL:
         finally:
             sys.stdout = old_stdout
             result["stdout"] = stdout_capture.getvalue()
-            # ALWAYS capture output - even if error occurred AFTER set_output() was called
+            # ALWAYS capture output - even if error occurred AFTER FINAL() was called
             result["output"] = self._output
 
         # Include current state
@@ -206,9 +242,10 @@ class PythonREPL:
         keys_to_keep = set(self.HIDDEN_KEYS) | {
             "sub_llm",
             "sub_llm_batch",
-            "set_output",
-            "set_output_var",
+            "FINAL",
+            "FINAL_var",
             "__builtins__",
+            "__name__",
         }
         self._namespace = {k: v for k, v in self._namespace.items() if k in keys_to_keep}
 
@@ -265,6 +302,7 @@ class RLM:
         api_key: str | None = None,
         base_url: str | None = None,
         max_iterations: int = 20,
+        max_time_seconds: int = DEFAULT_MAX_TIME_SECONDS,  # Timeout per completion
         max_output_tokens: int | None = 2000,  # Limit output for speed (None = no limit)
         temperature: float = 0.0,  # Use 0 for deterministic code generation
         log_dir: str | None = None,
@@ -278,6 +316,7 @@ class RLM:
     ):
         self.model = model
         self.max_iterations = max_iterations
+        self.max_time_seconds = max_time_seconds
         self.max_output_tokens = max_output_tokens
         self.temperature = temperature
         self.log_dir = Path(log_dir) if log_dir else None
@@ -435,13 +474,12 @@ class RLM:
             resp = await async_client.chat.completions.create(**kwargs)
             text = resp.choices[0].message.content or ""
 
-            # Simple extraction: if set_output pattern found, extract value
-            # For batch calls, we expect simple direct answers
-            match = re.search(r"set_output\(['\"](.+?)['\"]\)", text)
+            # Simple extraction: if FINAL pattern found, extract value
+            match = re.search(r"FINAL\(['\"](.+?)['\"]\)", text)
             if match:
                 return match.group(1)
-            # Or code block with set_output
-            code_match = re.search(r'```python.*?set_output\([\'"](.+?)[\'"]\).*?```', text, re.DOTALL)
+            # Or code block with FINAL
+            code_match = re.search(r'```python.*?FINAL\([\'"](.+?)[\'"]\).*?```', text, re.DOTALL)
             if code_match:
                 return code_match.group(1)
             # Fallback: return the raw response
@@ -510,8 +548,17 @@ class RLM:
         history: list[dict[str, str]] = []
         total_tokens, input_tokens, output_tokens = 0, 0, 0
         final_output: str | None = None
+        start_time = time.time()
 
         for iteration in range(self.max_iterations):
+            # Check timeout
+            elapsed = time.time() - start_time
+            if elapsed > self.max_time_seconds:
+                self._log("timeout", {"elapsed": elapsed, "max": self.max_time_seconds})
+                if self.on_step:
+                    self.on_step("timeout", {"elapsed": elapsed, "iteration": iteration + 1})
+                break
+
             if self.on_step:
                 self.on_step("thinking", {"iteration": iteration + 1})
 
@@ -533,23 +580,23 @@ class RLM:
             if self.on_step:
                 self.on_step(
                     "llm_response",
-                    {"iteration": iteration + 1, "response": response_text[:500], "has_code": code is not None},
+                    {"iteration": iteration + 1, "response": response_text, "has_code": code is not None},
                 )
 
             if not code:
-                # No code found - log for debugging and prompt to continue
+                # No code found - prompt to use FINAL()
                 self._log("no_code", {"response_preview": response_text[:500]})
                 messages += [
                     {"role": "assistant", "content": response_text},
                     {
                         "role": "user",
-                        "content": "Write Python code in a ```python block. Call set_output() with your answer.",
+                        "content": "Use ```python and call FINAL('your answer').",
                     },
                 ]
                 continue
 
             if self.on_step:
-                self.on_step("executing", {"iteration": iteration + 1, "code": code[:300]})
+                self.on_step("executing", {"iteration": iteration + 1, "code": code})  # Full code for debugging
 
             result = self._repl.execute(code)
             self._log("code_exec", {"code": code[:500], "output": result.get("output"), "state": result.get("state")})
@@ -559,14 +606,14 @@ class RLM:
                     "executed",
                     {
                         "iteration": iteration + 1,
-                        "stdout": result.get("stdout", "")[:200],
+                        "stdout": result.get("stdout", ""),  # Full stdout for debugging
                         "output": result.get("output"),
                         "error": result.get("error"),
                     },
                 )
 
-            # Only break if we have actual output (not empty string)
-            if result.get("output"):
+            # Break if FINAL() was called
+            if result.get("output") is not None:
                 final_output = result["output"]
                 break
 
@@ -596,7 +643,7 @@ class RLM:
             self._save_log(task)
 
         return RLMResult(
-            response=final_output or "No output",
+            response=final_output if final_output is not None else "No output",
             iterations=len([h for h in history if h["role"] == "assistant"]),
             total_tokens=total_tokens,
             input_tokens=input_tokens,

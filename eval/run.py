@@ -44,9 +44,29 @@ Usage:
 """
 
 import argparse
+import atexit
+import gc
 import logging
+import os
+import resource
+import signal
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+
+def get_memory_mb() -> float:
+    """Get current memory usage in MB."""
+    try:
+        # rusage returns memory in KB on Linux, bytes on macOS
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        # maxrss is in KB on Linux, bytes on macOS
+        if sys.platform == "darwin":
+            return usage.ru_maxrss / (1024 * 1024)  # bytes -> MB
+        else:
+            return usage.ru_maxrss / 1024  # KB -> MB
+    except Exception:
+        return 0.0
 
 from tqdm import tqdm
 
@@ -142,6 +162,14 @@ Examples:
 
     parser.add_argument("--quiet", "-q", action="store_true", help="Reduce output verbosity")
 
+    parser.add_argument(
+        "--parallel",
+        "-p",
+        type=int,
+        default=3,
+        help="Max parallel runners per task (default: 3 = all runners in parallel)",
+    )
+
     return parser.parse_args()
 
 
@@ -160,6 +188,7 @@ def run_evaluation(
     context_sizes: list[int] | None = None,
     verbose: bool = True,
     results_accumulator: list[EvalResult] | None = None,
+    max_parallel: int = 3,
 ) -> list[EvalResult]:
     """
     Run the full evaluation suite.
@@ -224,6 +253,7 @@ def run_evaluation(
                     model=model,
                     runs=runs,
                     verbose=verbose,
+                    max_parallel=max_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "long_context":
@@ -252,6 +282,7 @@ def run_evaluation(
                     model=model,
                     runs=runs,
                     verbose=verbose,
+                    max_parallel=max_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "json_extraction":
@@ -265,6 +296,7 @@ def run_evaluation(
                     model=model,
                     runs=runs,
                     verbose=verbose,
+                    max_parallel=max_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "json_aggregation":
@@ -278,6 +310,7 @@ def run_evaluation(
                     model=model,
                     runs=runs,
                     verbose=verbose,
+                    max_parallel=max_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "oolong":
@@ -291,6 +324,7 @@ def run_evaluation(
                     model=model,
                     runs=runs,
                     verbose=verbose,
+                    max_parallel=max_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "codeqa":
@@ -304,6 +338,7 @@ def run_evaluation(
                     model=model,
                     runs=runs,
                     verbose=verbose,
+                    max_parallel=max_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "browsecomp":
@@ -317,6 +352,7 @@ def run_evaluation(
                     model=model,
                     runs=runs,
                     verbose=verbose,
+                    max_parallel=max_parallel,
                 )
                 all_results.extend(results)
         else:
@@ -356,6 +392,32 @@ def _get_base_task_name(task_name: str) -> str:
         return task_name
 
 
+def _run_single_runner(
+    runner_name: str,
+    runner,
+    task,
+    instance,
+    model: str,
+) -> tuple[str, RunResult, bool, float]:
+    """Run a single runner on a task instance. Returns (runner_name, result, correct, partial_score)."""
+    try:
+        run_result = runner.run(instance.task, instance.context)
+        correct = task.check(run_result.response, instance.expected)
+        partial_score = task.check_partial(run_result.response, instance.expected)
+        return runner_name, run_result, correct, partial_score
+    except Exception as e:
+        run_result = RunResult(
+            response="",
+            total_tokens=0,
+            input_tokens=0,
+            output_tokens=0,
+            time_seconds=0.0,
+            iterations=0,
+            error=str(e),
+        )
+        return runner_name, run_result, False, 0.0
+
+
 def _run_task_evaluations(
     task_name: str,
     task_kwargs: dict,
@@ -363,8 +425,9 @@ def _run_task_evaluations(
     model: str,
     runs: int,
     verbose: bool,
+    max_parallel: int = 3,
 ) -> list[EvalResult]:
-    """Run evaluations for a single task across all runners."""
+    """Run evaluations for a single task across all runners (in parallel)."""
     results = []
 
     # Get base task name (handle parameterized names like scaling_8192, json_extraction_100k)
@@ -378,7 +441,7 @@ def _run_task_evaluations(
 
     if verbose:
         log.info(f"\n{'=' * 60}")
-        log.info(f"TASK: {task_name.upper()}")
+        log.info(f"TASK: {task_name.upper()} (parallel: {min(len(runners), max_parallel)})")
         log.info(f"{'=' * 60}")
 
     run_pbar = tqdm(range(runs), desc=f"{task_name}", leave=False, disable=not verbose)
@@ -390,66 +453,73 @@ def _run_task_evaluations(
 
         run_pbar.set_postfix({"context": f"{len(instance.context):,} chars", "run": f"{run_idx + 1}/{runs}"})
 
-        for runner_name, runner in tqdm(runners.items(), desc="  runners", leave=False, disable=not verbose):
-            try:
-                # Execute
-                run_result = runner.run(instance.task, instance.context)
+        # Run all runners in parallel (up to max_parallel)
+        gc.collect()  # GC before parallel execution
 
-                # Check correctness
-                correct = task.check(run_result.response, instance.expected)
-                partial_score = task.check_partial(run_result.response, instance.expected)
-            except KeyboardInterrupt:
-                tqdm.write(f"\n⚠️  Interrupted by user during {runner_name} on {task_name}")
-                raise
-            except Exception as e:
-                tqdm.write(f"\n❌ ERROR in {runner_name} on {task_name}: {type(e).__name__}: {e}")
-                # Create a failed result
-                run_result = RunResult(
-                    response="",
-                    total_tokens=0,
-                    input_tokens=0,
-                    output_tokens=0,
-                    time_seconds=0.0,
-                    iterations=0,
-                    error=str(e),
+        with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+            # Submit all runners
+            futures = {
+                executor.submit(_run_single_runner, runner_name, runner, task, instance, model): runner_name
+                for runner_name, runner in runners.items()
+            }
+
+            # Collect results as they complete
+            for future in as_completed(futures):
+                runner_name = futures[future]
+                try:
+                    runner_name, run_result, correct, partial_score = future.result()
+                except KeyboardInterrupt:
+                    tqdm.write(f"\n⚠️  Interrupted by user during {runner_name} on {task_name}")
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise
+                except Exception as e:
+                    tqdm.write(f"\n❌ ERROR in {runner_name} on {task_name}: {type(e).__name__}: {e}")
+                    run_result = RunResult(
+                        response="",
+                        total_tokens=0,
+                        input_tokens=0,
+                        output_tokens=0,
+                        time_seconds=0.0,
+                        iterations=0,
+                        error=str(e),
+                    )
+                    correct = False
+                    partial_score = 0.0
+
+                # Calculate cost
+                cost = calculate_cost(model, run_result.input_tokens, run_result.output_tokens)
+
+                # Create result
+                eval_result = EvalResult(
+                    task_name=task_name,
+                    task_instance_seed=seed,
+                    runner_name=runner_name,
+                    model=model,
+                    correct=correct,
+                    partial_score=partial_score,
+                    response=run_result.response,
+                    expected=instance.expected,
+                    total_tokens=run_result.total_tokens,
+                    input_tokens=run_result.input_tokens,
+                    output_tokens=run_result.output_tokens,
+                    time_seconds=run_result.time_seconds,
+                    iterations=run_result.iterations,
+                    error=run_result.error,
+                    context_size=len(instance.context),
+                    metadata=instance.metadata or {},
+                    cost_usd=cost,
                 )
-                correct = False
-                partial_score = 0.0
+                results.append(eval_result)
 
-            # Calculate cost
-            cost = calculate_cost(model, run_result.input_tokens, run_result.output_tokens)
-
-            # Create result
-            eval_result = EvalResult(
-                task_name=task_name,
-                task_instance_seed=seed,
-                runner_name=runner_name,
-                model=model,
-                correct=correct,
-                partial_score=partial_score,
-                response=run_result.response,
-                expected=instance.expected,
-                total_tokens=run_result.total_tokens,
-                input_tokens=run_result.input_tokens,
-                output_tokens=run_result.output_tokens,
-                time_seconds=run_result.time_seconds,
-                iterations=run_result.iterations,
-                error=run_result.error,
-                context_size=len(instance.context),
-                metadata=instance.metadata or {},
-                cost_usd=cost,
-            )
-            results.append(eval_result)
-
-            if verbose:
-                status = "✓" if correct else "✗"
-                error_info = f" | ⚠️ {run_result.error}" if run_result.error else ""
-                tqdm.write(
-                    f"    {runner_name}: {status} | "
-                    f"{run_result.input_tokens:,}+{run_result.output_tokens:,} tokens | "
-                    f"{run_result.time_seconds:.1f}s | "
-                    f"{run_result.iterations} iters{error_info}"
-                )
+                if verbose:
+                    status = "✓" if correct else "✗"
+                    error_info = f" | ⚠️ {run_result.error}" if run_result.error else ""
+                    tqdm.write(
+                        f"    {runner_name}: {status} | "
+                        f"{run_result.input_tokens:,}+{run_result.output_tokens:,} tokens | "
+                        f"{run_result.time_seconds:.1f}s | "
+                        f"{run_result.iterations} iters{error_info}"
+                    )
 
     return results
 
@@ -572,6 +642,34 @@ def main():
     # Run evaluation with crash protection
     # Use mutable list so partial results survive crashes
     results: list[EvalResult] = []
+
+    def save_partial_results(sig_name: str = "unknown"):
+        """Emergency save of partial results."""
+        if results:
+            log.warning(f"\n⚠️  Saving {len(results)} partial results (signal: {sig_name})...")
+            try:
+                json_path, summary_path = save_results(results, output_dir)
+                log.info(f"Partial results saved to: {json_path}")
+            except Exception as e:
+                log.error(f"Failed to save partial results: {e}")
+
+    def signal_handler(signum, frame):
+        """Handle termination signals."""
+        sig_name = signal.Signals(signum).name
+        log.error(f"\n❌ Received signal {sig_name} ({signum})")
+        save_partial_results(sig_name)
+        sys.exit(128 + signum)
+
+    # Register signal handlers for common termination signals
+    for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
+        try:
+            signal.signal(sig, signal_handler)
+        except (ValueError, OSError):
+            pass  # Some signals may not be available on all platforms
+
+    # Register atexit handler for clean shutdown
+    atexit.register(lambda: save_partial_results("atexit") if results and not hasattr(main, "_saved") else None)
+
     try:
         run_evaluation(
             model=args.model,
@@ -583,6 +681,7 @@ def main():
             context_sizes=context_sizes,
             verbose=verbose,
             results_accumulator=results,  # Pass mutable list
+            max_parallel=args.parallel,
         )
     except KeyboardInterrupt:
         log.warning("\n⚠️  Evaluation interrupted by user")
@@ -599,6 +698,9 @@ def main():
     if not results:
         log.error("No results collected!")
         return
+
+    # Mark as saved to prevent atexit double-save
+    main._saved = True
 
     # Save results
     json_path, summary_path = save_results(results, output_dir)
@@ -620,4 +722,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # Ensure unbuffered output for crash diagnosis
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
     main()

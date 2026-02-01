@@ -6,12 +6,15 @@ Generates publication-quality plots:
 - Token efficiency analysis
 - Latency comparison
 - Scaling analysis (context length vs accuracy)
+- Cost by task and context length
 - Comprehensive summary dashboard
 """
 
 import json
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")  # Use non-GUI backend before importing pyplot
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -464,6 +467,139 @@ def plot_cost_comparison(
     return fig
 
 
+def plot_cost_by_task_and_context(
+    results: list[EvalResult], output_path: Path | None = None, title: str = "Cost by Task & Context"
+) -> plt.Figure | None:
+    """
+    Combined view: cost per task (left) and cost vs context length (right).
+    """
+    costs_available = any(r.cost_usd is not None for r in results)
+    if not costs_available:
+        return None
+
+    apply_style()
+
+    aggregated = aggregate_results(results)
+    tasks = sorted(aggregated.keys())
+    runners = sorted({r.runner_name for r in results})
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Left: Cost per task by runner
+    ax1 = axes[0]
+    x = np.arange(len(tasks))
+    width = 0.25
+
+    for i, runner in enumerate(runners):
+        costs = []
+        for task in tasks:
+            if runner in aggregated[task]:
+                task_results = [r for r in results if r.task_name == task and r.runner_name == runner]
+                task_costs = [r.cost_usd for r in task_results if r.cost_usd is not None]
+                avg_cost = sum(task_costs) / len(task_costs) * 1000 if task_costs else 0  # per 1000 queries
+                costs.append(avg_cost)
+            else:
+                costs.append(0)
+
+        bars = ax1.bar(
+            x + i * width,
+            costs,
+            width,
+            label=LABELS.get(runner, runner),
+            color=COLORS.get(runner, f"C{i}"),
+            alpha=0.85,
+        )
+
+        for bar, val in zip(bars, costs):
+            if val > 0:
+                ax1.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height(),
+                    f"${val:.2f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                    rotation=45,
+                )
+
+    ax1.set_ylabel("Cost per 1000 Queries (USD)")
+    ax1.set_title("Cost by Task", fontweight="bold")
+    ax1.set_xticks(x + width * (len(runners) - 1) / 2)
+    ax1.set_xticklabels([t.upper().replace("_", " ") for t in tasks], rotation=30, ha="right")
+    ax1.legend(loc="upper right")
+
+    # Right: Cost vs context length (line chart)
+    ax2 = axes[1]
+
+    # Group by runner and context size
+    cost_by_context: dict[str, dict[int, list[float]]] = {}
+    for r in results:
+        if r.cost_usd is None or r.context_size == 0:
+            continue
+        if r.runner_name not in cost_by_context:
+            cost_by_context[r.runner_name] = {}
+        if r.context_size not in cost_by_context[r.runner_name]:
+            cost_by_context[r.runner_name][r.context_size] = []
+        cost_by_context[r.runner_name][r.context_size].append(r.cost_usd)
+
+    has_context_data = any(len(sizes) > 1 for sizes in cost_by_context.values())
+
+    if has_context_data:
+        for runner, sizes in cost_by_context.items():
+            sorted_sizes = sorted(sizes.keys())
+            x_vals = sorted_sizes
+            y_vals = [sum(sizes[s]) / len(sizes[s]) * 1000 for s in sorted_sizes]  # per 1000 queries
+
+            ax2.plot(
+                x_vals,
+                y_vals,
+                marker=MARKERS.get(runner, "o"),
+                color=COLORS.get(runner, "gray"),
+                label=LABELS.get(runner, runner),
+                linewidth=2,
+                markersize=8,
+            )
+
+        ax2.set_xscale("log", base=2)
+        ax2.set_xlabel("Context Size (characters)")
+        ax2.set_ylabel("Cost per 1000 Queries (USD)")
+        ax2.set_title("Cost vs Context Length", fontweight="bold")
+        ax2.legend(loc="upper left")
+        ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"$2^{{{int(np.log2(x))}}}$" if x > 0 else "0"))
+    else:
+        # Fallback: show cost savings summary
+        ax2.axis("off")
+        summary_lines = ["Cost Savings Summary\n"]
+
+        vanilla_cost = sum(r.cost_usd for r in results if r.runner_name == "vanilla" and r.cost_usd) or 0
+        ours_cost = sum(r.cost_usd for r in results if r.runner_name == "ours" and r.cost_usd) or 0
+        official_cost = sum(r.cost_usd for r in results if r.runner_name == "official" and r.cost_usd) or 0
+
+        if vanilla_cost > 0:
+            summary_lines.append(f"Vanilla LLM: ${vanilla_cost:.4f}")
+        if ours_cost > 0:
+            summary_lines.append(f"minRLM: ${ours_cost:.4f}")
+            if vanilla_cost > 0:
+                savings = (1 - ours_cost / vanilla_cost) * 100
+                summary_lines.append(f"→ {savings:.0f}% cheaper than Vanilla")
+        if official_cost > 0:
+            summary_lines.append(f"Official RLM: ${official_cost:.4f}")
+
+        ax2.text(
+            0.5, 0.5, "\n".join(summary_lines),
+            transform=ax2.transAxes, fontsize=12, ha="center", va="center",
+            bbox={"boxstyle": "round", "facecolor": "lightgreen", "alpha": 0.3},
+        )
+
+    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.02)
+    plt.tight_layout()
+
+    if output_path:
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
+
+    return fig
+
+
 def plot_comprehensive_dashboard(
     results: list[EvalResult], output_dir: Path, title: str = "RLM Evaluation Dashboard"
 ) -> list[Path]:
@@ -502,6 +638,13 @@ def plot_comprehensive_dashboard(
     # 5. Cost comparison (if cost data available)
     path = output_dir / "cost_comparison.png"
     fig = plot_cost_comparison(results, path, "Cost Analysis")
+    if fig is not None:
+        saved_paths.append(path)
+        plt.close(fig)
+
+    # 6. Cost by task and context (new)
+    path = output_dir / "cost_by_task_context.png"
+    fig = plot_cost_by_task_and_context(results, path, "Cost by Task & Context Length")
     if fig is not None:
         saved_paths.append(path)
         plt.close(fig)
@@ -647,3 +790,28 @@ def load_and_visualize(json_path: Path, output_dir: Path) -> list[Path]:
 
     results = [EvalResult.from_dict(d) for d in data]
     return plot_comprehensive_dashboard(results, output_dir)
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) < 2:
+        print("Usage: python -m eval.visualize <results.json> [output_dir]")
+        print("\nGenerates visualization plots from evaluation results.")
+        sys.exit(1)
+
+    json_path = Path(sys.argv[1])
+    output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else json_path.parent / "plots"
+
+    if not json_path.exists():
+        print(f"Error: {json_path} not found")
+        sys.exit(1)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Loading results from {json_path}...")
+    paths = load_and_visualize(json_path, output_dir)
+
+    print(f"\n✅ Generated {len(paths)} plots in {output_dir}/")
+    for p in paths:
+        print(f"  - {p.name}")
