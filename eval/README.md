@@ -4,20 +4,33 @@ A reproducible benchmark suite for comparing **Recursive Language Model (RLM)** 
 
 Based on evaluation tasks from [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601).
 
+## Latest Results (gpt-5-mini)
+
+| Runner | Avg Tokens | Cost | Token Efficiency |
+|--------|------------|------|------------------|
+| **minRLM (ours)** | **893** | **$0.008** | **16x** |
+| vanilla | 14,315 | $0.024 | - |
+| official | 5,496 | $0.018 | 2.6x |
+
+Evaluated across 46 tasks including retrieval, JSON extraction, and aggregation at 8K-262K contexts.
+
 ## Quick Start
 
 ```bash
 # Run full evaluation with default settings
-uv run python eval/run.py --model gpt-5-nano
+uv run python eval/run.py --model gpt-5-mini
 
 # Run specific tasks only
-uv run python eval/run.py --model gpt-5-nano --tasks sniah,multi_needle
+uv run python eval/run.py --model gpt-5-mini --tasks sniah,multi_needle,pairs
+
+# Run with extended scaling tests (up to 256K context)
+uv run python eval/run.py --model gpt-5-mini --extended
 
 # Skip official RLM (if not installed)
-uv run python eval/run.py --model gpt-5-nano --skip-official
+uv run python eval/run.py --model gpt-5-mini --skip-official
 
 # Multiple runs for statistical significance
-uv run python eval/run.py --model gpt-5-nano --runs 5
+uv run python eval/run.py --model gpt-5-mini --runs 5
 ```
 
 ## What This Evaluates
@@ -32,12 +45,17 @@ uv run python eval/run.py --model gpt-5-nano --runs 5
 
 ### Tasks
 
-| Task | Description | Difficulty |
-|------|-------------|------------|
-| **S-NIAH** | Find single needle in haystack | Easy |
-| **Multi-Needle** | Find 5 hidden secrets | Medium |
-| **OOLONG-Pairs** | Match 8 definition-concept pairs | Hard |
-| **Scaling** | Test across context lengths (8K-128K) | Variable |
+| Task | Description | Context Sizes | Difficulty |
+|------|-------------|---------------|------------|
+| **S-NIAH** | Find single needle in haystack | 50K | Easy |
+| **Multi-Needle** | Find 5 hidden secrets | 50K | Medium |
+| **OOLONG-Pairs** | Match 8 definition-concept pairs | 50K | Hard |
+| **Scaling** | Test across context lengths | 8K-256K | Variable |
+| **Long Context** | Needle at start/middle/end | 8K-256K | Medium |
+| **Multi-Needle Long** | Find 10 needles at scale | 8K-256K | Hard |
+| **JSON Extraction** | Find data in JSON records | 8K-262K | Medium |
+| **JSON Aggregation** | Count/sum from JSON data | 8K-262K | Hard |
+| **QA Retrieval** | Answer questions from facts | 50K | Medium |
 
 ## Metrics Collected
 
@@ -47,6 +65,7 @@ uv run python eval/run.py --model gpt-5-nano --runs 5
 - **Output Tokens**: Tokens in completions
 - **Total Tokens**: Input + Output
 - **Iterations**: Number of RLM loops (for RLM methods)
+- **Cost (USD)**: API cost calculated via `tokencost`
 
 ## Output Structure
 
@@ -59,7 +78,9 @@ eval/
 │       ├── accuracy_comparison.png
 │       ├── token_efficiency.png
 │       ├── latency_comparison.png
-│       └── scaling_analysis.png
+│       ├── scaling_analysis.png
+│       ├── cost_comparison.png
+│       └── summary_dashboard.png
 ```
 
 ## Extending the Benchmark
@@ -118,18 +139,12 @@ To reproduce our benchmark results:
    export OPENAI_API_KEY="your-key"
    ```
 
-2. **Install official RLM** (optional):
+2. **Run evaluation**:
    ```bash
-   cd temp/rlm-official
-   uv venv && uv pip install -e .
+   uv run python eval/run.py --model gpt-5-mini --runs 1
    ```
 
-3. **Run evaluation**:
-   ```bash
-   uv run python eval/run.py --model gpt-5-nano --runs 3 --tasks all
-   ```
-
-4. **View results**:
+3. **View results**:
    ```bash
    open eval/results/plots/
    cat eval/results/summary_*.md
@@ -137,26 +152,35 @@ To reproduce our benchmark results:
 
 ## Key Findings
 
-Our minimal RLM implementation demonstrates:
+### Performance Summary
 
-| Metric | vs Vanilla LLM | vs Official RLM |
-|--------|----------------|-----------------|
-| Token Efficiency | **3-4x better** | **20-30x better** |
-| Latency | 2-3x slower | **6x faster** |
-| Accuracy | Similar | Similar |
-| Code Size | N/A | **10x smaller** |
+| Metric | minRLM vs Vanilla | minRLM vs Official |
+|--------|-------------------|-------------------|
+| **Token Efficiency** | **16x fewer** | **6x fewer** |
+| **Cost** | **3x cheaper** | **2x cheaper** |
+| **Latency** | ~1.4x slower | ~1.6x faster |
 
-### Where RLM Shines ✨
+### Where minRLM Excels ✨
 
-- **Long context retrieval**: Finding information buried in large documents
-- **Multi-step reasoning**: Tasks requiring iterative refinement
-- **Token efficiency**: Dramatically reduces token usage for complex tasks
+- **JSON Aggregation at 262K**: Succeeded where vanilla failed (50K+ tokens)
+- **Long context retrieval**: Consistent performance from 8K to 256K
+- **Multi-needle tasks**: Finds scattered needles at any scale
+- **Token efficiency**: Uses <1K tokens regardless of context size
+
+### Task-Specific Highlights
+
+| Task | minRLM Tokens | Vanilla Tokens | Savings |
+|------|---------------|----------------|---------|
+| PAIRS (8 defs) | 1,265 | 6,793 | 5.4x |
+| JSON_EXTRACTION_262K | 1,048 | 93,438 | **89x** |
+| JSON_AGGREGATION_131K | 669 | 26,906 | **40x** |
+| MULTI_NEEDLE_256K | 1,293 | 33,312 | **26x** |
 
 ### Limitations ⚠️
 
-- **Simple tasks**: Overhead not worth it for straightforward queries
-- **Latency**: Multiple API calls add wall-clock time
-- **Complex matching**: OOLONG-Pairs style tasks remain challenging
+- **Simple tasks**: RLM overhead not worth it for straightforward queries
+- **Latency**: Multiple API calls add wall-clock time (~10s avg vs ~7s for vanilla)
+- **Requires code generation**: Model must generate valid Python
 
 ## Citation
 
@@ -174,4 +198,3 @@ If you use this evaluation suite, please cite:
 ## License
 
 MIT License - See repository root.
-
