@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "openai>=1.0.0",
+    "tokencost>=0.1.26",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +33,7 @@ dev = [
     "numpy>=1.24.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
+    "tqdm>=4.66.0",
 ]
 all = [
     "minrlm[visualizer,dev]",

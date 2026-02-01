@@ -20,6 +20,15 @@ Usage:
     # Custom context sizes for scaling test
     uv run python eval/run.py --model gpt-5-nano --tasks scaling --context-sizes 8192,16384,32768
 
+    # Extended evaluation (8K to 256K contexts)
+    uv run python eval/run.py --model gpt-5-nano --tasks scaling --extended
+
+    # Long context stress test (128K-256K)
+    uv run python eval/run.py --model gpt-5-nano --tasks long_context --context-sizes 131072,262144
+
+    # Multi-needle at large scale
+    uv run python eval/run.py --model gpt-5-nano --tasks multi_needle_long
+
     # Output to specific directory
     uv run python eval/run.py --model gpt-5-nano --output-dir my_results/
 """
@@ -29,11 +38,13 @@ import logging
 import sys
 from pathlib import Path
 
+from tqdm import tqdm
+
 # Ensure our module is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-from eval.metrics import EvalResult, compute_statistics, save_results
+from eval.metrics import EvalResult, calculate_cost, compute_statistics, save_results
 from eval.runners import RUNNER_REGISTRY, get_runner
 from eval.tasks import TASK_REGISTRY, get_task
 from eval.visualize import plot_comprehensive_dashboard
@@ -96,8 +107,14 @@ Examples:
 
     parser.add_argument(
         "--context-sizes",
-        default="8192,16384,32768,65536",
-        help="Context sizes for scaling benchmark (comma-separated)",
+        default="8192,16384,32768,65536,131072",
+        help="Context sizes for scaling benchmark (comma-separated). Use --context-sizes large for extended test.",
+    )
+
+    parser.add_argument(
+        "--extended",
+        action="store_true",
+        help="Run extended scaling tests (8K to 256K contexts)",
     )
 
     parser.add_argument("--context-size", type=int, default=50000, help="Default context size for non-scaling tasks")
@@ -173,16 +190,67 @@ def run_evaluation(
         return []
 
     # Run evaluations
-    total_evals = len(tasks) * len(active_runners) * runs
-    current_eval = 0
-
-    for task_name in tasks:
+    for task_name in tqdm(tasks, desc="Tasks", disable=not verbose):
         # Handle scaling task specially
         if task_name == "scaling":
             sizes = context_sizes or [8192, 16384, 32768, 65536]
             for size in sizes:
                 results = _run_task_evaluations(
                     task_name=f"scaling_{size}",
+                    task_kwargs={"context_size": size},
+                    runners=active_runners,
+                    model=model,
+                    runs=runs,
+                    verbose=verbose,
+                )
+                all_results.extend(results)
+        elif task_name == "long_context":
+            # Test at multiple large context sizes with position variation
+            long_sizes = context_sizes or [131072, 262144]
+            positions = ["start", "middle", "end"]
+            for size in long_sizes:
+                for pos in positions:
+                    results = _run_task_evaluations(
+                        task_name=f"long_context_{size // 1024}k_{pos}",
+                        task_kwargs={"context_size": size, "position": pos},
+                        runners=active_runners,
+                        model=model,
+                        runs=runs,
+                        verbose=verbose,
+                    )
+                    all_results.extend(results)
+        elif task_name == "multi_needle_long":
+            # Test multi-needle at large context sizes
+            long_sizes = context_sizes or [131072, 262144]
+            for size in long_sizes:
+                results = _run_task_evaluations(
+                    task_name=f"multi_needle_{size // 1024}k",
+                    task_kwargs={"context_size": size, "num_needles": 10},
+                    runners=active_runners,
+                    model=model,
+                    runs=runs,
+                    verbose=verbose,
+                )
+                all_results.extend(results)
+        elif task_name == "json_extraction":
+            # JSON extraction at various sizes
+            json_sizes = context_sizes or [50000, 100000, 200000]
+            for size in json_sizes:
+                results = _run_task_evaluations(
+                    task_name=f"json_extraction_{size // 1000}k",
+                    task_kwargs={"context_size": size},
+                    runners=active_runners,
+                    model=model,
+                    runs=runs,
+                    verbose=verbose,
+                )
+                all_results.extend(results)
+        elif task_name == "json_aggregation":
+            # JSON aggregation at various sizes
+            json_sizes = context_sizes or [50000, 100000, 200000]
+            for size in json_sizes:
+                results = _run_task_evaluations(
+                    task_name=f"json_aggregation_{size // 1000}k",
                     task_kwargs={"context_size": size},
                     runners=active_runners,
                     model=model,
@@ -204,6 +272,23 @@ def run_evaluation(
     return all_results
 
 
+def _get_base_task_name(task_name: str) -> str:
+    """Extract the registered task name from a parameterized task name."""
+    # Map parameterized task names to their base registered names
+    if task_name.startswith("scaling_"):
+        return "scaling"
+    elif task_name.startswith("long_context_"):
+        return "long_context"
+    elif task_name.startswith("multi_needle_") and task_name not in ("multi_needle", "multi_needle_long"):
+        return "multi_needle_long"
+    elif task_name.startswith("json_extraction_"):
+        return "json_extraction"
+    elif task_name.startswith("json_aggregation_"):
+        return "json_aggregation"
+    else:
+        return task_name
+
+
 def _run_task_evaluations(
     task_name: str,
     task_kwargs: dict,
@@ -215,8 +300,8 @@ def _run_task_evaluations(
     """Run evaluations for a single task across all runners."""
     results = []
 
-    # Get base task name (strip scaling suffix if present)
-    base_task_name = task_name.split("_")[0] if "scaling" in task_name else task_name
+    # Get base task name (handle parameterized names like scaling_8192, json_extraction_100k)
+    base_task_name = _get_base_task_name(task_name)
 
     try:
         task = get_task(base_task_name)
@@ -229,25 +314,25 @@ def _run_task_evaluations(
         log.info(f"TASK: {task_name.upper()}")
         log.info(f"{'=' * 60}")
 
-    for run_idx in range(runs):
+    run_pbar = tqdm(range(runs), desc=f"{task_name}", leave=False, disable=not verbose)
+    for run_idx in run_pbar:
         seed = 42 + run_idx * 100
 
         # Generate task instance
         instance = task.generate(seed=seed, **task_kwargs)
 
-        if verbose:
-            log.info(f"\nRun {run_idx + 1}/{runs} | Context: {len(instance.context):,} chars")
+        run_pbar.set_postfix({"context": f"{len(instance.context):,} chars", "run": f"{run_idx + 1}/{runs}"})
 
-        for runner_name, runner in runners.items():
-            if verbose:
-                log.info(f"  Running {runner_name}...")
-
+        for runner_name, runner in tqdm(runners.items(), desc="  runners", leave=False, disable=not verbose):
             # Execute
             run_result = runner.run(instance.task, instance.context)
 
             # Check correctness
             correct = task.check(run_result.response, instance.expected)
             partial_score = task.check_partial(run_result.response, instance.expected)
+
+            # Calculate cost
+            cost = calculate_cost(model, run_result.input_tokens, run_result.output_tokens)
 
             # Create result
             eval_result = EvalResult(
@@ -267,14 +352,15 @@ def _run_task_evaluations(
                 error=run_result.error,
                 context_size=len(instance.context),
                 metadata=instance.metadata or {},
+                cost_usd=cost,
             )
             results.append(eval_result)
 
             if verbose:
                 status = "✓" if correct else "✗"
-                log.info(
+                tqdm.write(
                     f"    {runner_name}: {status} | "
-                    f"{run_result.total_tokens:,} tokens | "
+                    f"{run_result.input_tokens:,}+{run_result.output_tokens:,} tokens | "
                     f"{run_result.time_seconds:.1f}s | "
                     f"{run_result.iterations} iters"
                 )
@@ -286,6 +372,9 @@ def print_summary(results: list[EvalResult]):
     """Print a summary table of results."""
     stats = compute_statistics(results)
 
+    # Check if cost data is available
+    has_cost = any(data.get("total_cost_usd") is not None for data in stats.get("by_runner", {}).values())
+
     print("\n" + "=" * 80)
     print("EVALUATION SUMMARY")
     print("=" * 80)
@@ -294,21 +383,42 @@ def print_summary(results: list[EvalResult]):
     print(f"Total Evaluations: {stats.get('total_evaluations', 0)}")
 
     print("\n" + "-" * 80)
-    print(f"{'Runner':<15} {'Accuracy':>10} {'Avg Tokens':>12} {'Avg Time':>10} {'Token Eff':>12}")
+    if has_cost:
+        print(
+            f"{'Runner':<15} {'Accuracy':>10} {'Avg Tokens':>12} {'Avg Time':>10} {'Total Cost':>12} {'Token Eff':>10}"
+        )
+    else:
+        print(f"{'Runner':<15} {'Accuracy':>10} {'Avg Tokens':>12} {'Avg Time':>10} {'Token Eff':>12}")
     print("-" * 80)
 
     for runner, data in stats.get("by_runner", {}).items():
         eff = data.get("token_efficiency_vs_vanilla", 1.0)
         eff_str = f"{eff:.2f}x" if eff != 1.0 else "-"
-        print(
-            f"{runner:<15} "
-            f"{data.get('overall_accuracy', 0):>9.1f}% "
-            f"{data.get('avg_tokens_per_task', 0):>12,.0f} "
-            f"{data.get('avg_time_per_task', 0):>9.1f}s "
-            f"{eff_str:>12}"
-        )
+        cost = data.get("total_cost_usd")
+        cost_str = f"${cost:.4f}" if cost is not None else "N/A"
+
+        if has_cost:
+            print(
+                f"{runner:<15} "
+                f"{data.get('overall_accuracy', 0):>9.1f}% "
+                f"{data.get('avg_tokens_per_task', 0):>12,.0f} "
+                f"{data.get('avg_time_per_task', 0):>9.1f}s "
+                f"{cost_str:>12} "
+                f"{eff_str:>10}"
+            )
+        else:
+            print(
+                f"{runner:<15} "
+                f"{data.get('overall_accuracy', 0):>9.1f}% "
+                f"{data.get('avg_tokens_per_task', 0):>12,.0f} "
+                f"{data.get('avg_time_per_task', 0):>9.1f}s "
+                f"{eff_str:>12}"
+            )
 
     print("-" * 80)
+
+    if not has_cost:
+        print("\n⚠️  Cost calculation unavailable (model not in tokencost database)")
 
     # Per-task breakdown
     print("\nBy Task:")
@@ -349,7 +459,16 @@ def main():
         runners.remove("official")
 
     # Parse context sizes
-    context_sizes = [int(s.strip()) for s in args.context_sizes.split(",")] if args.context_sizes else None
+    if args.extended:
+        # Extended test: 8K to 256K (paper-style evaluation)
+        context_sizes = [8192, 16384, 32768, 65536, 131072, 262144]
+    elif args.context_sizes == "large":
+        # Large preset: include 128K and 256K
+        context_sizes = [32768, 65536, 131072, 262144]
+    elif args.context_sizes:
+        context_sizes = [int(s.strip()) for s in args.context_sizes.split(",")]
+    else:
+        context_sizes = None
 
     # Output directory
     output_dir = Path(args.output_dir)

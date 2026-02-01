@@ -6,6 +6,7 @@ Provides:
 - Aggregation functions for multiple runs
 - Statistical analysis utilities
 - Report generation
+- Cost calculation via tokencost
 """
 
 import json
@@ -13,6 +14,35 @@ import statistics
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+# Cost calculation
+try:
+    from tokencost import calculate_completion_cost, calculate_prompt_cost
+
+    TOKENCOST_AVAILABLE = True
+except ImportError:
+    TOKENCOST_AVAILABLE = False
+
+
+def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
+    """
+    Calculate cost for a completion using tokencost.
+
+    Returns None if model is not supported or tokencost is unavailable.
+    """
+    if not TOKENCOST_AVAILABLE:
+        return None
+
+    try:
+        # tokencost expects actual text, but we only have token counts
+        # Use a workaround: create dummy strings of the right length
+        # (tokencost will tokenize and may differ slightly, but close enough)
+        input_cost = calculate_prompt_cost(prompt="x" * input_tokens, model=model)
+        output_cost = calculate_completion_cost(completion="x" * output_tokens, model=model)
+        return float(input_cost + output_cost)
+    except Exception:
+        # Model not in tokencost database
+        return None
 
 
 @dataclass
@@ -45,6 +75,9 @@ class EvalResult:
     context_size: int = 0
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     metadata: dict = field(default_factory=dict)
+
+    # Cost (None if model not supported by tokencost)
+    cost_usd: float | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -87,6 +120,10 @@ class AggregatedMetrics:
     # Efficiency ratios (compared to baseline)
     token_efficiency: float | None = None  # baseline_tokens / our_tokens
     time_efficiency: float | None = None  # our_time / baseline_time
+
+    # Cost (None if not calculable)
+    avg_cost_usd: float | None = None
+    total_cost_usd: float | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -168,6 +205,11 @@ def _compute_metrics(task_name: str, runner_name: str, model: str, results: list
     n = len(results)
     correct_list = [1 if r.correct else 0 for r in results]
 
+    # Calculate cost metrics
+    costs = [r.cost_usd for r in results if r.cost_usd is not None]
+    avg_cost = statistics.mean(costs) if costs else None
+    total_cost = sum(costs) if costs else None
+
     return AggregatedMetrics(
         task_name=task_name,
         runner_name=runner_name,
@@ -184,6 +226,8 @@ def _compute_metrics(task_name: str, runner_name: str, model: str, results: list
         avg_time_seconds=statistics.mean(r.time_seconds for r in results),
         std_time_seconds=statistics.stdev(r.time_seconds for r in results) if n > 1 else 0,
         avg_iterations=statistics.mean(r.iterations for r in results),
+        avg_cost_usd=avg_cost,
+        total_cost_usd=total_cost,
     )
 
 
@@ -217,6 +261,11 @@ def compute_statistics(results: list[EvalResult]) -> dict:
     for runner_name in {r.runner_name for r in results}:
         runner_results = [r for r in results if r.runner_name == runner_name]
 
+        # Calculate costs
+        costs = [r.cost_usd for r in runner_results if r.cost_usd is not None]
+        total_cost = sum(costs) if costs else None
+        avg_cost = statistics.mean(costs) if costs else None
+
         stats["by_runner"][runner_name] = {
             "total_runs": len(runner_results),
             "overall_accuracy": sum(r.correct for r in runner_results) / len(runner_results) * 100,
@@ -224,6 +273,8 @@ def compute_statistics(results: list[EvalResult]) -> dict:
             "avg_tokens_per_task": statistics.mean(r.total_tokens for r in runner_results),
             "avg_time_per_task": statistics.mean(r.time_seconds for r in runner_results),
             "avg_iterations": statistics.mean(r.iterations for r in runner_results),
+            "total_cost_usd": total_cost,
+            "avg_cost_usd": avg_cost,
         }
 
     # Efficiency comparisons
@@ -264,6 +315,9 @@ def save_results(results: list[EvalResult], output_dir: Path, prefix: str = "eva
 
 def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
     """Generate a markdown summary report."""
+    # Check if cost data is available
+    has_cost = any(data.get("total_cost_usd") is not None for data in stats.get("by_runner", {}).values())
+
     lines = [
         "# RLM Evaluation Report",
         "",
@@ -273,19 +327,36 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
         "",
         "## Summary by Runner",
         "",
-        "| Runner | Accuracy | Avg Tokens | Avg Time | Token Efficiency |",
-        "|--------|----------|------------|----------|------------------|",
     ]
+
+    if has_cost:
+        lines.append("| Runner | Accuracy | Avg Tokens | Avg Time | Total Cost | Token Efficiency |")
+        lines.append("|--------|----------|------------|----------|------------|------------------|")
+    else:
+        lines.append("| Runner | Accuracy | Avg Tokens | Avg Time | Token Efficiency |")
+        lines.append("|--------|----------|------------|----------|------------------|")
 
     for runner, data in stats.get("by_runner", {}).items():
         efficiency = data.get("token_efficiency_vs_vanilla", 1.0)
         efficiency_str = f"{efficiency:.2f}x" if efficiency != 1.0 else "-"
-        lines.append(
-            f"| {runner} | {data.get('overall_accuracy', 0):.1f}% | "
-            f"{data.get('avg_tokens_per_task', 0):.0f} | "
-            f"{data.get('avg_time_per_task', 0):.1f}s | "
-            f"{efficiency_str} |"
-        )
+        cost = data.get("total_cost_usd")
+        cost_str = f"${cost:.4f}" if cost is not None else "N/A"
+
+        if has_cost:
+            lines.append(
+                f"| {runner} | {data.get('overall_accuracy', 0):.1f}% | "
+                f"{data.get('avg_tokens_per_task', 0):.0f} | "
+                f"{data.get('avg_time_per_task', 0):.1f}s | "
+                f"{cost_str} | "
+                f"{efficiency_str} |"
+            )
+        else:
+            lines.append(
+                f"| {runner} | {data.get('overall_accuracy', 0):.1f}% | "
+                f"{data.get('avg_tokens_per_task', 0):.0f} | "
+                f"{data.get('avg_time_per_task', 0):.1f}s | "
+                f"{efficiency_str} |"
+            )
 
     lines.extend(
         [
@@ -339,6 +410,19 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
 
     if ours:
         lines.append(f"- **Average iterations**: {ours.get('avg_iterations', 0):.1f} per task")
+
+    # Cost findings
+    vanilla_cost = vanilla.get("total_cost_usd")
+    ours_cost = ours.get("total_cost_usd")
+    official_cost = official.get("total_cost_usd")
+
+    if vanilla_cost is not None and ours_cost is not None and ours_cost > 0:
+        cost_ratio = vanilla_cost / ours_cost
+        lines.append(
+            f"- **Cost savings**: minRLM is **{cost_ratio:.1f}x cheaper** than vanilla (${ours_cost:.4f} vs ${vanilla_cost:.4f})"
+        )
+    elif ours_cost is None:
+        lines.append("- **Cost**: Unable to calculate (model not in tokencost database)")
 
     return "\n".join(lines)
 

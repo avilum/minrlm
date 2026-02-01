@@ -390,6 +390,80 @@ def plot_scaling_analysis(
     return fig
 
 
+def plot_cost_comparison(
+    results: list[EvalResult], output_path: Path | None = None, title: str = "Cost Analysis"
+) -> plt.Figure | None:
+    """
+    Bar chart showing cost comparison across methods.
+    Returns None if no cost data is available.
+    """
+    # Check if cost data is available
+    costs_available = any(r.cost_usd is not None for r in results)
+    if not costs_available:
+        return None
+
+    apply_style()
+
+    runners = sorted({r.runner_name for r in results})
+
+    # Calculate total cost per runner
+    runner_costs = {}
+    for runner in runners:
+        runner_results = [r for r in results if r.runner_name == runner]
+        costs = [r.cost_usd for r in runner_results if r.cost_usd is not None]
+        if costs:
+            runner_costs[runner] = {
+                "total": sum(costs),
+                "avg": sum(costs) / len(costs),
+                "count": len(costs),
+            }
+
+    if not runner_costs:
+        return None
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Left: Total cost
+    ax1 = axes[0]
+    runners_with_cost = list(runner_costs.keys())
+    totals = [runner_costs[r]["total"] for r in runners_with_cost]
+    colors = [COLORS.get(r, "gray") for r in runners_with_cost]
+
+    bars = ax1.bar(runners_with_cost, totals, color=colors, alpha=0.85)
+    for bar, val in zip(bars, totals):
+        ax1.text(
+            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"${val:.4f}", ha="center", va="bottom", fontsize=10
+        )
+
+    ax1.set_ylabel("Total Cost (USD)")
+    ax1.set_title("Total Cost by Runner", fontweight="bold")
+    ax1.set_xticks(range(len(runners_with_cost)))
+    ax1.set_xticklabels([LABELS.get(r, r) for r in runners_with_cost])
+
+    # Right: Cost per query
+    ax2 = axes[1]
+    avgs = [runner_costs[r]["avg"] * 1000 for r in runners_with_cost]  # Cost per 1000 queries
+
+    bars = ax2.bar(runners_with_cost, avgs, color=colors, alpha=0.85)
+    for bar, val in zip(bars, avgs):
+        ax2.text(
+            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"${val:.2f}", ha="center", va="bottom", fontsize=10
+        )
+
+    ax2.set_ylabel("Cost per 1000 Queries (USD)")
+    ax2.set_title("Cost per 1000 Queries", fontweight="bold")
+    ax2.set_xticks(range(len(runners_with_cost)))
+    ax2.set_xticklabels([LABELS.get(r, r) for r in runners_with_cost])
+
+    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.02)
+    plt.tight_layout()
+
+    if output_path:
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
+
+    return fig
+
+
 def plot_comprehensive_dashboard(
     results: list[EvalResult], output_dir: Path, title: str = "RLM Evaluation Dashboard"
 ) -> list[Path]:
@@ -425,7 +499,14 @@ def plot_comprehensive_dashboard(
         plot_scaling_analysis(scaling_results, path, "Context Scaling Analysis")
         saved_paths.append(path)
 
-    # 5. Summary dashboard
+    # 5. Cost comparison (if cost data available)
+    path = output_dir / "cost_comparison.png"
+    fig = plot_cost_comparison(results, path, "Cost Analysis")
+    if fig is not None:
+        saved_paths.append(path)
+        plt.close(fig)
+
+    # 6. Summary dashboard
     path = output_dir / "summary_dashboard.png"
     _plot_summary_dashboard(results, path, title)
     saved_paths.append(path)
@@ -525,6 +606,18 @@ def _plot_summary_dashboard(results: list[EvalResult], output_path: Path, title:
         summary_lines.append(f"✓ minRLM uses {vanilla_tokens / ours_tokens:.1f}x fewer tokens than Vanilla LLM")
     if official_tokens > 0 and ours_tokens > 0:
         summary_lines.append(f"✓ minRLM uses {official_tokens / ours_tokens:.1f}x fewer tokens than Official RLM")
+
+    # Cost efficiency
+    vanilla_cost = stats.get("by_runner", {}).get("vanilla", {}).get("total_cost_usd")
+    ours_cost = stats.get("by_runner", {}).get("ours", {}).get("total_cost_usd")
+
+    if vanilla_cost is not None and ours_cost is not None and ours_cost > 0:
+        cost_ratio = vanilla_cost / ours_cost
+        summary_lines.append(
+            f"✓ minRLM is {cost_ratio:.1f}x cheaper than Vanilla (${ours_cost:.4f} vs ${vanilla_cost:.4f})"
+        )
+    elif ours_cost is None:
+        summary_lines.append("⚠ Cost data unavailable (model not in tokencost)")
 
     summary_text = "\n".join(summary_lines)
     ax7.text(

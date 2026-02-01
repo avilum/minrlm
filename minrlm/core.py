@@ -35,7 +35,7 @@ class RLMResult:
 class PythonREPL:
     """Persistent Python REPL with sub_llm() and set_output() support."""
 
-    HIDDEN_KEYS = {"__builtins__", "sub_llm", "sub_llm_batch", "set_output", "set_output_var", "peek"}
+    HIDDEN_KEYS = {"__builtins__", "sub_llm", "sub_llm_batch", "set_output", "set_output_var", "peek", "search"}
 
     def __init__(self, sub_llm_callback: Callable | None = None, sub_llm_batch_callback: Callable | None = None):
         self._output: str | None = None
@@ -46,6 +46,7 @@ class PythonREPL:
             "set_output": self._set_output,
             "set_output_var": self._set_output_var,
             "peek": self._peek,
+            "search": self._search,
         }
 
     def _make_sub_llm(self, callback: Callable[[str, str], str] | None) -> Callable[[str, str], str]:
@@ -71,6 +72,41 @@ class PythonREPL:
     def _set_output(self, value: str) -> None:
         self._output = str(value)
 
+    def _search(self, text: str, pattern: str, context: int = 100) -> list[str]:
+        """Search for pattern in text and return all matches with surrounding context.
+
+        Args:
+            text: The text to search in
+            pattern: The pattern to find (case-insensitive)
+            context: Number of characters to show around each match
+
+        Returns:
+            List of matches with context, prints them too
+        """
+        matches = []
+        text_lower = text.lower()
+        pattern_lower = pattern.lower()
+        start = 0
+
+        while True:
+            pos = text_lower.find(pattern_lower, start)
+            if pos == -1:
+                break
+            # Extract match with context
+            ctx_start = max(0, pos - context)
+            ctx_end = min(len(text), pos + len(pattern) + context)
+            match_text = text[ctx_start:ctx_end]
+            matches.append(match_text)
+            print(f"[Match at {pos}]: ...{match_text}...")
+            start = pos + 1
+
+        if not matches:
+            print(f"No matches found for '{pattern}'")
+        else:
+            print(f"\nFound {len(matches)} match(es) for '{pattern}'")
+
+        return matches
+
     def _set_output_var(self, var_name: str) -> None:
         """Set output from a variable in the namespace (FINAL_VAR from paper)."""
         if var_name not in self._namespace:
@@ -87,12 +123,15 @@ class PythonREPL:
                 preview = repr(data)
                 print(f"{indent}{preview}")
             else:
-                # Show start AND a sample from middle to reveal patterns
-                start = data[: max_len // 2]
+                # Show start, middle, AND end to reveal patterns throughout
+                chunk_size = max_len // 3
+                start = data[:chunk_size]
                 mid_pos = len(data) // 2
-                middle = data[mid_pos : mid_pos + max_len // 2]
+                middle = data[mid_pos : mid_pos + chunk_size]
+                end = data[-chunk_size:]
                 print(f"{indent}Start: {repr(start)}...")
                 print(f"{indent}Middle ({mid_pos:,}): {repr(middle)}...")
+                print(f"{indent}End ({len(data) - chunk_size:,}): {repr(end)}")
                 print(f"{indent}({len(data):,} chars total)")
                 preview = f"str[{len(data):,}]"
             return preview
@@ -224,6 +263,7 @@ class RLM:
         base_url: str | None = None,
         max_iterations: int = 20,
         max_output_tokens: int | None = 2000,  # Limit output for speed (None = no limit)
+        temperature: float = 0.0,  # Use 0 for deterministic code generation
         log_dir: str | None = None,
         async_batch: bool = True,  # Enable parallel sub_llm_batch calls
         on_step: Callable[[str, dict], None] | None = None,  # Callback for streaming steps
@@ -231,6 +271,7 @@ class RLM:
         self.model = model
         self.max_iterations = max_iterations
         self.max_output_tokens = max_output_tokens
+        self.temperature = temperature
         self.log_dir = Path(log_dir) if log_dir else None
         self.async_batch = async_batch
         self.on_step = on_step
@@ -293,11 +334,11 @@ class RLM:
             "messages": messages,
         }
 
-        # Some models (e.g., gpt-5) don't support temperature
-        if "gpt-5" not in self.model.lower():
-            kwargs["temperature"] = 0.7
+        # Set temperature (gpt-5 models don't support temperature=0)
+        if self.temperature is not None and "gpt-5" not in self.model.lower():
+            kwargs["temperature"] = self.temperature
 
-        # Limit output tokens to reduce latency (skip for gpt-5 models which have issues with this param)
+        # Limit output tokens to reduce latency (skip for gpt-5 models which may have issues)
         if self.max_output_tokens and "gpt-5" not in self.model.lower():
             kwargs["max_tokens"] = self.max_output_tokens
 
@@ -488,7 +529,8 @@ class RLM:
                     },
                 )
 
-            if result.get("output") is not None:
+            # Only break if we have actual output (not empty string)
+            if result.get("output"):
                 final_output = result["output"]
                 break
 

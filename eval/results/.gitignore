@@ -1,5 +1,0 @@
-# Ignore all results (they can be regenerated)
-*.json
-*.md
-plots/
-

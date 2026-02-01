@@ -378,6 +378,343 @@ class ScalingTask(BaseTask):
         return code.upper() in response.upper()
 
 
+@register_task("long_context")
+class LongContextTask(BaseTask):
+    """
+    Long Context Stress Test
+
+    Test retrieval at extreme context lengths (128K-1M chars).
+    Replicates Figure 1 evaluation from the RLM paper.
+    Tests needle at different positions: start, middle, end.
+    """
+
+    description = "Retrieval at extreme context lengths with position variation"
+    difficulty = "hard"
+
+    def __init__(self, context_size: int = 131072):
+        self.context_size = context_size
+
+    def generate(self, seed: int = 42, context_size: int = None, position: str = "random", **kwargs) -> TaskInstance:
+        random.seed(seed)
+        size = context_size or self.context_size
+
+        # Generate unique secret
+        secret = generate_code("LONGCTX", 8, seed + 1)
+        needle = f"\n\n[CRITICAL DATA - The verification code is: {secret}]\n\n"
+
+        # Create haystack
+        noise = generate_noise(size, seed + 2)
+
+        # Position the needle based on parameter
+        if position == "start":
+            # First 10%
+            pos = random.randint(0, len(noise) // 10)
+        elif position == "middle":
+            # Middle 20% (40-60%)
+            pos = random.randint(4 * len(noise) // 10, 6 * len(noise) // 10)
+        elif position == "end":
+            # Last 10%
+            pos = random.randint(9 * len(noise) // 10, len(noise))
+        else:  # random
+            pos = random.randint(len(noise) // 10, 9 * len(noise) // 10)
+
+        context = noise[:pos] + needle + noise[pos:]
+
+        task = """Find the verification code in this text.
+The text contains: "[CRITICAL DATA - The verification code is: LONGCTX-XXXXXXXX]"
+Return ONLY the full code (e.g., LONGCTX-ABC12345)."""
+
+        return TaskInstance(
+            task=task,
+            context=context,
+            expected=secret,
+            metadata={
+                "context_size": size,
+                "needle_position": pos,
+                "position_type": position,
+                "position_percent": round(100 * pos / len(noise), 1),
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        code = expected.split("-", 1)[1] if "-" in expected else expected
+        return code.upper() in response.upper()
+
+
+@register_task("multi_needle_long")
+class MultiNeedleLongTask(BaseTask):
+    """
+    Multi-Needle at Long Context
+
+    Find 10+ needles in 128K+ context.
+    This is extremely challenging - tests systematic exploration.
+    """
+
+    description = "Find many needles in very long context"
+    difficulty = "very_hard"
+
+    def __init__(self, context_size: int = 131072, num_needles: int = 10):
+        self.context_size = context_size
+        self.num_needles = num_needles
+
+    def generate(self, seed: int = 42, context_size: int = None, num_needles: int = None, **kwargs) -> TaskInstance:
+        random.seed(seed)
+        size = context_size or self.context_size
+        n_needles = num_needles or self.num_needles
+
+        # Generate unique secrets
+        secrets = [generate_code("KEY", 6, seed + i * 10) for i in range(n_needles)]
+
+        # Create haystack
+        noise = generate_noise(size, seed + 100)
+        context = noise
+
+        # Distribute needles evenly across the document
+        positions = sorted(
+            [
+                random.randint(
+                    i * len(noise) // n_needles + len(noise) // (n_needles * 4),
+                    (i + 1) * len(noise) // n_needles - len(noise) // (n_needles * 4),
+                )
+                for i in range(n_needles)
+            ]
+        )
+
+        offset = 0
+        for i, pos in enumerate(positions):
+            needle = f"\n\n[ACCESS KEY {i + 1}/{n_needles}: {secrets[i]}]\n\n"
+            insert_pos = pos + offset
+            context = context[:insert_pos] + needle + context[insert_pos:]
+            offset += len(needle)
+
+        task = f"""Find ALL {n_needles} access keys hidden in this text.
+Each key appears as: "[ACCESS KEY N/{n_needles}: KEY-XXXXXX]"
+Return ALL keys as a comma-separated list (e.g., KEY-ABC123, KEY-DEF456, ...)."""
+
+        expected = ", ".join(secrets)
+
+        return TaskInstance(
+            task=task,
+            context=context,
+            expected=expected,
+            metadata={
+                "context_size": size,
+                "num_needles": n_needles,
+                "secrets": secrets,
+                "positions": positions,
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        """Check if at least 80% of needles found."""
+        secrets = [s.strip() for s in expected.split(",")]
+        found = sum(1 for s in secrets if s.split("-", 1)[1].upper() in response.upper())
+        return found >= len(secrets) * 0.8
+
+    def check_partial(self, response: str, expected: str) -> float:
+        """Return fraction of needles found."""
+        secrets = [s.strip() for s in expected.split(",")]
+        found = sum(1 for s in secrets if s.split("-", 1)[1].upper() in response.upper())
+        return found / len(secrets) if secrets else 0.0
+
+
+@register_task("json_extraction")
+class JSONExtractionTask(BaseTask):
+    """
+    JSON Data Extraction
+
+    Extract specific values from a large nested JSON document.
+    Tests ability to parse and navigate structured data.
+    """
+
+    description = "Extract specific data from large JSON structures"
+    difficulty = "medium"
+
+    def __init__(self, context_size: int = 100000, num_records: int = 500):
+        self.context_size = context_size
+        self.num_records = num_records
+
+    def generate(self, seed: int = 42, context_size: int = None, num_records: int = None, **kwargs) -> TaskInstance:
+        import json as json_module
+
+        random.seed(seed)
+        size = context_size or self.context_size
+        n_records = num_records or self.num_records
+
+        # Estimate records needed to reach target size (compact JSON ~65 chars per record)
+        n_records = max(n_records, size // 65)
+
+        # Generate departments and projects
+        departments = ["Engineering", "Sales", "Marketing", "HR", "Finance", "Operations", "Legal", "Research"]
+        projects = ["Project Alpha", "Project Beta", "Project Gamma", "Project Delta", "Project Omega"]
+        statuses = ["active", "inactive", "pending", "completed"]
+
+        # Pick a target record to query
+        target_idx = random.randint(n_records // 4, 3 * n_records // 4)
+        target_id = f"EMP-{seed:04d}-{target_idx:05d}"
+        target_secret = generate_code("SECRET", 8, seed + target_idx)
+
+        records = []
+        for i in range(n_records):
+            emp_id = f"EMP-{seed:04d}-{i:05d}"
+
+            # Compact record structure (~80 chars each in compact JSON)
+            record = {
+                "id": emp_id,
+                "dept": random.choice(departments)[:3].upper(),
+                "status": random.choice(statuses)[0],  # Single char: a/i/p/c
+                "salary": random.randint(50, 200) * 1000,
+            }
+
+            # Insert target secret in target record
+            if i == target_idx:
+                record["code"] = target_secret
+
+            records.append(record)
+
+        # Build the full JSON document
+        document = {
+            "schema_version": "2.1",
+            "export_date": "2025-01-15T00:00:00Z",
+            "organization": "Acme Corp",
+            "total_records": n_records,
+            "records": records,
+        }
+
+        # Use compact JSON to control size, but keep it readable
+        context = json_module.dumps(document, separators=(",", ":"))
+
+        # Query types
+        query_type = random.choice(["find_by_id", "find_code", "find_by_id"])
+
+        if query_type == "find_code":
+            task = f"""This JSON contains {n_records} employee records.
+One record has a "code" field with a secret value.
+
+Find the secret code.
+Return ONLY the code (format: SECRET-XXXXXXXX)."""
+            expected = target_secret
+        else:  # find_by_id
+            task = f"""This JSON contains {n_records} employee records.
+Find the employee with id "{target_id}".
+
+What is their "code" field value?
+Return ONLY the code (format: SECRET-XXXXXXXX)."""
+            expected = target_secret
+
+        return TaskInstance(
+            task=task,
+            context=context,
+            expected=expected,
+            metadata={
+                "context_size": len(context),
+                "num_records": n_records,
+                "target_id": target_id,
+                "target_idx": target_idx,
+                "query_type": query_type,
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        code = expected.split("-", 1)[1] if "-" in expected else expected
+        return code.upper() in response.upper()
+
+
+@register_task("json_aggregation")
+class JSONAggregationTask(BaseTask):
+    """
+    JSON Aggregation/Computation
+
+    Compute aggregates (count, sum, filter) from large JSON data.
+    Tests ability to process structured data programmatically.
+    """
+
+    description = "Compute aggregates from large JSON structures"
+    difficulty = "hard"
+
+    def __init__(self, context_size: int = 100000):
+        self.context_size = context_size
+
+    def generate(self, seed: int = 42, context_size: int = None, **kwargs) -> TaskInstance:
+        import json as json_module
+
+        random.seed(seed)
+        size = context_size or self.context_size
+
+        # Estimate records needed
+        n_records = size // 150
+
+        departments = ["Engineering", "Sales", "Marketing", "HR", "Finance"]
+        statuses = ["active", "inactive", "pending"]
+
+        # Generate records with predictable structure
+        records = []
+        target_dept = random.choice(departments)
+        target_status = "active"
+
+        for i in range(n_records):
+            dept = random.choice(departments)
+            status = random.choice(statuses)
+            salary = random.randint(50000, 200000)
+
+            record = {
+                "id": i + 1,
+                "department": dept,
+                "status": status,
+                "salary": salary,
+                "hired": f"20{random.randint(15, 24)}-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}",
+            }
+            records.append(record)
+
+        # Calculate expected answer
+        matching = [r for r in records if r["department"] == target_dept and r["status"] == target_status]
+        expected_count = len(matching)
+        expected_total_salary = sum(r["salary"] for r in matching)
+
+        document = {"employees": records}
+        context = json_module.dumps(document, separators=(",", ":"))
+
+        # Pick query type
+        query_type = random.choice(["count", "sum"])
+
+        if query_type == "count":
+            task = f"""This JSON contains {n_records} employee records.
+
+Count how many employees are in the "{target_dept}" department AND have status "{target_status}".
+
+Return ONLY the count as a number."""
+            expected = str(expected_count)
+        else:
+            task = f"""This JSON contains {n_records} employee records.
+
+Calculate the TOTAL salary of all employees in the "{target_dept}" department with status "{target_status}".
+
+Return ONLY the total as a number (no formatting, no $ sign)."""
+            expected = str(expected_total_salary)
+
+        return TaskInstance(
+            task=task,
+            context=context,
+            expected=expected,
+            metadata={
+                "context_size": len(context),
+                "num_records": n_records,
+                "target_dept": target_dept,
+                "target_status": target_status,
+                "query_type": query_type,
+                "expected_count": expected_count,
+                "expected_total_salary": expected_total_salary,
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        # Extract numbers from response
+        import re
+
+        numbers = re.findall(r"\d+", response.replace(",", ""))
+        return expected in numbers
+
+
 @register_task("qa_retrieval")
 class QARetrievalTask(BaseTask):
     """

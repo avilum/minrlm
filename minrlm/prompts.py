@@ -11,11 +11,13 @@ Key insights from the paper:
 5. Iterative exploration before solving
 """
 
-SYSTEM_PROMPT_WITH_CONTEXT = """Write Python code in ```python blocks. No explanations.
+SYSTEM_PROMPT_WITH_CONTEXT = """Python code only.
 
-Available: input_0 ({context_meta}), peek(x), sub_llm(task, ctx), set_output(answer)
+input_0 = {context_meta}
+search(text, pattern) -> find all matches
+set_output(answer) -> return answer
 
-IMPORTANT: Look at the data preview below before making assumptions about formats.
+Find patterns, extract values, call set_output().
 """
 
 SYSTEM_PROMPT_NO_CONTEXT = """Write Python code. No explanations.
@@ -57,13 +59,9 @@ def format_system_prompt(context: str = "", context_type: str = "string") -> str
         return SYSTEM_PROMPT_NO_CONTEXT
 
 
-CONTINUE_PROMPT = """Code executed.{error_info}
-
-stdout: {output}
-
-Variables: {state_info}
-
-DON'T repeat code. Either continue or call set_output(answer)."""
+CONTINUE_PROMPT = """stdout: {output}{error_info}
+Vars: {state_info}
+Call set_output(answer) now, or try different approach if stuck."""
 
 
 def format_continue_prompt(
