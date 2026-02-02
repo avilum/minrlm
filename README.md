@@ -80,6 +80,8 @@ But there's another benefit: **the data transformations are now visible and repr
 
 The data never enters the conversation. Token usage stays flat regardless of context size.
 
+**Note on prompts**: The example above shows a simplified view. The actual system prompt is comprehensive (~150 lines) with detailed rules, examples for structured vs unstructured data, guidance on using `search()` vs regex, and best practices. The prompt can be optimized for your use case — see [`minrlm/prompts.py`](minrlm/prompts.py) for the full implementation. The prompt has been refined through benchmarking to improve accuracy on complex tasks.
+
 ## How is this different from an agent?
 
 **RLMs are agents whose only tool is a Python REPL.**
@@ -135,34 +137,38 @@ Code execution is O(n) string operations. And you can read exactly what it did:
 
 When the model writes `[emp for emp in data if emp["dept"] == "Engineering"]`, you can trust the output in a way you can't trust "I looked through the document and found..." More importantly, **you can use that code later** to pre-process your data, build pipelines, or understand what transformations the model actually applied.
 
-## Real numbers
+## Benchmarks
 
 **Note**: The original RLM paper authors report that RLMs *improve* accuracy on long-context tasks (e.g., CodeQA: 24% → 62%, OOLONG: RLM outperforms GPT-5 by 2x+). The results below are from **this minrlm implementation** tested on gpt-5-nano across 162 evaluations:
 
 **Overall Performance:**
-- **Accuracy**: 87.0% (vs 92.6% vanilla) — small drop, but strong performance
-- **Token Efficiency**: **4.20x fewer tokens** (2,247 vs 9,441 average)
-- **Cost**: **4.1x cheaper** ($0.001750 vs $0.007099)
-- **Speed**: Faster on average (5.0s vs 15.3s)
+- **Accuracy**: 87.0% (vs 92.6% vanilla, 79.6% official)
+- **Token Efficiency**: **4.20x fewer tokens** than vanilla (2,247 vs 9,441 average)
+- **Token Efficiency**: **6.1x fewer tokens** than official RLM (2,247 vs 13,602 average)
+- **Cost**: **4.1x cheaper** than vanilla ($0.001750 vs $0.007099)
+- **Speed**: Faster on average (5.0s vs 15.3s vanilla, 53.2s official)
+- **Average iterations**: 1.1 per task
 
 **Where RLMs Excel:**
 - **Large contexts (128K+)**: RLMs often outperform vanilla (JSON_AGGREGATION_131K: 100% vs 0%, OOLONG_128K: 100% vs 0%)
 - **Extreme contexts (6M-11M)**: minRLM achieves 100% accuracy where vanilla fails (token limit exceeded)
-- **JSON tasks**: 100% accuracy, massive savings (e.g., 131K JSON extraction: 1,670 vs 46,745 tokens = **28x**)
+- **JSON tasks**: 100% accuracy, massive savings (e.g., 131K JSON extraction: 1,993 vs 46,890 tokens = **23.5x**)
 - **Token usage stays flat**: ~2K tokens regardless of context size (vs vanilla's linear growth)
+- **Scaling tasks**: Consistent performance across all sizes (8K to 131K+), while vanilla token usage grows linearly
+- **Multi-hop reasoning**: BrowseComp+ at 11M contexts — minRLM succeeds where vanilla cannot even attempt the task
 
-**Where RLMs Struggle:**
-- **Small contexts (<64K)**: Vanilla often has higher accuracy (better for simple tasks)
-- **BrowseComp at mid-sizes (16K-65K)**: Task-specific failures (all methods struggle)
-- **Some code understanding (CODEQA)**: Mixed results, depends on context size
+**Where RLMs Trade Accuracy for Efficiency:**
+- **Small contexts (<64K)**: Vanilla often has higher accuracy (better for simple tasks where token cost is negligible)
+- **Some code understanding (CODEQA)**: Mixed results, depends on context size and task complexity
 
-| Task | Context | Vanilla | minrlm | Savings |
-|------|---------|---------|--------|---------|
-| Find in JSON | 262K | 93,438 tokens | 1,048 tokens | **89x** |
-| Aggregate JSON | 131K | 23,630 tokens | 1,647 tokens | **14x** |
-| Multi-needle | 256K | 33,312 tokens | 1,293 tokens | **26x** |
-| Long context | 128K | 16,714 tokens | 1,562 tokens | **11x** |
-| BrowseComp+ | 11M | ❌ Fails | ✅ 100% (~2K tokens) | **∞** |
+| Task | Context | Vanilla | minrlm | Savings | Notes |
+|------|---------|---------|--------|---------|-------|
+| JSON Extraction | 131K | 46,890 tokens | 1,993 tokens | **23.5x** | 100% accuracy both |
+| JSON Aggregation | 131K | 38,746 tokens (0%) | 1,975 tokens (100%) | **19.6x** | RLM wins on accuracy |
+| OOLONG | 128K | 37,873 tokens (0%) | 1,917 tokens (100%) | **19.7x** | RLM wins on accuracy |
+| Multi-needle | 128K | 17,059 tokens | 1,848 tokens | **9.2x** | 100% accuracy both |
+| Long context | 128K | 16,576 tokens | 1,827 tokens | **9.1x** | 100% accuracy both |
+| BrowseComp+ | 11M | ❌ Fails | ✅ 100% (~2K tokens) | **∞** | Vanilla hits token limit |
 
 **The takeaway (minrlm results)**: This implementation trades a small accuracy drop (5.6%) for massive token savings (4.20x) and cost reduction (4.1x). The approach shines on structured data and large contexts where token costs dominate. At extreme scales (6M-11M), RLMs are the only viable option. 
 
@@ -230,6 +236,8 @@ FINAL("\n".join(str(1 << i) for i in range(100)))
 | `peek(data)` | Preview structure of large data |
 | `sub_llm(task, context)` | Recursive LLM call on a chunk |
 | `FINAL(answer)` | Return the final answer |
+
+**System prompt**: The system prompt guides the model on when to use each function, how to parse structured vs unstructured data, and best practices for code generation. The prompt is comprehensive (~150 lines) and has been optimized through benchmarking. You can customize it in [`minrlm/prompts.py`](minrlm/prompts.py) for your specific use case.
 
 ### Custom endpoints
 
