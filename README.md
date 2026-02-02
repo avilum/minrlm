@@ -1,154 +1,179 @@
 # minrlm
 
-A minimal, token-efficient implementation of [Recursive Language Models](https://arxiv.org/abs/2512.24601) in ~500 lines of Python.
+A minimal implementation of [Recursive Language Models](https://arxiv.org/abs/2512.24601) — let LLMs write code instead of reading your data.
 
-## The Problem
+## Why?
 
-When you ask an LLM to find something in a 262K character document:
+When you ask an LLM to find something in a large document, you pay for every token in that document. A 256K character JSON file costs ~93,000 tokens just to find one value.
 
 ```python
-# Vanilla LLM - sends entire context to the model
-response = openai.chat.completions.create(
+# You're paying for the model to "read" 93K tokens
+response = client.chat.completions.create(
     model="gpt-5-mini",
-    messages=[{"role": "user", "content": f"Find the secret code in: {document_262k}"}]
+    messages=[{"role": "user", "content": f"Find employee EMP-0042 in: {huge_json}"}]
 )
-# → 93,438 tokens, $0.003, 14s
 ```
 
-**93,000 tokens** just to find a single value buried in JSON.
-
-## The Solution
-
-RLM lets the LLM write code to search the context instead of reading it all:
+What if the model wrote code to search instead?
 
 ```python
-# minRLM - LLM writes code to search
 from minrlm import RLM
 
 rlm = RLM(model="gpt-5-mini")
 result = rlm.completion(
-    task="Find the secret code",
-    context=document_262k  # stored as variable, not in prompt
+    task="Find employee EMP-0042",
+    context=huge_json  # stored as variable, never sent to the model
 )
-# → 1,048 tokens, $0.00003, 13s
 ```
 
-**89x fewer tokens.** Same answer. Same time. **100x cheaper.**
+The model writes `[e for e in json.loads(input_0) if e["id"] == "EMP-0042"]` and you pay for ~1,000 tokens instead of 93,000. Same answer, ~90x cheaper.
 
-## How It Works
+## The Evolution: Why RLMs Are Inevitable
 
-Instead of stuffing context into the prompt, minRLM:
+The path from GPT-3.5 to today tells a story of escalating costs and complexity:
 
-1. Stores the context as `input_0` in a Python REPL
-2. Asks the LLM to write code that searches/processes it
-3. Executes the code and returns `stdout` to the LLM
-4. Repeats until `FINAL(answer)` is called
+**1. The "Think Step by Step" Era (GPT-3.5)**
+Prompt engineering discovered that asking models to reason explicitly ("think step by step") dramatically improved accuracy. This worked, but it was manual and fragile.
+
+**2. Reasoning Models (GPT-5, o1, o3)**
+Models learned to reason internally. No more prompt engineering — the model just thinks. But here's the catch: **you pay for every token of that reasoning**. Queries became significantly more expensive as models generated thousands of hidden reasoning tokens before answering.
+
+**3. Agents: Tools + Reasoning**
+We connected reasoning models to tools (APIs, calculators, code execution). The model could now choose what to execute. Powerful, but context management exploded. Every tool call, every intermediate result, every error message — it all went back into the prompt. Conversations grew from 1K tokens to 100K tokens in a few turns.
+
+**4. The Context Crisis**
+Context windows grew (8K → 32K → 128K → 1M tokens), but so did costs. We built workarounds: summarize chat history, compress context, truncate old messages. These helped, but they're hacks around a fundamental problem: **we're asking the model to hold everything in its attention mechanism**.
+
+**5. RLMs: The Inevitable Solution**
+RLMs are agents with one tool: a Python REPL. The model writes code to interact with data, but **the data never enters the LLM's context**. 
+
+Think about it: an agent with a code execution tool still sends your 200K document to the model so it can "decide what to do." An RLM doesn't — it just says "you have `input_0` with 200K chars, write code to search it." The model never sees the data. It only sees metadata ("200K chars") and writes code.
+
+This isn't just cheaper — it's architecturally different. The data lives in the REPL, not in the conversation. Token usage stays flat regardless of context size. No summarization hacks. No context window limits. No paying for the model to "read" your data.
+
+But there's another benefit: **the data transformations are now visible and reproducible**. Instead of mysterious attention "permutations" happening inside the model's memory, you get Python code that does the work. You can inspect it, debug it, reuse it, and even pre-process your context based on what the model learned. This code becomes a blueprint for how to handle your data efficiently.
+
+**RLMs aren't just another tool in the agent toolkit. They're a fundamental shift: from "send data to the model" to "send code from the model."**
+
+## How it works
+
+1. Your context is stored as `input_0` in a Python REPL
+2. The model writes code to search/process it
+3. Code runs, output goes back to the model
+4. Repeat until `FINAL(answer)` is called
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  LLM sees:                                                  │
 │                                                             │
-│  input_0 = "<262K chars of JSON>"                           │
-│  search(text, pattern) → find patterns                      │
-│  FINAL(answer) → return final answer                        │
-│                                                             │
-│  Task: Find the employee with id EMP-0042-02317             │
+│  input_0 = "string with 262144 chars"                       │
+│  Task: Find employee EMP-0042                               │
 ├─────────────────────────────────────────────────────────────┤
 │  LLM writes:                                                │
 │                                                             │
-│  ```python                                                  │
-│  import json                                                │
 │  data = json.loads(input_0)                                 │
 │  for emp in data:                                           │
-│      if emp["id"] == "EMP-0042-02317":                      │
-│          FINAL(emp["code"])                                 │
-│  ```                                                        │
+│      if emp["id"] == "EMP-0042":                            │
+│          FINAL(emp["name"])                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The context never enters the conversation. Token usage stays constant regardless of context size.
+The data never enters the conversation. Token usage stays flat regardless of context size.
 
-## Why This Works: Attention → Code
+## How is this different from an agent?
 
-Traditional LLMs process context through **attention layers** - expensive O(n²) operations where every token attends to every other token. For a 256K document, that's billions of floating-point operations just to find one value.
+**RLMs are agents whose only tool is a Python REPL.**
 
-RLMs replace attention with **deterministic code execution**:
+Traditional agents have a menu of tools (search, calculator, APIs, code execution) and the model chooses which to use. But here's the problem: **the context still goes in the prompt** so the agent can reason about it. A ReAct agent with code execution still sends your 200K document to the model so it can "decide what to do."
 
-| Approach | How it finds data | Compute cost | Inspectable? |
-|----------|-------------------|--------------|--------------|
-| Vanilla LLM | Attention over all tokens | O(n²) FLOPS | ❌ Black box |
-| RLM | Python `search()` / `json.loads()` | O(n) string ops | ✅ Readable code |
+RLM is simpler: the model just writes code. No tool selection step. No context in the prompt. The data lives in the REPL as `input_0`, and the model only sees metadata ("200K chars"). It writes code to search it, but **the model never sees the actual data**.
 
-**The key insight:** LLMs already know how to write code that solves retrieval tasks. RLM just lets them *use* that knowledge instead of brute-forcing through attention.
+That's the architectural difference. It's not about having code execution as a capability — it's about **keeping the data out of the conversation entirely**. The model generates code, not answers. The REPL executes the code, not the model.
 
-This also means RLM reasoning is **traceable** - you can see exactly which search patterns the model used, which JSON keys it accessed, and how it computed the answer. Unlike chain-of-thought prompting (natural language), code reasoning is:
+This is why token usage stays flat regardless of context size. You're not paying the model to "read" your data — you're paying it to write code that searches your data.
 
-- **Deterministic** - same code always produces same result
-- **Verifiable** - execute it yourself to check
-- **Learnable** - patterns transfer across tasks (regex, JSON parsing, iteration)
+This pattern helps with several common headaches:
 
-When an LLM writes `[emp for emp in data if emp["dept"] == "Engineering"]`, you can trust the output in a way you can't trust "I looked through the document and found..."
+- **Large context management** — Data lives in the REPL, not the conversation. You can process 500K documents without hitting context limits or paying for 500K tokens per turn.
 
-## Minimal Prompts
+- **Prompt engineering fragility** — Different phrasings produce the same code. "Find engineers" and "who works in engineering?" both become `[e for e in data if e["dept"] == "Engineering"]`. The code layer normalizes your intent.
 
-The original RLM paper uses elaborate prompts with detailed chunking strategies and examples:
+- **Multi-agent context bloat** — When agents pass context between each other, conversations grow fast. With RLM, the data stays in the REPL. `sub_llm()` calls can process chunks without copying everything into messages.
 
-| | Paper's RLM | minrlm |
-|--|-------------|--------|
-| **Prompt size** | ~2000 chars | ~150 chars |
-| **Lines** | 50+ lines | 6 lines |
-| **Examples in prompt** | 3 detailed examples | None |
+## Prompts become code
 
-**Paper's prompt** (excerpt):
-```
-You are tasked with answering a query with associated context. You can access,
-transform, and analyze this context interactively in a REPL environment that
-can recursively query sub-LLMs, which you are strongly encouraged to use...
-[continues for 50+ lines with chunking strategies and examples]
+Different prompts often produce the same Python code.
+
+Ask "find all engineers" or "who works in engineering?" or "list engineering team members" — the model writes roughly the same thing:
+
+```python
+[emp for emp in data if emp["dept"] == "Engineering"]
 ```
 
-**minrlm's prompt** (complete):
-```
-Python code only.
+This is a form of **prompt normalization**. Instead of worrying whether you phrased your prompt perfectly, the model translates your intent into deterministic code. You can verify the code does what you meant, fix it if not, and trust the execution.
 
-input_0 = <context metadata>
-search(text, pattern) -> find all matches
-FINAL(answer) -> return answer
+Prompt engineering becomes less fragile when there's a code layer between your words and the answer.
 
-Find patterns, extract values, call FINAL().
-```
+## Why code beats attention (on many tasks)
 
-### Why This Matters
+Traditional LLMs process your data through attention — expensive O(n²) operations where every token looks at every other token. Even though there are many forms of optimization for the Attention mechanism, for large documents, that's billions of floating-point operations to find one value.
 
-- **No fine-tuning required** — vanilla GPT-5-nano/Claude/Qwen works out of the box
-- **Fewer tokens per call** — the prompt itself is 13x smaller
-- **Less prompt fragility** — fewer instructions = fewer places to misinterpret  
-- **Model-agnostic** — works across providers without tuning examples per model
+But here's the deeper problem: **the data transformations happen inside the attention mechanism's memory**. These "permutations" (filtering, searching, aggregating) are opaque — you can't see what the model did, you can't reproduce it, and you can't understand why it found (or missed) something. It's a black box.
 
-Modern LLMs are smart enough that `"Python code only. Call FINAL(answer)."` is sufficient. The model figures out the rest.
+RLMs move these data transformations out of the attention mechanism and into CPU-bound Python code. The model writes `[emp for emp in data if emp["dept"] == "Engineering"]` — you can see exactly what it's doing. This code is:
+- **Reproducible** — Run it again, get the same result
+- **Debuggable** — Step through it, add print statements, inspect variables
+- **Reusable** — Use the generated code to pre-process your context before sending it to other models
+- **Faster** — O(n) string operations instead of O(n²) attention operations
 
-## Benchmarks
+Code execution is O(n) string operations. And you can read exactly what it did:
 
-Real results on gpt-5-mini across 46 evaluation tasks:
+| Approach | How it finds data | Cost | Debuggable? | Reproducible? |
+|----------|-------------------|------|-------------|---------------|
+| Vanilla LLM | Attention over all tokens | O(n²) | No | No |
+| minrlm | `json.loads()`, regex, loops | O(n) | Yes | Yes |
 
-| Task | Context | Vanilla | minRLM | Savings |
+When the model writes `[emp for emp in data if emp["dept"] == "Engineering"]`, you can trust the output in a way you can't trust "I looked through the document and found..." More importantly, **you can use that code later** to pre-process your data, build pipelines, or understand what transformations the model actually applied.
+
+## Real numbers
+
+**Note**: The original RLM paper authors report that RLMs *improve* accuracy on long-context tasks (e.g., CodeQA: 24% → 62%, OOLONG: RLM outperforms GPT-5 by 2x+). The results below are from **this minrlm implementation** tested on gpt-5-nano across 162 evaluations:
+
+**Overall Performance:**
+- **Accuracy**: 87.0% (vs 92.6% vanilla) — small drop, but strong performance
+- **Token Efficiency**: **4.20x fewer tokens** (2,247 vs 9,441 average)
+- **Cost**: **4.1x cheaper** ($0.001750 vs $0.007099)
+- **Speed**: Faster on average (5.0s vs 15.3s)
+
+**Where RLMs Excel:**
+- **Large contexts (128K+)**: RLMs often outperform vanilla (JSON_AGGREGATION_131K: 100% vs 0%, OOLONG_128K: 100% vs 0%)
+- **Extreme contexts (6M-11M)**: minRLM achieves 100% accuracy where vanilla fails (token limit exceeded)
+- **JSON tasks**: 100% accuracy, massive savings (e.g., 131K JSON extraction: 1,670 vs 46,745 tokens = **28x**)
+- **Token usage stays flat**: ~2K tokens regardless of context size (vs vanilla's linear growth)
+
+**Where RLMs Struggle:**
+- **Small contexts (<64K)**: Vanilla often has higher accuracy (better for simple tasks)
+- **BrowseComp at mid-sizes (16K-65K)**: Task-specific failures (all methods struggle)
+- **Some code understanding (CODEQA)**: Mixed results, depends on context size
+
+| Task | Context | Vanilla | minrlm | Savings |
 |------|---------|---------|--------|---------|
-| Needle in haystack | 50K | 6,365 tokens | 1,098 tokens | **6x** |
 | Find in JSON | 262K | 93,438 tokens | 1,048 tokens | **89x** |
-| Aggregate JSON | 131K | 26,906 tokens | 669 tokens | **40x** |
+| Aggregate JSON | 131K | 23,630 tokens | 1,647 tokens | **14x** |
 | Multi-needle | 256K | 33,312 tokens | 1,293 tokens | **26x** |
+| Long context | 128K | 16,714 tokens | 1,562 tokens | **11x** |
+| BrowseComp+ | 11M | ❌ Fails | ✅ 100% (~2K tokens) | **∞** |
 
-### vs Official RLM
+**The takeaway (minrlm results)**: This implementation trades a small accuracy drop (5.6%) for massive token savings (4.20x) and cost reduction (4.1x). The approach shines on structured data and large contexts where token costs dominate. At extreme scales (6M-11M), RLMs are the only viable option. 
 
-Compared to the [official implementation](https://github.com/alexzhang13/rlm):
+**Why the accuracy difference?** The original paper shows RLMs *improve* accuracy on long-context tasks (e.g., CodeQA: 24% → 62%). Our results differ likely due to:
+- **Context sizes**: Paper tests up to 1M-10M tokens; our tests include up to 11M for BrowseComp+
+- **Model choice**: Paper uses GPT-5-mini; we tested with GPT-5-nano (weaker reasoning)
+- **Task focus**: Paper emphasizes complex aggregation tasks where RLMs excel; our mix includes simpler tasks
 
-| Method | Avg Tokens | Avg Cost | Token Efficiency |
-|--------|------------|----------|------------------|
-| Vanilla LLM | 14,315 | $0.024 | - |
-| Official RLM | 5,496 | $0.018 | 2.6x |
-| **minRLM** | **893** | **$0.008** | **16x** |
+**Key insight**: At large contexts (128K+), RLMs often match or exceed vanilla accuracy while using 10-90x fewer tokens. At extreme scales (6M-11M), RLMs are the only viable option — vanilla fails due to token limits.
 
-See [`eval/`](eval/) for the full evaluation suite and reproducible benchmarks.
+See [`eval/`](eval/) for the full benchmark suite and results.
 
 ## Install
 
@@ -160,66 +185,53 @@ git clone https://github.com/avilum/minrlm
 cd minrlm && uv sync
 ```
 
-## Quick Start
+## Quick start
 
 ```python
 from minrlm import RLM
 
-rlm = RLM(model="gpt-5-nano")
-result = rlm.completion("Print me the first 100 powers of two, each on a newline.")
+# Use gpt-4o-mini for simple tasks (fast, cheap)
+rlm = RLM(model="gpt-4o-mini")
 
+# Or gpt-5-nano for complex multi-step tasks (reasoning enabled)
+# rlm = RLM(model="gpt-5-nano")
+
+# No context — model just writes code
+result = rlm.completion("Print the first 100 powers of two")
 print(result.response)
-# 1
-# 2
-# 4
-# 8
-# ...
-# 633825300114114700748351602688
+# 1, 2, 4, 8, 16, ... 633825300114114700748351602688
 
-print(result.iterations)     # 2
-print(result.input_tokens)   # 137
-print(result.output_tokens)  # 1,473
+# With context — data stored as input_0
+result = rlm.completion(
+    task="Find all employees in Engineering",
+    context=massive_json  # 500K chars
+)
+print(result.total_tokens)  # Typically <2K tokens regardless of context size
 ```
 
-**What happened under the hood:**
+### What the model generates
 
 ```python
-# Iteration 1: LLM wrote this code
+# Iteration 1: writes this
 for i in range(100):
     print(1 << i)
-# → stdout captured, but no FINAL() called
+# → stdout captured, but no FINAL()
 
-# Iteration 2: LLM realized it needs FINAL()
-powers = [str(1 << i) for i in range(100)]
-answer = "\n".join(powers)
-FINAL(answer)  # ← returns the final answer
+# Iteration 2: realizes it needs FINAL()
+FINAL("\n".join(str(1 << i) for i in range(100)))
 ```
 
-### With Large Context
+### Available functions
 
-```python
-# Find a needle in 500K chars of JSON - only ~800 tokens instead of 150,000
-result = rlm.completion(
-    task="Find all employees in Engineering department",
-    context=massive_json_file  # 500K chars, stored as input_0
-)
-print(result.response)      # "['Alice', 'Bob', 'Carol', ...]"
-print(result.total_tokens)  # ~800 (not 150,000!)
-```
-
-### Available REPL Functions
-
-The LLM has access to:
-
-| Function | Description |
-|----------|-------------|
-| `input_0` | The context data (stored as variable) |
-| `search(text, pattern)` | Find pattern matches with surrounding context |
-| `peek(data)` | Preview first/last portions of large data |
-| `sub_llm(task, context)` | Make recursive LLM calls |
+| Function | What it does |
+|----------|--------------|
+| `input_0` | Your context data |
+| `search(text, pattern)` | Find matches with surrounding context |
+| `peek(data)` | Preview structure of large data |
+| `sub_llm(task, context)` | Recursive LLM call on a chunk |
 | `FINAL(answer)` | Return the final answer |
 
-### Custom Endpoint
+### Custom endpoints
 
 ```python
 rlm = RLM(
@@ -229,65 +241,64 @@ rlm = RLM(
 )
 ```
 
-## Evaluation Suite
+## When to use this
 
-Run the full benchmark suite:
+| Context size | Recommendation |
+|--------------|----------------|
+| < 10K chars | Vanilla LLM (faster) |
+| 10K - 50K chars | Either works |
+| 50K+ chars | minrlm (**typically 20-90x cheaper**) |
+
+**Good for:** Large documents, logs, JSON, anything you'd search/filter/aggregate.
+
+**Skip if:** Context is small, latency matters more than cost, or the task needs holistic understanding of the whole document.
+
+## Model selection
+
+| Model | Best for | Tokens | Speed |
+|-------|----------|--------|-------|
+| **gpt-5-nano** | Complex tasks (multi-step logic) | More | Slower |
+| **gpt-4o-mini** | Simple tasks (direct lookups) | Less | Faster |
+
+Reasoning models (gpt-5, o1, o3) have internal chain-of-thought that helps with complex code generation. For complex multi-step parsing tasks, reasoning models typically achieve higher accuracy than non-reasoning models.
+
+By default, minrlm uses `reasoning_effort="low"` for reasoning models to control token cost. You can tune this:
+
+```python
+# Fast and cheap for simple tasks
+rlm = RLM(model="gpt-4o-mini")
+
+# Accurate for complex tasks (reasoning with low token overhead)
+rlm = RLM(model="gpt-5-nano", reasoning_effort="low")
+
+# Maximum reasoning (expensive but most capable)
+rlm = RLM(model="gpt-5-nano", reasoning_effort="high")
+```
+
+## Running evals
 
 ```bash
 # Quick test
 uv run python eval/run.py --model gpt-5-mini --tasks scaling --runs 1
 
-# Full evaluation (8K to 256K contexts)  
+# Full suite (8K to 256K contexts)
 uv run python eval/run.py --model gpt-5-mini --extended
-
-# Paper-scale evaluation (8K to 1M contexts)
-uv run python eval/run.py --model gpt-5-mini --paper-scale
-
-# Specific tasks
-uv run python eval/run.py --model gpt-5-mini --tasks json_extraction,json_aggregation
 ```
 
-Generates plots and detailed results in `eval/results/`. The evaluation suite saves partial results if interrupted (Ctrl+C) or crashed. See [`eval/README.md`](eval/README.md) for task descriptions and methodology.
+Results go to `eval/results/`. Partial results are saved if you ctrl+C.
 
-## Interactive Visualizer
-
-Compare methods side-by-side with live execution tracing:
+## Interactive UI
 
 ```bash
-# Install visualizer dependencies
 uv sync --extra visualizer
-
-# Run the UI
 uv run python examples/visualizer.py
 ```
 
-Opens a Gradio UI showing token usage, iterations, and model trajectories in real-time.
-
-## When to Use
-
-| Context Size | Recommendation |
-|--------------|----------------|
-| < 10K chars | Vanilla LLM (lower latency) |
-| 10K - 50K chars | Either (similar cost) |
-| 50K - 200K chars | minRLM (**5-20x cheaper**) |
-| > 200K chars | minRLM (**20-100x cheaper**) |
-
-See eval/ folder.
-
-**Use minRLM when:**
-- Processing large documents, logs, or JSON
-- Cost matters more than latency
-- Task involves searching/filtering/aggregating
-
-**Use vanilla LLM when:**
-- Context is small
-- Latency is critical
-- Task requires understanding the full context
+Opens a Gradio interface showing token usage and model traces.
 
 ## Security
 
-⚠️ minRLM executes LLM-generated Python code using the permissions (PID) of the python process.<br>
-For untrusted inputs, use Docker mode:
+⚠️ This runs LLM-generated Python code. For untrusted inputs, use Docker:
 
 ```python
 from minrlm import RLM, check_docker_available
@@ -296,54 +307,17 @@ from minrlm import RLM, check_docker_available
 if check_docker_available():
     rlm = RLM(
         model="gpt-5-mini",
-        use_docker=True,              # Run code in Docker container
-        docker_image="python:3.11-slim",
-        docker_memory="256m",         # Memory limit
-        docker_timeout=60,            # Execution timeout in seconds
+        use_docker=True,
+        docker_memory="256m",
+        docker_timeout=60
     )
-
-# Security features in Docker mode:
-# - No network access (seccomp blocks all socket syscalls)
-# - Memory limited (default 256MB)
-# - CPU limited (default 1 core)
-# - Process limit (100 max)
-# - Read-only filesystem (except /tmp)
-# - Execution timeout
 ```
 
-Note: `sub_llm()` is not available in Docker mode. Use standard mode for recursive LLM calls.
+Docker mode sandboxes execution: no network, memory limits, read-only filesystem. Note: `sub_llm()` isn't available in Docker mode.
 
-### Docker vs Local Performance
+## Credits
 
-```python
-from minrlm import RLM, check_docker_available
-import time
-
-task = "Calculate 2^1000"
-
-# Local REPL (faster, less secure)
-rlm = RLM(model="gpt-5-nano", use_docker=False)
-start = time.time()
-r = rlm.completion(task)
-print(f"Local:  {r.total_tokens} tokens | {time.time()-start:.1f}s")
-
-# Docker REPL (slower, sandboxed)
-if check_docker_available():
-    rlm = RLM(model="gpt-5-nano", use_docker=True)
-    start = time.time()
-    r = rlm.completion(task)
-    print(f"Docker: {r.total_tokens} tokens | {time.time()-start:.1f}s")
-
-# Typical results:
-# Local:  1,566 tokens | 12.5s
-# Docker: 1,943 tokens | 16.6s  (~4s container startup overhead)
-```
-
-**Recommendation:** Use Docker for untrusted inputs, local REPL for trusted code / low latency.
-
-## References
-
-This is a minimal reimplementation of Recursive Language Models. Please cite the original work:
+Based on the RLM paper by Zhang, Kraska, and Khattab:
 
 ```bibtex
 @misc{zhang2025recursivelanguagemodels,
@@ -357,9 +331,14 @@ This is a minimal reimplementation of Recursive Language Models. Please cite the
 }
 ```
 
-- Paper: [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601)
-- Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm)
+Paper: [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601)  
+Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm)
 
 ## License
 
 MIT
+
+## Personal note 
+> I am a security researcher. This is far from secure - but this is fucking cool!
+> I recommend using it with docker backends (default if Docker is installed) because it uses custom seccomp policies that block network and most processing syscalls. Keep the LLM's REPL seperated and confined.
+> Bonus: You can use gVisor as docker runtime.

@@ -676,6 +676,25 @@ def build_app():
             </div>
         </div>
         """)
+        
+        # About Section
+        with gr.Accordion("ℹ️ About", open=False):
+            gr.Markdown("""
+            ### Let LLMs think through code.
+            
+            A minimal (<500 lines) RLM (Recursive Language Model) implementation that's **4.2x more token-efficient**.
+            
+            **Benchmark Results (gpt-5-nano, 162 evaluations):**
+            - **Accuracy**: 87.0% (vs 92.6% vanilla)
+            - **Token Efficiency**: 4.20x fewer tokens (2,247 vs 9,441 avg)
+            - **Cost**: 4.1x cheaper ($0.001750 vs $0.007099)
+            - **Large contexts (128K+)**: RLMs often outperform vanilla
+            - **Extreme contexts (6M-11M)**: minRLM achieves 100% where vanilla fails
+            
+            **How it works**: The model writes Python code to search/process data stored in a REPL. The data never enters the LLM's context — only metadata ("200K chars") is sent. Token usage stays flat regardless of context size.
+            
+            See the [README](https://github.com/avilum/minrlm) for full details.
+            """)
 
         # Model & Method Selection Panel
         with gr.Group():
