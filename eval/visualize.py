@@ -375,15 +375,61 @@ def plot_scaling_analysis(
         )
 
     ax.set_xscale("log", base=2)
-    ax.set_xlabel("Context Size (characters)")
-    ax.set_ylabel("Accuracy (%)")
-    ax.set_title(title, fontweight="bold")
+    ax.set_xlabel("Context Size (characters)", fontsize=11)
+    ax.set_ylabel("Accuracy (%)", fontsize=11)
+    ax.set_title(title, fontweight="bold", fontsize=12)
     ax.set_ylim(-5, 105)
-    ax.legend(loc="lower left")
+    ax.legend(loc="lower left", fontsize=10)
     ax.axhline(y=100, color="gray", linestyle="--", alpha=0.5)
+    ax.grid(True, alpha=0.3, linestyle="--")
 
-    # Format x-axis with powers of 2
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"$2^{{{int(np.log2(x))}}}$" if x > 0 else "0"))
+    # Format x-axis with powers of 2 or readable sizes
+    def format_size(x, p):
+        if x <= 0:
+            return "0"
+        if x < 1024:
+            return f"{int(x)}"
+        elif x < 1024 * 1024:
+            return f"{int(x // 1024)}K"
+        elif x < 1024 * 1024 * 1024:
+            return f"{int(x // (1024 * 1024))}M"
+        else:
+            return f"{int(x // (1024 * 1024 * 1024))}G"
+    
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(format_size))
+    
+    # Highlight where RLM outperforms vanilla (if both present)
+    vanilla_runner = None
+    rlm_runner = None
+    for runner in scaling_data.keys():
+        if runner == "vanilla":
+            vanilla_runner = runner
+        elif runner in ["ours", "official"]:
+            rlm_runner = runner
+    
+    if vanilla_runner and rlm_runner and vanilla_runner in scaling_data and rlm_runner in scaling_data:
+        # Find sizes where RLM accuracy > vanilla accuracy
+        vanilla_sizes = sorted(scaling_data[vanilla_runner].keys())
+        rlm_sizes = sorted(scaling_data[rlm_runner].keys())
+        common_sizes = sorted(set(vanilla_sizes) & set(rlm_sizes))
+        
+        if common_sizes:
+            rlm_better_sizes = []
+            for size in common_sizes:
+                vanilla_acc = sum(r.correct for r in scaling_data[vanilla_runner][size]) / len(scaling_data[vanilla_runner][size]) * 100
+                rlm_acc = sum(r.correct for r in scaling_data[rlm_runner][size]) / len(scaling_data[rlm_runner][size]) * 100
+                if rlm_acc > vanilla_acc:
+                    rlm_better_sizes.append(size)
+            
+            if rlm_better_sizes:
+                # Add annotation showing where RLM outperforms
+                min_better = min(rlm_better_sizes)
+                max_better = max(rlm_better_sizes)
+                ax.axvspan(min_better, max_better, alpha=0.1, color="green", label="RLM > Vanilla")
+                # Add text annotation
+                mid_size = (min_better * max_better) ** 0.5
+                ax.text(mid_size, 95, "RLM outperforms", ha="center", fontsize=9, 
+                       style="italic", color="green", alpha=0.7)
 
     plt.tight_layout()
 
@@ -435,7 +481,7 @@ def plot_cost_comparison(
     bars = ax1.bar(runners_with_cost, totals, color=colors, alpha=0.85)
     for bar, val in zip(bars, totals):
         ax1.text(
-            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"${val:.4f}", ha="center", va="bottom", fontsize=10
+            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"${val:.6f}", ha="center", va="bottom", fontsize=10
         )
 
     ax1.set_ylabel("Total Cost (USD)")
@@ -471,7 +517,8 @@ def plot_cost_by_task_and_context(
     results: list[EvalResult], output_path: Path | None = None, title: str = "Cost by Task & Context"
 ) -> plt.Figure | None:
     """
-    Combined view: cost per task (left) and cost vs context length (right).
+    Combined view: cost by task category (left) and cost vs context length (right).
+    Groups similar tasks for readability.
     """
     costs_available = any(r.cost_usd is not None for r in results)
     if not costs_available:
@@ -479,27 +526,56 @@ def plot_cost_by_task_and_context(
 
     apply_style()
 
-    aggregated = aggregate_results(results)
-    tasks = sorted(aggregated.keys())
     runners = sorted({r.runner_name for r in results})
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-    # Left: Cost per task by runner
+    # Left: Cost by task CATEGORY (grouped)
     ax1 = axes[0]
-    x = np.arange(len(tasks))
+
+    # Group tasks into categories
+    def get_category(task_name: str) -> str:
+        task_upper = task_name.upper()
+        if "SCALING" in task_upper:
+            return "SCALING"
+        elif "LONG_CONTEXT" in task_upper:
+            return "LONG_CONTEXT"
+        elif "MULTI_NEEDLE" in task_upper:
+            return "MULTI_NEEDLE"
+        elif "JSON_EXTRACT" in task_upper:
+            return "JSON_EXTRACT"
+        elif "JSON_AGG" in task_upper:
+            return "JSON_AGG"
+        elif "OOLONG" in task_upper:
+            return "OOLONG"
+        elif "CODEQA" in task_upper:
+            return "CODEQA"
+        elif "BROWSECOMP" in task_upper:
+            return "BROWSECOMP"
+        else:
+            return task_upper.split("_")[0]  # First word
+
+    # Aggregate costs by category
+    category_costs: dict[str, dict[str, list[float]]] = {}
+    for r in results:
+        if r.cost_usd is None:
+            continue
+        cat = get_category(r.task_name)
+        if cat not in category_costs:
+            category_costs[cat] = {runner: [] for runner in runners}
+        if r.runner_name in category_costs[cat]:
+            category_costs[cat][r.runner_name].append(r.cost_usd)
+
+    categories = sorted(category_costs.keys())
+    x = np.arange(len(categories))
     width = 0.25
 
     for i, runner in enumerate(runners):
         costs = []
-        for task in tasks:
-            if runner in aggregated[task]:
-                task_results = [r for r in results if r.task_name == task and r.runner_name == runner]
-                task_costs = [r.cost_usd for r in task_results if r.cost_usd is not None]
-                avg_cost = sum(task_costs) / len(task_costs) * 1000 if task_costs else 0  # per 1000 queries
-                costs.append(avg_cost)
-            else:
-                costs.append(0)
+        for cat in categories:
+            cat_costs = category_costs[cat].get(runner, [])
+            avg_cost = sum(cat_costs) / len(cat_costs) * 1000 if cat_costs else 0
+            costs.append(avg_cost)
 
         bars = ax1.bar(
             x + i * width,
@@ -511,21 +587,20 @@ def plot_cost_by_task_and_context(
         )
 
         for bar, val in zip(bars, costs):
-            if val > 0:
+            if val > 0.5:  # Only label significant bars
                 ax1.text(
                     bar.get_x() + bar.get_width() / 2,
                     bar.get_height(),
-                    f"${val:.2f}",
+                    f"${val:.1f}",
                     ha="center",
                     va="bottom",
-                    fontsize=8,
-                    rotation=45,
+                    fontsize=9,
                 )
 
     ax1.set_ylabel("Cost per 1000 Queries (USD)")
-    ax1.set_title("Cost by Task", fontweight="bold")
+    ax1.set_title("Cost by Task Category", fontweight="bold")
     ax1.set_xticks(x + width * (len(runners) - 1) / 2)
-    ax1.set_xticklabels([t.upper().replace("_", " ") for t in tasks], rotation=30, ha="right")
+    ax1.set_xticklabels(categories, rotation=45, ha="right", fontsize=9)
     ax1.legend(loc="upper right")
 
     # Right: Cost vs context length (line chart)
@@ -576,14 +651,14 @@ def plot_cost_by_task_and_context(
         official_cost = sum(r.cost_usd for r in results if r.runner_name == "official" and r.cost_usd) or 0
 
         if vanilla_cost > 0:
-            summary_lines.append(f"Vanilla LLM: ${vanilla_cost:.4f}")
+            summary_lines.append(f"Vanilla LLM: ${vanilla_cost:.6f}")
         if ours_cost > 0:
-            summary_lines.append(f"minRLM: ${ours_cost:.4f}")
+            summary_lines.append(f"minRLM: ${ours_cost:.6f}")
             if vanilla_cost > 0:
                 savings = (1 - ours_cost / vanilla_cost) * 100
                 summary_lines.append(f"→ {savings:.0f}% cheaper than Vanilla")
         if official_cost > 0:
-            summary_lines.append(f"Official RLM: ${official_cost:.4f}")
+            summary_lines.append(f"Official RLM: ${official_cost:.6f}")
 
         ax2.text(
             0.5, 0.5, "\n".join(summary_lines),
@@ -632,7 +707,7 @@ def plot_comprehensive_dashboard(
     scaling_results = [r for r in results if "scaling" in r.task_name.lower()]
     if scaling_results:
         path = output_dir / "scaling_analysis.png"
-        plot_scaling_analysis(scaling_results, path, "Context Scaling Analysis")
+        plot_scaling_analysis(scaling_results, path, "Accuracy vs Context Size (RLM vs Vanilla)")
         saved_paths.append(path)
 
     # 5. Cost comparison (if cost data available)
@@ -757,7 +832,7 @@ def _plot_summary_dashboard(results: list[EvalResult], output_path: Path, title:
     if vanilla_cost is not None and ours_cost is not None and ours_cost > 0:
         cost_ratio = vanilla_cost / ours_cost
         summary_lines.append(
-            f"✓ minRLM is {cost_ratio:.1f}x cheaper than Vanilla (${ours_cost:.4f} vs ${vanilla_cost:.4f})"
+            f"✓ minRLM is {cost_ratio:.1f}x cheaper than Vanilla (${ours_cost:.6f} vs ${vanilla_cost:.6f})"
         )
     elif ours_cost is None:
         summary_lines.append("⚠ Cost data unavailable (model not in tokencost)")

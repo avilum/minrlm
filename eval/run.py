@@ -134,6 +134,8 @@ Examples:
 
     parser.add_argument("--output-dir", "-o", default="eval/results", help="Output directory for results and plots")
 
+    parser.add_argument("--log-dir", default=None, help="Directory to save RLM execution logs (default: None)")
+
     parser.add_argument(
         "--skip-official", action="store_true", help="Skip official RLM runner (useful if not installed)"
     )
@@ -189,6 +191,7 @@ def run_evaluation(
     verbose: bool = True,
     results_accumulator: list[EvalResult] | None = None,
     max_parallel: int = 3,
+    log_dir: str | None = None,
 ) -> list[EvalResult]:
     """
     Run the full evaluation suite.
@@ -224,7 +227,9 @@ def run_evaluation(
     active_runners = {}
     for runner_name in runners:
         try:
-            runner = get_runner(runner_name, model)
+            # Pass log_dir only to "ours" runner
+            kwargs = {"log_dir": log_dir} if runner_name == "ours" and log_dir else {}
+            runner = get_runner(runner_name, model, **kwargs)
             if runner.warmup():
                 active_runners[runner_name] = runner
                 if verbose:
@@ -244,7 +249,8 @@ def run_evaluation(
     for task_name in tqdm(tasks, desc="Tasks", disable=not verbose):
         # Handle scaling task specially
         if task_name == "scaling":
-            sizes = context_sizes or [8192, 16384, 32768, 65536]
+            # Default: Test up to 1M as per paper (Figure 1)
+            sizes = context_sizes or [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576]
             for size in sizes:
                 results = _run_task_evaluations(
                     task_name=f"scaling_{size}",
@@ -328,8 +334,9 @@ def run_evaluation(
                 )
                 all_results.extend(results)
         elif task_name == "codeqa":
-            # CodeQA: Code repository understanding at various sizes
-            codeqa_sizes = context_sizes or [100000, 500000]
+            # CodeQA: Code repository understanding at various sizes (paper: 23K-4.2M)
+            # Default: Include 1M+ contexts as per paper
+            codeqa_sizes = context_sizes or [100000, 500000, 1000000, 2000000]
             for size in codeqa_sizes:
                 results = _run_task_evaluations(
                     task_name=f"codeqa_{size // 1000}k",
@@ -342,11 +349,12 @@ def run_evaluation(
                 )
                 all_results.extend(results)
         elif task_name == "browsecomp":
-            # BrowseComp+: Deep research at large contexts
-            browsecomp_sizes = context_sizes or [500000, 1000000]
+            # BrowseComp+: Deep research at large contexts (paper: 6M-11M)
+            # Default to paper's range: 6M-11M
+            browsecomp_sizes = context_sizes or [6000000, 8000000, 10000000, 11000000]
             for size in browsecomp_sizes:
                 results = _run_task_evaluations(
-                    task_name=f"browsecomp_{size // 1000}k",
+                    task_name=f"browsecomp_{size // 1000000}M",
                     task_kwargs={"context_size": size},
                     runners=active_runners,
                     model=model,
@@ -355,6 +363,20 @@ def run_evaluation(
                     max_parallel=max_parallel,
                 )
                 all_results.extend(results)
+        elif task_name == "pairs":
+            # PAIRS: Increase default runs for investigation (50% accuracy issue)
+            # Use more runs to get better statistics on failure modes
+            pairs_runs = max(runs, 5)  # At least 5 runs for PAIRS
+            results = _run_task_evaluations(
+                task_name=task_name,
+                task_kwargs={"context_size": context_size},
+                runners=active_runners,
+                model=model,
+                runs=pairs_runs,
+                verbose=verbose,
+                max_parallel=max_parallel,
+            )
+            all_results.extend(results)
         else:
             results = _run_task_evaluations(
                 task_name=task_name,
@@ -538,26 +560,31 @@ def print_summary(results: list[EvalResult]):
     print(f"\nModel: {stats.get('model', 'N/A')}")
     print(f"Total Evaluations: {stats.get('total_evaluations', 0)}")
 
-    print("\n" + "-" * 80)
+    print("\n" + "-" * 90)
     if has_cost:
         print(
-            f"{'Runner':<15} {'Accuracy':>10} {'Avg Tokens':>12} {'Avg Time':>10} {'Total Cost':>12} {'Token Eff':>10}"
+            f"{'Runner':<15} {'Accuracy':>10} {'In+Out Tokens':>18} {'Avg Time':>10} {'Total Cost':>12} {'Token Eff':>10}"
         )
     else:
-        print(f"{'Runner':<15} {'Accuracy':>10} {'Avg Tokens':>12} {'Avg Time':>10} {'Token Eff':>12}")
-    print("-" * 80)
+        print(f"{'Runner':<15} {'Accuracy':>10} {'In+Out Tokens':>18} {'Avg Time':>10} {'Token Eff':>12}")
+    print("-" * 90)
 
     for runner, data in stats.get("by_runner", {}).items():
         eff = data.get("token_efficiency_vs_vanilla", 1.0)
         eff_str = f"{eff:.2f}x" if eff != 1.0 else "-"
         cost = data.get("total_cost_usd")
-        cost_str = f"${cost:.4f}" if cost is not None else "N/A"
+        cost_str = f"${cost:.6f}" if cost is not None else "N/A"
+        
+        # Show input+output tokens separately
+        in_tok = int(data.get("avg_input_tokens", 0))
+        out_tok = int(data.get("avg_output_tokens", 0))
+        tokens_str = f"{in_tok:,}+{out_tok:,}"
 
         if has_cost:
             print(
                 f"{runner:<15} "
                 f"{data.get('overall_accuracy', 0):>9.1f}% "
-                f"{data.get('avg_tokens_per_task', 0):>12,.0f} "
+                f"{tokens_str:>18} "
                 f"{data.get('avg_time_per_task', 0):>9.1f}s "
                 f"{cost_str:>12} "
                 f"{eff_str:>10}"
@@ -566,12 +593,12 @@ def print_summary(results: list[EvalResult]):
             print(
                 f"{runner:<15} "
                 f"{data.get('overall_accuracy', 0):>9.1f}% "
-                f"{data.get('avg_tokens_per_task', 0):>12,.0f} "
+                f"{tokens_str:>18} "
                 f"{data.get('avg_time_per_task', 0):>9.1f}s "
                 f"{eff_str:>12}"
             )
 
-    print("-" * 80)
+    print("-" * 90)
 
     if not has_cost:
         print("\n⚠️  Cost calculation unavailable (model not in tokencost database)")
@@ -582,12 +609,65 @@ def print_summary(results: list[EvalResult]):
         print(f"\n  {task.upper()}:")
         for runner, data in runners_data.items():
             status = "✓" if data.get("accuracy", 0) >= 80 else "✗"
+            in_tok = int(data.get("avg_input_tokens", 0))
+            out_tok = int(data.get("avg_output_tokens", 0))
             print(
                 f"    {runner:<12} {status} "
                 f"{data.get('accuracy', 0):>5.1f}% | "
-                f"{data.get('avg_total_tokens', 0):>8,.0f} tokens | "
+                f"{in_tok:,}+{out_tok:,} tokens | "
                 f"{data.get('avg_time_seconds', 0):>6.1f}s"
             )
+    
+    # Context size analysis
+    print("\n" + "=" * 80)
+    print("CONTEXT SIZE ANALYSIS")
+    print("=" * 80)
+    
+    # Group by context size
+    size_groups: dict[int, dict[str, list[EvalResult]]] = {}
+    for r in results:
+        if r.context_size not in size_groups:
+            size_groups[r.context_size] = {}
+        if r.runner_name not in size_groups[r.context_size]:
+            size_groups[r.context_size][r.runner_name] = []
+        size_groups[r.context_size][r.runner_name].append(r)
+    
+    if len(size_groups) > 1:
+        print(f"\n{'Context Size':<15} {'Vanilla Acc':<12} {'RLM Acc':<12} {'Advantage':<12} {'RLM Tokens':<15} {'Vanilla Tokens':<15}")
+        print("-" * 80)
+        
+        for size in sorted(size_groups.keys()):
+            vanilla_results = size_groups[size].get("vanilla", [])
+            rlm_results = size_groups[size].get("ours", []) or size_groups[size].get("official", [])
+            
+            if vanilla_results and rlm_results:
+                vanilla_acc = sum(r.correct for r in vanilla_results) / len(vanilla_results) * 100
+                rlm_acc = sum(r.correct for r in rlm_results) / len(rlm_results) * 100
+                advantage = rlm_acc - vanilla_acc
+                
+                vanilla_tokens = int(sum(r.total_tokens for r in vanilla_results) / len(vanilla_results))
+                rlm_tokens = int(sum(r.total_tokens for r in rlm_results) / len(rlm_results))
+                
+                size_str = f"{size // 1024}K" if size < 1024 * 1024 else f"{size // (1024 * 1024)}M"
+                advantage_str = f"+{advantage:.1f}%" if advantage > 0 else f"{advantage:.1f}%"
+                
+                print(f"{size_str:<15} {vanilla_acc:>10.1f}% {rlm_acc:>10.1f}% {advantage_str:>11} {rlm_tokens:>14,} {vanilla_tokens:>14,}")
+        
+        # Find crossover point where RLM starts outperforming
+        crossover_sizes = []
+        for size in sorted(size_groups.keys()):
+            vanilla_results = size_groups[size].get("vanilla", [])
+            rlm_results = size_groups[size].get("ours", []) or size_groups[size].get("official", [])
+            if vanilla_results and rlm_results:
+                vanilla_acc = sum(r.correct for r in vanilla_results) / len(vanilla_results) * 100
+                rlm_acc = sum(r.correct for r in rlm_results) / len(rlm_results) * 100
+                if rlm_acc > vanilla_acc:
+                    crossover_sizes.append((size, rlm_acc - vanilla_acc))
+        
+        if crossover_sizes:
+            min_crossover = min(crossover_sizes, key=lambda x: x[0])
+            size_str = f"{min_crossover[0] // 1024}K" if min_crossover[0] < 1024 * 1024 else f"{min_crossover[0] // (1024 * 1024)}M"
+            print(f"\n✓ RLM starts outperforming vanilla at {size_str} context size (+{min_crossover[1]:.1f}% advantage)")
 
     print("\n" + "=" * 80)
 
@@ -682,6 +762,7 @@ def main():
             verbose=verbose,
             results_accumulator=results,  # Pass mutable list
             max_parallel=args.parallel,
+            log_dir=args.log_dir,
         )
     except KeyboardInterrupt:
         log.warning("\n⚠️  Evaluation interrupted by user")

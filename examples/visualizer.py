@@ -48,6 +48,7 @@ from minrlm import RLM  # Our implementation
 
 # Import evaluation tasks
 from eval.tasks import TASK_REGISTRY, get_task
+from eval.metrics import calculate_cost
 
 
 # =============================================================================
@@ -78,9 +79,14 @@ def get_benchmark_options() -> dict[str, dict]:
                     "description": f"{task_cls.description} ({size_val:,} chars)",
                 }
 
-    scaling_sizes = [8192, 16384, 32768, 65536, 131072]
+    # Paper's scaling sizes: 8K to 1M (Figure 1), plus 10M for extreme testing
+    scaling_sizes = [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 10485760]
     for size in scaling_sizes:
-        options[f"SCALING - {size // 1024}K"] = {
+        if size < 1024 * 1024:
+            size_label = f"{size // 1024}K"
+        else:
+            size_label = f"{size // (1024 * 1024)}M"
+        options[f"SCALING - {size_label}"] = {
             "task": "scaling",
             "context_size": size,
             "description": f"S-NIAH at {size:,} chars",
@@ -101,7 +107,14 @@ def get_benchmark_options() -> dict[str, dict]:
                 "description": f"Aggregate data from JSON ({size_val:,} chars)",
             }
 
-    long_sizes = {"128K": 131072, "256K": 262144}
+    # Extended long context sizes including paper's large contexts
+    long_sizes = {
+        "128K": 131072,
+        "256K": 262144,
+        "512K": 524288,
+        "1M": 1048576,
+        "10M": 10485760,
+    }
     for size_name, size_val in long_sizes.items():
         if "long_context" in TASK_REGISTRY:
             for pos in ["start", "middle", "end"]:
@@ -128,18 +141,36 @@ def get_benchmark_options() -> dict[str, dict]:
         }
 
     if "codeqa" in TASK_REGISTRY:
-        options["CODEQA (Code Understanding)"] = {
-            "task": "codeqa",
-            "context_size": 100000,
-            "description": "Answer questions about code (100K chars)",
+        # Paper's CodeQA sizes: 23K-4.2M, include 1M+
+        codeqa_sizes = {
+            "Small (100K)": 100000,
+            "Medium (500K)": 500000,
+            "Large (1M)": 1000000,
+            "XL (2M)": 2000000,
+            "XXL (10M)": 10000000,
         }
+        for size_name, size_val in codeqa_sizes.items():
+            options[f"CODEQA - {size_name}"] = {
+                "task": "codeqa",
+                "context_size": size_val,
+                "description": f"Code repository understanding ({size_val:,} chars)",
+            }
 
     if "browsecomp" in TASK_REGISTRY:
-        options["BROWSECOMP (Research)"] = {
-            "task": "browsecomp",
-            "context_size": 200000,
-            "description": "Multi-hop research (200K chars)",
+        # Paper's BrowseComp+ sizes: 6M-11M
+        browsecomp_sizes = {
+            "Small (200K)": 200000,
+            "Medium (1M)": 1000000,
+            "Large (6M)": 6000000,
+            "XL (10M)": 10000000,
+            "XXL (11M)": 11000000,
         }
+        for size_name, size_val in browsecomp_sizes.items():
+            options[f"BROWSECOMP - {size_name}"] = {
+                "task": "browsecomp",
+                "context_size": size_val,
+                "description": f"Multi-hop research ({size_val:,} chars)",
+            }
 
     return options
 
@@ -180,6 +211,7 @@ class RunResult:
     time_seconds: float
     iterations: int = 1
     trace: str = ""
+    cost_usd: float | None = None
 
 
 def run_vanilla_llm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
@@ -206,6 +238,11 @@ def run_vanilla_llm(task: str, context: str, model: str, check_fn: callable = No
         resp_text = response.choices[0].message.content or ""
         usage = response.usage
         correct = check_fn(resp_text) if check_fn else True
+        
+        input_tokens = usage.prompt_tokens if usage else 0
+        output_tokens = usage.completion_tokens if usage else 0
+        total_tokens = usage.total_tokens if usage else 0
+        cost = calculate_cost(model, input_tokens, output_tokens)
 
         trace += f"**Response:** `{resp_text[:200]}{'...' if len(resp_text) > 200 else ''}`\n\n"
         if check_fn:
@@ -214,10 +251,11 @@ def run_vanilla_llm(task: str, context: str, model: str, check_fn: callable = No
         return RunResult(
             response=resp_text,
             correct=correct,
-            tokens=usage.total_tokens if usage else 0,
-            input_tokens=usage.prompt_tokens if usage else 0,
-            output_tokens=usage.completion_tokens if usage else 0,
+            tokens=total_tokens,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             time_seconds=elapsed,
+            cost_usd=cost,
             trace=trace,
         )
     except Exception as e:
@@ -281,8 +319,13 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
         response = result.response
         correct = check_fn(response) if check_fn else True
 
+        cost = calculate_cost(model, result.input_tokens, result.output_tokens)
+        
         trace_parts.append(f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n")
-        trace_parts.append(f"**Tokens:** {result.total_tokens:,} | **Time:** {elapsed:.1f}s\n")
+        trace_parts.append(f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out = {result.total_tokens:,} total")
+        if cost is not None:
+            trace_parts.append(f" | **Cost:** ${cost:.6f}")
+        trace_parts.append(f" | **Time:** {elapsed:.1f}s\n")
         if check_fn:
             trace_parts.append(f"{'✅ Correct' if correct else '❌ Incorrect'}\n\n")
 
@@ -294,6 +337,7 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
             output_tokens=result.output_tokens,
             time_seconds=elapsed,
             iterations=result.iterations,
+            cost_usd=cost,
             trace="".join(trace_parts),
         )
     except Exception as e:
@@ -407,8 +451,12 @@ except Exception as e:
             iterations = data.get("iterations", 1)
 
             correct = check_fn(resp_text) if check_fn else True
+            cost = calculate_cost(model, input_tokens, output_tokens)
 
-            trace += f"**Tokens:** {total_tokens:,}\n\n"
+            trace += f"**Tokens:** {input_tokens:,} in + {output_tokens:,} out = {total_tokens:,} total"
+            if cost is not None:
+                trace += f" | **Cost:** ${cost:.6f}"
+            trace += "\n\n"
             trace += f"**Response:** `{resp_text[:200]}{'...' if len(resp_text) > 200 else ''}`\n\n"
             if check_fn:
                 trace += f"{'✅ Correct' if correct else '❌ Incorrect'}\n\n"
@@ -421,6 +469,7 @@ except Exception as e:
                 output_tokens=output_tokens,
                 time_seconds=elapsed,
                 iterations=iterations,
+                cost_usd=cost,
                 trace=trace,
             )
         elif "<<<ERROR>>>" in output:
@@ -745,17 +794,27 @@ def build_app():
 
                     # Final output
                     output = f"**{benchmark_name}** · {len(context):,} chars · {model}\n\n"
-                    output += "| Method | Result | Tokens | Time | Iters |\n|--------|--------|--------|------|-------|\n"
+                    output += "| Method | Result | Input Tokens | Output Tokens | Total Tokens | Cost | Time | Iters |\n"
+                    output += "|--------|--------|--------------|---------------|--------------|------|------|-------|\n"
                     for name, r in results_list:
                         status = "✅" if r.correct else "❌"
-                        output += f"| {name} | {status} | {r.tokens:,} | {r.time_seconds:.1f}s | {r.iterations} |\n"
+                        cost_str = f"${r.cost_usd:.6f}" if r.cost_usd is not None else "N/A"
+                        output += f"| {name} | {status} | {r.input_tokens:,} | {r.output_tokens:,} | {r.tokens:,} | {cost_str} | {r.time_seconds:.1f}s | {r.iterations} |\n"
 
                     if len(results_list) >= 2:
                         tokens = [(n, r.tokens) for n, r in results_list if r.tokens > 0]
+                        costs = [(n, r.cost_usd) for n, r in results_list if r.cost_usd is not None]
+                        
                         if tokens:
                             best, worst = min(tokens, key=lambda x: x[1]), max(tokens, key=lambda x: x[1])
                             if best[1] < worst[1]:
                                 output += f"\n**{best[0]}** used {(1-best[1]/worst[1])*100:.0f}% fewer tokens."
+                        
+                        if costs:
+                            best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(costs, key=lambda x: x[1])
+                            if best_cost[1] < worst_cost[1]:
+                                savings = (1 - best_cost[1] / worst_cost[1]) * 100
+                                output += f"\n**{best_cost[0]}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
 
                     all_correct = all(r.correct for _, r in results_list)
                     final_status = create_status_box("✓ Complete" if all_correct else "Complete", f"⏱️ {total_elapsed:.1f}s", "🎉" if all_correct else "⚠️", "#51cf66" if all_correct else "#fcc419", False)
@@ -845,16 +904,26 @@ def build_app():
 
                     # Final output table
                     output = f"**Custom Task** · {context_info} · {model}\n\n"
-                    output += "| Method | Tokens | Time | Iters |\n|--------|--------|------|-------|\n"
+                    output += "| Method | Input Tokens | Output Tokens | Total Tokens | Cost | Time | Iters |\n"
+                    output += "|--------|--------------|---------------|--------------|------|------|-------|\n"
                     for name, r in results_list:
-                        output += f"| {name} | {r.tokens:,} | {r.time_seconds:.1f}s | {r.iterations} |\n"
+                        cost_str = f"${r.cost_usd:.6f}" if r.cost_usd is not None else "N/A"
+                        output += f"| {name} | {r.input_tokens:,} | {r.output_tokens:,} | {r.tokens:,} | {cost_str} | {r.time_seconds:.1f}s | {r.iterations} |\n"
 
                     if len(results_list) >= 2:
                         tokens = [(n, r.tokens) for n, r in results_list if r.tokens > 0]
+                        costs = [(n, r.cost_usd) for n, r in results_list if r.cost_usd is not None]
+                        
                         if tokens:
                             best, worst = min(tokens, key=lambda x: x[1]), max(tokens, key=lambda x: x[1])
                             if best[1] < worst[1]:
                                 output += f"\n**{best[0]}** used {(1-best[1]/worst[1])*100:.0f}% fewer tokens."
+                        
+                        if costs:
+                            best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(costs, key=lambda x: x[1])
+                            if best_cost[1] < worst_cost[1]:
+                                savings = (1 - best_cost[1] / worst_cost[1]) * 100
+                                output += f"\n**{best_cost[0]}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
 
                     # Build responses display
                     responses_md = "### Responses\n\n"

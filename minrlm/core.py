@@ -18,7 +18,11 @@ from typing import Any
 
 from openai import AsyncOpenAI, OpenAI
 
-from .prompts import format_continue_prompt, format_system_prompt, format_user_prompt
+from .prompts import (
+    format_continue_prompt,
+    format_system_prompt,
+    format_user_prompt,
+)
 
 # Context chars to show before/after each search() match
 SEARCH_CONTEXT_CHARS = 500
@@ -39,6 +43,17 @@ class RLMResult:
     history: list[dict[str, str]] = field(default_factory=list)
 
 
+class ProtectedNamespace(dict):
+    """Dict that prevents reassignment of protected keys (like input_0)."""
+    
+    PROTECTED = {"input_0", "input_1", "input_2"}  # Context variables are protected
+    
+    def __setitem__(self, key: str, value: Any) -> None:
+        if key in self.PROTECTED and key in self:
+            raise NameError(f"Cannot reassign '{key}' - it already contains your data. Use it directly.")
+        super().__setitem__(key, value)
+
+
 class PythonREPL:
     """Persistent Python REPL with sub_llm() and FINAL() support."""
 
@@ -46,7 +61,8 @@ class PythonREPL:
 
     def __init__(self, sub_llm_callback: Callable | None = None, sub_llm_batch_callback: Callable | None = None):
         self._output: str | None = None
-        self._namespace = {
+        self._data_accessed = False  # Track if search() or input_0 was used
+        self._namespace = ProtectedNamespace({
             "__builtins__": __builtins__,
             "__name__": "__main__",  # So `if __name__ == "__main__":` works
             "sub_llm": self._make_sub_llm(sub_llm_callback),
@@ -55,7 +71,7 @@ class PythonREPL:
             "FINAL_var": self._set_output_var,
             "peek": self._peek,
             "search": self._search,
-        }
+        })
 
     def _make_sub_llm(self, callback: Callable[[str, str], str] | None) -> Callable[[str, str], str]:
         def sub_llm(task: str, context: str = "") -> str:
@@ -78,6 +94,14 @@ class PythonREPL:
         return sub_llm_batch
 
     def _set_output(self, value: str) -> None:
+        # Reject None or empty values
+        if value is None:
+            raise ValueError("FINAL() called with None - provide a non-empty string value")
+        
+        # Enforce data grounding: if input_0 exists, must access data first
+        if "input_0" in self._namespace and not self._data_accessed:
+            raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
+        
         self._output = str(value).strip()
         
         # Clean common artifacts from search() tuple returns
@@ -92,9 +116,9 @@ class PythonREPL:
             if inner:
                 print(f"ℹ️ Cleaned output: '{self._output}'")
         
+        # Reject empty string after cleaning
         if self._output == "":
-            print("⚠️ REJECTED: FINAL() called with empty string - try again")
-            self._output = None  # Reject empty output
+            raise ValueError("FINAL() called with empty string - provide a non-empty answer")
 
     def _search(self, text: str, pattern: str, context: int = SEARCH_CONTEXT_CHARS) -> list[tuple[str, str, str]]:
         """Search for literal pattern in text (case-insensitive).
@@ -109,6 +133,7 @@ class PythonREPL:
         Returns:
             List of tuples: (match, before_context, after_context)
         """
+        self._data_accessed = True  # Mark data as accessed
         matches = []
         text_lower = text.lower()
         pattern_lower = pattern.lower()
@@ -145,10 +170,20 @@ class PythonREPL:
 
     def _set_output_var(self, var_name: str) -> None:
         """Set output from a variable in the namespace (FINAL_VAR from paper)."""
+        # Enforce data grounding: if input_0 exists, must access data first
+        if "input_0" in self._namespace and not self._data_accessed:
+            raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
+        
         if var_name not in self._namespace:
             raise NameError(f"Variable '{var_name}' not found in REPL")
+        
         value = self._namespace[var_name]
-        self._output = str(value)
+        if value is None:
+            raise ValueError(f"Variable '{var_name}' is None - provide a non-empty value")
+        
+        self._output = str(value).strip()
+        if self._output == "":
+            raise ValueError(f"Variable '{var_name}' contains empty string - provide a non-empty value")
 
     def _peek(self, data: Any, max_len: int = 500, max_items: int = 5, depth: int = 0) -> str:
         """Efficient preview of data - truncates large strings/lists, recurses into structures."""
@@ -217,6 +252,23 @@ class PythonREPL:
         stdout_capture = StringIO()
         old_stdout, sys.stdout = sys.stdout, stdout_capture
 
+        # Check if input_0 is accessed directly (e.g., json.loads(input_0), re.findall(..., input_0), etc.)
+        # This allows structured data parsing and pattern matching without requiring search()
+        if "input_0" in self._namespace and not self._data_accessed:
+            import re
+            # Look for common patterns that indicate input_0 is being used
+            has_input_0 = 'input_0' in code
+            has_regex = bool(re.search(r're\.(findall|search|finditer|match|fullmatch)', code))
+            patterns = [
+                r'json\.loads\s*\(\s*input_0',  # json.loads(input_0)
+                r'input_0\s*\[',  # input_0[...]
+                r'input_0\s*\.',  # input_0.method()
+                r'=\s*input_0',  # var = input_0
+            ]
+            # If input_0 is used AND (regex function is called OR direct access pattern matches)
+            if has_input_0 and (has_regex or any(re.search(p, code) for p in patterns)):
+                self._data_accessed = True
+
         result: dict[str, Any] = {"stdout": "", "output": None, "error": None}
         try:
             exec(code, self._namespace)
@@ -238,6 +290,7 @@ class PythonREPL:
     def reset(self) -> None:
         """Reset REPL state for a new completion while preserving callbacks."""
         self._output = None
+        self._data_accessed = False  # Reset data access tracking
         # Clear user variables, keep built-ins and special functions
         keys_to_keep = set(self.HIDDEN_KEYS) | {
             "sub_llm",
@@ -298,13 +351,14 @@ class RLM:
 
     def __init__(
         self,
-        model: str = "gpt-5-nano",
+        model: str = "gpt-4o-mini",  # Default to non-reasoning model for cost efficiency
         api_key: str | None = None,
         base_url: str | None = None,
-        max_iterations: int = 20,
+        max_iterations: int = 6,  # Reduced from 20 - force early commitment
         max_time_seconds: int = DEFAULT_MAX_TIME_SECONDS,  # Timeout per completion
-        max_output_tokens: int | None = 2000,  # Limit output for speed (None = no limit)
+        max_output_tokens: int | None = 1500,  # Reduced from 2000 - less verbose code
         temperature: float = 0.0,  # Use 0 for deterministic code generation
+        reasoning_effort: str = "low",  # For reasoning models: "low", "medium", "high"
         log_dir: str | None = None,
         async_batch: bool = True,  # Enable parallel sub_llm_batch calls
         on_step: Callable[[str, dict], None] | None = None,  # Callback for streaming steps
@@ -319,6 +373,7 @@ class RLM:
         self.max_time_seconds = max_time_seconds
         self.max_output_tokens = max_output_tokens
         self.temperature = temperature
+        self.reasoning_effort = reasoning_effort
         self.log_dir = Path(log_dir) if log_dir else None
         self.async_batch = async_batch
         self.on_step = on_step
@@ -409,13 +464,21 @@ class RLM:
             "messages": messages,
         }
 
-        # Set temperature (gpt-5 models don't support temperature=0)
-        if self.temperature is not None and "gpt-5" not in self.model.lower():
+        # TODO: Maintain this list as OpenAI releases new reasoning models
+        # Currently: o1, o1-mini, o1-preview, o3, o3-mini, gpt-5, gpt-5-nano, gpt-5-mini
+        is_reasoning_model = self._is_reasoning_model(self.model)
+
+        # Set temperature (reasoning models don't support temperature != 1)
+        if self.temperature is not None and not is_reasoning_model:
             kwargs["temperature"] = self.temperature
 
-        # Limit output tokens to reduce latency (skip for gpt-5 models which may have issues)
-        if self.max_output_tokens and "gpt-5" not in self.model.lower():
+        # Limit output tokens to reduce latency (skip for reasoning models)
+        if self.max_output_tokens and not is_reasoning_model:
             kwargs["max_tokens"] = self.max_output_tokens
+
+        # Use reasoning_effort for reasoning models to control token cost
+        if is_reasoning_model and self.reasoning_effort:
+            kwargs["reasoning_effort"] = self.reasoning_effort
 
         resp = self.client.chat.completions.create(**kwargs)
         usage = resp.usage
@@ -425,6 +488,20 @@ class RLM:
             usage.prompt_tokens if usage else 0,
             usage.completion_tokens if usage else 0,
         )
+
+    @staticmethod
+    def _is_reasoning_model(model: str) -> bool:
+        """Check if model is a reasoning model that uses hidden chain-of-thought.
+        
+        TODO: Keep this list updated as OpenAI releases new reasoning models.
+        These models have internal reasoning tokens that are billed but not visible.
+        """
+        model_lower = model.lower()
+        reasoning_patterns = [
+            "o1", "o3",  # o1, o1-mini, o1-preview, o3, o3-mini
+            "gpt-5",     # gpt-5, gpt-5-nano, gpt-5-mini
+        ]
+        return any(pattern in model_lower for pattern in reasoning_patterns)
 
     def _handle_sub_llm(self, task: str, context: str = "") -> str:
         """Handle recursive sub_llm() calls, preserving parent's output state."""
@@ -599,7 +676,7 @@ class RLM:
                 self.on_step("executing", {"iteration": iteration + 1, "code": code})  # Full code for debugging
 
             result = self._repl.execute(code)
-            self._log("code_exec", {"code": code[:500], "output": result.get("output"), "state": result.get("state")})
+            self._log("code_exec", {"code": code[:500], "output": result.get("output"), "error": result.get("error"), "state": result.get("state")})
 
             if self.on_step:
                 self.on_step(
@@ -623,7 +700,11 @@ class RLM:
                 {
                     "role": "user",
                     "content": format_continue_prompt(
-                        result.get("stdout", ""), result.get("error", ""), result.get("state", {})
+                        result.get("stdout", ""),
+                        result.get("error", ""),
+                        result.get("state", {}),
+                        iteration=iteration + 1,
+                        max_iterations=self.max_iterations,
                     ),
                 },
             ]

@@ -271,6 +271,8 @@ def compute_statistics(results: list[EvalResult]) -> dict:
             "overall_accuracy": sum(r.correct for r in runner_results) / len(runner_results) * 100,
             "total_tokens_used": sum(r.total_tokens for r in runner_results),
             "avg_tokens_per_task": statistics.mean(r.total_tokens for r in runner_results),
+            "avg_input_tokens": statistics.mean(r.input_tokens for r in runner_results),
+            "avg_output_tokens": statistics.mean(r.output_tokens for r in runner_results),
             "avg_time_per_task": statistics.mean(r.time_seconds for r in runner_results),
             "avg_iterations": statistics.mean(r.iterations for r in runner_results),
             "total_cost_usd": total_cost,
@@ -340,7 +342,7 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
         efficiency = data.get("token_efficiency_vs_vanilla", 1.0)
         efficiency_str = f"{efficiency:.2f}x" if efficiency != 1.0 else "-"
         cost = data.get("total_cost_usd")
-        cost_str = f"${cost:.4f}" if cost is not None else "N/A"
+        cost_str = f"${cost:.6f}" if cost is not None else "N/A"
 
         if has_cost:
             lines.append(
@@ -386,9 +388,45 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
 
         lines.append("")
 
+    # Context size analysis
+    lines.extend(
+        [
+            "",
+            "## Context Size Analysis",
+            "",
+        ]
+    )
+    
+    # Group results by context size and runner
+    size_analysis: dict[int, dict[str, list[EvalResult]]] = {}
+    for r in results:
+        if r.context_size not in size_analysis:
+            size_analysis[r.context_size] = {}
+        if r.runner_name not in size_analysis[r.context_size]:
+            size_analysis[r.context_size][r.runner_name] = []
+        size_analysis[r.context_size][r.runner_name].append(r)
+    
+    if len(size_analysis) > 1:
+        lines.append("| Context Size | Vanilla Accuracy | RLM Accuracy | RLM Advantage |")
+        lines.append("|--------------|------------------|--------------|---------------|")
+        
+        for size in sorted(size_analysis.keys()):
+            vanilla_results = size_analysis[size].get("vanilla", [])
+            rlm_results = size_analysis[size].get("ours", []) or size_analysis[size].get("official", [])
+            
+            vanilla_acc = sum(r.correct for r in vanilla_results) / len(vanilla_results) * 100 if vanilla_results else 0
+            rlm_acc = sum(r.correct for r in rlm_results) / len(rlm_results) * 100 if rlm_results else 0
+            
+            if vanilla_results and rlm_results:
+                advantage = rlm_acc - vanilla_acc
+                advantage_str = f"+{advantage:.1f}%" if advantage > 0 else f"{advantage:.1f}%"
+                size_str = f"{size // 1024}K" if size < 1024 * 1024 else f"{size // (1024 * 1024)}M"
+                lines.append(f"| {size_str} | {vanilla_acc:.1f}% | {rlm_acc:.1f}% | {advantage_str} |")
+    
     # Key findings
     lines.extend(
         [
+            "",
             "## Key Findings",
             "",
         ]
@@ -419,7 +457,7 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
     if vanilla_cost is not None and ours_cost is not None and ours_cost > 0:
         cost_ratio = vanilla_cost / ours_cost
         lines.append(
-            f"- **Cost savings**: minRLM is **{cost_ratio:.1f}x cheaper** than vanilla (${ours_cost:.4f} vs ${vanilla_cost:.4f})"
+            f"- **Cost savings**: minRLM is **{cost_ratio:.1f}x cheaper** than vanilla (${ours_cost:.6f} vs ${vanilla_cost:.6f})"
         )
     elif ours_cost is None:
         lines.append("- **Cost**: Unable to calculate (model not in tokencost database)")
