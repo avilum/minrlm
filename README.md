@@ -6,7 +6,7 @@ A minimal implementation of [Recursive Language Models](https://arxiv.org/abs/25
 
 **The solution**: The model writes code to search it. You pay ~1,000 tokens instead. Same answer, ~90x cheaper.
 
-**The proof**: 87% accuracy, 4.2x fewer tokens, 4.1x cheaper. At 11M contexts, RLMs work where vanilla LLM fails.
+**The proof**: 4.2x fewer tokens, 4.1x cheaper. At 11M contexts, RLMs work where vanilla LLM fails.
 
 ## Quick Start
 
@@ -27,7 +27,7 @@ print(result.total_tokens)  # ~2K tokens regardless of size
 
 ## Benchmarks
 
-**Overall**: 87% accuracy, **4.2x fewer tokens**, **4.1x cheaper**
+**Overall**: **4.2x fewer tokens**, **4.1x cheaper**
 
 | Task | Context | Vanilla | minrlm | Savings |
 |------|---------|---------|--------|---------|
@@ -36,6 +36,14 @@ print(result.total_tokens)  # ~2K tokens regardless of size
 | BrowseComp+ | 11M | ❌ Fails | ✅ 100% (~2K tokens) | **∞** |
 
 **Key insight**: At large contexts (128K+), RLMs often match or exceed vanilla accuracy while using 10-90x fewer tokens. At extreme scales (6M-11M), RLMs are the only viable option - vanilla fails due to token limits.
+
+### Cost & Token Efficiency
+
+![Cost by Task & Context Length](docs/cost_by_task_context.png)
+
+![Cost Comparison](docs/cost_comparison.png)
+
+![Token Efficiency](docs/token_efficiency.png)
 
 See [`eval/README.md`](eval/README.md) for detailed benchmark analysis.
 
