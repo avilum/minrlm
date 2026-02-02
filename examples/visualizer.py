@@ -691,7 +691,7 @@ def build_app():
             - **Large contexts (128K+)**: RLMs often outperform vanilla
             - **Extreme contexts (6M-11M)**: minRLM achieves 100% where vanilla fails
             
-            **How it works**: The model writes Python code to search/process data stored in a REPL. The data never enters the LLM's context — only metadata ("200K chars") is sent. Token usage stays flat regardless of context size.
+            **How it works**: The model writes Python code to search/process data stored in a REPL. The data never enters the LLM's context - only metadata ("200K chars") is sent. Token usage stays flat regardless of context size.
             
             See the [README](https://github.com/avilum/minrlm) for full details.
             """)
