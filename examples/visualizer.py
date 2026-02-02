@@ -11,6 +11,7 @@ Run with:
 
 # Fix matplotlib backend before any imports (Gradio 6.x bug on Python 3.14)
 import matplotlib
+
 matplotlib.use("Agg")
 
 import json
@@ -44,12 +45,11 @@ from openai import OpenAI
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from minrlm import RLM  # Our implementation
+from eval.metrics import calculate_cost
 
 # Import evaluation tasks
 from eval.tasks import TASK_REGISTRY, get_task
-from eval.metrics import calculate_cost
-
+from minrlm import RLM  # Our implementation
 
 # =============================================================================
 # Build Benchmark Options from Eval Tasks
@@ -238,7 +238,7 @@ def run_vanilla_llm(task: str, context: str, model: str, check_fn: callable = No
         resp_text = response.choices[0].message.content or ""
         usage = response.usage
         correct = check_fn(resp_text) if check_fn else True
-        
+
         input_tokens = usage.prompt_tokens if usage else 0
         output_tokens = usage.completion_tokens if usage else 0
         total_tokens = usage.total_tokens if usage else 0
@@ -301,7 +301,9 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
                 stdout = data.get("stdout", "")
                 output = data.get("output")
                 if stdout:
-                    trace_parts.append(f"**stdout:**\n```\n{stdout[:2000]}{'...' if len(stdout) > 2000 else ''}\n```\n\n")
+                    trace_parts.append(
+                        f"**stdout:**\n```\n{stdout[:2000]}{'...' if len(stdout) > 2000 else ''}\n```\n\n"
+                    )
                 if output:
                     trace_parts.append(f"✅ **FINAL():** `{output}`\n\n")
                 elif not stdout:
@@ -320,9 +322,11 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
         correct = check_fn(response) if check_fn else True
 
         cost = calculate_cost(model, result.input_tokens, result.output_tokens)
-        
+
         trace_parts.append(f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n")
-        trace_parts.append(f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out = {result.total_tokens:,} total")
+        trace_parts.append(
+            f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out = {result.total_tokens:,} total"
+        )
         if cost is not None:
             trace_parts.append(f" | **Cost:** ${cost:.6f}")
         trace_parts.append(f" | **Time:** {elapsed:.1f}s\n")
@@ -479,14 +483,26 @@ except Exception as e:
             if result.stderr:
                 trace += f"**Error:** {result.stderr[:500]}\n"
 
-        return RunResult(response="", correct=False, tokens=0, input_tokens=0, output_tokens=0, time_seconds=elapsed, trace=trace)
+        return RunResult(
+            response="", correct=False, tokens=0, input_tokens=0, output_tokens=0, time_seconds=elapsed, trace=trace
+        )
 
     except subprocess.TimeoutExpired:
         trace += "**Error:** Timeout (5 min limit)\n"
-        return RunResult(response="", correct=False, tokens=0, input_tokens=0, output_tokens=0, time_seconds=300, trace=trace)
+        return RunResult(
+            response="", correct=False, tokens=0, input_tokens=0, output_tokens=0, time_seconds=300, trace=trace
+        )
     except Exception as e:
         trace += f"**Error:** {e}\n"
-        return RunResult(response="", correct=False, tokens=0, input_tokens=0, output_tokens=0, time_seconds=time.time() - start, trace=trace)
+        return RunResult(
+            response="",
+            correct=False,
+            tokens=0,
+            input_tokens=0,
+            output_tokens=0,
+            time_seconds=time.time() - start,
+            trace=trace,
+        )
     finally:
         for f in [context_file, task_file]:
             try:
@@ -530,7 +546,9 @@ def generate_task_instance(benchmark_name: str) -> tuple[str, str, str, str, cal
 # =============================================================================
 
 
-def create_status_box(title: str, subtitle: str = "", icon: str = "⏳", color: str = "#818cf8", pulse: bool = True) -> str:
+def create_status_box(
+    title: str, subtitle: str = "", icon: str = "⏳", color: str = "#818cf8", pulse: bool = True
+) -> str:
     pulse_style = "animation: pulse 1.5s ease-in-out infinite;" if pulse else ""
     glow = f"box-shadow: 0 0 40px {color}33;" if pulse else ""
     return f"""
@@ -562,18 +580,18 @@ def build_charts(results_list: list) -> tuple:
     color_map = {m: colors.get(m, "#94a3b8") for m in df["Method"]}
 
     # Common layout settings
-    layout_common = dict(
-        showlegend=False,
-        height=320,
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(15,23,42,0.5)",
-        font=dict(family="Inter, system-ui, sans-serif", color="#e2e8f0"),
-        title_font=dict(size=16, color="#e2e8f0"),
-        xaxis=dict(gridcolor="rgba(148,163,184,0.1)", title=""),
-        yaxis=dict(gridcolor="rgba(148,163,184,0.1)"),
-        margin=dict(t=50, b=40, l=60, r=20),
-    )
+    layout_common = {
+        "showlegend": False,
+        "height": 320,
+        "template": "plotly_dark",
+        "paper_bgcolor": "rgba(0,0,0,0)",
+        "plot_bgcolor": "rgba(15,23,42,0.5)",
+        "font": {"family": "Inter, system-ui, sans-serif", "color": "#e2e8f0"},
+        "title_font": {"size": 16, "color": "#e2e8f0"},
+        "xaxis": {"gridcolor": "rgba(148,163,184,0.1)", "title": ""},
+        "yaxis": {"gridcolor": "rgba(148,163,184,0.1)"},
+        "margin": {"t": 50, "b": 40, "l": 60, "r": 20},
+    }
 
     tokens_fig = px.bar(df, x="Method", y="Tokens", color="Method", color_discrete_map=color_map)
     tokens_fig.update_layout(**layout_common, title="Token Usage", yaxis_title="Tokens")
@@ -637,30 +655,33 @@ def build_app():
     }
     """
 
-    with gr.Blocks(title="RLM Visualizer", css=custom_css, theme=gr.themes.Base(
-        primary_hue="indigo",
-        secondary_hue="slate",
-        neutral_hue="slate",
-        font=gr.themes.GoogleFont("Inter"),
-    ).set(
-        body_background_fill="*neutral_950",
-        body_background_fill_dark="*neutral_950",
-        block_background_fill="*neutral_900",
-        block_background_fill_dark="*neutral_900",
-        block_border_color="*neutral_800",
-        block_border_color_dark="*neutral_800",
-        block_label_background_fill="*primary_600",
-        block_label_background_fill_dark="*primary_600",
-        block_title_text_color="*neutral_100",
-        block_title_text_color_dark="*neutral_100",
-        input_background_fill="*neutral_800",
-        input_background_fill_dark="*neutral_800",
-        button_primary_background_fill="*primary_600",
-        button_primary_background_fill_dark="*primary_600",
-        button_primary_background_fill_hover="*primary_500",
-        button_primary_background_fill_hover_dark="*primary_500",
-    )) as demo:
-
+    with gr.Blocks(
+        title="RLM Visualizer",
+        css=custom_css,
+        theme=gr.themes.Base(
+            primary_hue="indigo",
+            secondary_hue="slate",
+            neutral_hue="slate",
+            font=gr.themes.GoogleFont("Inter"),
+        ).set(
+            body_background_fill="*neutral_950",
+            body_background_fill_dark="*neutral_950",
+            block_background_fill="*neutral_900",
+            block_background_fill_dark="*neutral_900",
+            block_border_color="*neutral_800",
+            block_border_color_dark="*neutral_800",
+            block_label_background_fill="*primary_600",
+            block_label_background_fill_dark="*primary_600",
+            block_title_text_color="*neutral_100",
+            block_title_text_color_dark="*neutral_100",
+            input_background_fill="*neutral_800",
+            input_background_fill_dark="*neutral_800",
+            button_primary_background_fill="*primary_600",
+            button_primary_background_fill_dark="*primary_600",
+            button_primary_background_fill_hover="*primary_500",
+            button_primary_background_fill_hover_dark="*primary_500",
+        ),
+    ) as demo:
         # Header
         gr.HTML("""
         <div style="text-align: center; padding: 32px 0 24px 0; border-bottom: 1px solid rgba(148,163,184,0.1); margin-bottom: 24px;">
@@ -676,23 +697,23 @@ def build_app():
             </div>
         </div>
         """)
-        
+
         # About Section
         with gr.Accordion("ℹ️ About", open=False):
             gr.Markdown("""
             ### Let LLMs think through code.
-            
+
             A minimal (<500 lines) RLM (Recursive Language Model) implementation that's **4.2x more token-efficient**.
-            
+
             **Benchmark Results (gpt-5-nano, 162 evaluations):**
             - **Accuracy**: 87.0% (vs 92.6% vanilla)
             - **Token Efficiency**: 4.20x fewer tokens (2,247 vs 9,441 avg)
             - **Cost**: 4.1x cheaper ($0.001750 vs $0.007099)
             - **Large contexts (128K+)**: RLMs often outperform vanilla
             - **Extreme contexts (6M-11M)**: minRLM achieves 100% where vanilla fails
-            
+
             **How it works**: The model writes Python code to search/process data stored in a REPL. The data never enters the LLM's context - only metadata ("200K chars") is sent. Token usage stays flat regardless of context size.
-            
+
             See the [README](https://github.com/avilum/minrlm) for full details.
             """)
 
@@ -718,7 +739,7 @@ def build_app():
         # =================================================================
         # TABS
         # =================================================================
-        with gr.Tabs() as tabs:
+        with gr.Tabs():
             # =============================================================
             # TAB 1: Evaluation Tasks
             # =============================================================
@@ -742,7 +763,9 @@ def build_app():
                     task_description = gr.Markdown("*Select a task and click 'New Instance' to generate*")
 
                 # Status & Results
-                eval_status_html = gr.HTML(create_status_box("Ready", "Select a task and click Run", "📋", "#64748b", False))
+                eval_status_html = gr.HTML(
+                    create_status_box("Ready", "Select a task and click Run", "📋", "#64748b", False)
+                )
 
                 with gr.Group():
                     eval_results_output = gr.Markdown("")
@@ -773,15 +796,33 @@ def build_app():
                     preview = context[:500] + "..." if len(context) > 500 else context
                     return (
                         f"**{benchmark_name}**\n\n{desc}\n\n*Context: {len(context):,} chars*",
-                        task, expected, preview, context, check_fn,
+                        task,
+                        expected,
+                        preview,
+                        context,
+                        check_fn,
                     )
 
-                generate_btn.click(fn=on_generate, inputs=[benchmark_dropdown], outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state])
-                benchmark_dropdown.change(fn=on_generate, inputs=[benchmark_dropdown], outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state])
+                generate_btn.click(
+                    fn=on_generate,
+                    inputs=[benchmark_dropdown],
+                    outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state],
+                )
+                benchmark_dropdown.change(
+                    fn=on_generate,
+                    inputs=[benchmark_dropdown],
+                    outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state],
+                )
 
                 def run_eval_task(task, context, model, run_vanilla, run_rlm, run_official, benchmark_name, check_fn):
                     if not task:
-                        yield create_status_box("No Task", "Generate a task first", "📋", "#666", False), "", None, None, ""
+                        yield (
+                            create_status_box("No Task", "Generate a task first", "📋", "#666", False),
+                            "",
+                            None,
+                            None,
+                            "",
+                        )
                         return
 
                     results_list = []
@@ -796,12 +837,29 @@ def build_app():
                         methods.append(("Official", "🟢", "#51cf66", run_official_rlm))
 
                     if not methods:
-                        yield create_status_box("No Methods", "Select at least one method", "⚠️", "#fcc419", False), "", None, None, ""
+                        yield (
+                            create_status_box("No Methods", "Select at least one method", "⚠️", "#fcc419", False),
+                            "",
+                            None,
+                            None,
+                            "",
+                        )
                         return
 
                     total_elapsed = 0.0
                     for i, (name, icon, color, run_fn) in enumerate(methods):
-                        yield create_status_box(f"Running {name}...", f"Step {i+1}/{len(methods)} · {len(context):,} chars", icon, color, True), "", *build_charts(results_list), traces
+                        yield (
+                            create_status_box(
+                                f"Running {name}...",
+                                f"Step {i + 1}/{len(methods)} · {len(context):,} chars",
+                                icon,
+                                color,
+                                True,
+                            ),
+                            "",
+                            *build_charts(results_list),
+                            traces,
+                        )
 
                         step_start = time.time()
                         r = run_fn(task, context, model, check_fn)
@@ -813,8 +871,12 @@ def build_app():
 
                     # Final output
                     output = f"**{benchmark_name}** · {len(context):,} chars · {model}\n\n"
-                    output += "| Method | Result | Input Tokens | Output Tokens | Total Tokens | Cost | Time | Iters |\n"
-                    output += "|--------|--------|--------------|---------------|--------------|------|------|-------|\n"
+                    output += (
+                        "| Method | Result | Input Tokens | Output Tokens | Total Tokens | Cost | Time | Iters |\n"
+                    )
+                    output += (
+                        "|--------|--------|--------------|---------------|--------------|------|------|-------|\n"
+                    )
                     for name, r in results_list:
                         status = "✅" if r.correct else "❌"
                         cost_str = f"${r.cost_usd:.6f}" if r.cost_usd is not None else "N/A"
@@ -823,12 +885,12 @@ def build_app():
                     if len(results_list) >= 2:
                         tokens = [(n, r.tokens) for n, r in results_list if r.tokens > 0]
                         costs = [(n, r.cost_usd) for n, r in results_list if r.cost_usd is not None]
-                        
+
                         if tokens:
                             best, worst = min(tokens, key=lambda x: x[1]), max(tokens, key=lambda x: x[1])
                             if best[1] < worst[1]:
-                                output += f"\n**{best[0]}** used {(1-best[1]/worst[1])*100:.0f}% fewer tokens."
-                        
+                                output += f"\n**{best[0]}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
+
                         if costs:
                             best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(costs, key=lambda x: x[1])
                             if best_cost[1] < worst_cost[1]:
@@ -836,14 +898,35 @@ def build_app():
                                 output += f"\n**{best_cost[0]}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
 
                     all_correct = all(r.correct for _, r in results_list)
-                    final_status = create_status_box("✓ Complete" if all_correct else "Complete", f"⏱️ {total_elapsed:.1f}s", "🎉" if all_correct else "⚠️", "#51cf66" if all_correct else "#fcc419", False)
+                    final_status = create_status_box(
+                        "✓ Complete" if all_correct else "Complete",
+                        f"⏱️ {total_elapsed:.1f}s",
+                        "🎉" if all_correct else "⚠️",
+                        "#51cf66" if all_correct else "#fcc419",
+                        False,
+                    )
 
                     yield final_status, output, *build_charts(results_list), traces
 
                 run_eval_btn.click(
                     fn=run_eval_task,
-                    inputs=[task_text, full_context, model_dropdown, vanilla_checkbox, rlm_checkbox, official_checkbox, benchmark_dropdown, check_fn_state],
-                    outputs=[eval_status_html, eval_results_output, eval_tokens_plot, eval_time_plot, eval_traces_output],
+                    inputs=[
+                        task_text,
+                        full_context,
+                        model_dropdown,
+                        vanilla_checkbox,
+                        rlm_checkbox,
+                        official_checkbox,
+                        benchmark_dropdown,
+                        check_fn_state,
+                    ],
+                    outputs=[
+                        eval_status_html,
+                        eval_results_output,
+                        eval_tokens_plot,
+                        eval_time_plot,
+                        eval_traces_output,
+                    ],
                 )
 
             # =============================================================
@@ -870,7 +953,9 @@ def build_app():
                     )
                     run_custom_btn = gr.Button("▶️ Run Comparison", variant="primary", size="lg")
 
-                custom_status_html = gr.HTML(create_status_box("Ready", "Enter a task and click Run", "✏️", "#64748b", False))
+                custom_status_html = gr.HTML(
+                    create_status_box("Ready", "Enter a task and click Run", "✏️", "#64748b", False)
+                )
 
                 with gr.Group():
                     custom_results_output = gr.Markdown("")
@@ -889,7 +974,14 @@ def build_app():
 
                 def run_custom_task(task, context, model, run_vanilla, run_rlm, run_official):
                     if not task.strip():
-                        yield create_status_box("No Task", "Enter a task prompt", "✏️", "#666", False), "", None, None, "", ""
+                        yield (
+                            create_status_box("No Task", "Enter a task prompt", "✏️", "#666", False),
+                            "",
+                            None,
+                            None,
+                            "",
+                            "",
+                        )
                         return
 
                     results_list = []
@@ -904,14 +996,29 @@ def build_app():
                         methods.append(("Official", "🟢", "#51cf66", run_official_rlm))
 
                     if not methods:
-                        yield create_status_box("No Methods", "Select at least one method", "⚠️", "#fcc419", False), "", None, None, "", ""
+                        yield (
+                            create_status_box("No Methods", "Select at least one method", "⚠️", "#fcc419", False),
+                            "",
+                            None,
+                            None,
+                            "",
+                            "",
+                        )
                         return
 
                     context_info = f"{len(context):,} chars" if context else "no context"
                     total_elapsed = 0.0
 
                     for i, (name, icon, color, run_fn) in enumerate(methods):
-                        yield create_status_box(f"Running {name}...", f"Step {i+1}/{len(methods)} · {context_info}", icon, color, True), "", *build_charts(results_list), traces, ""
+                        yield (
+                            create_status_box(
+                                f"Running {name}...", f"Step {i + 1}/{len(methods)} · {context_info}", icon, color, True
+                            ),
+                            "",
+                            *build_charts(results_list),
+                            traces,
+                            "",
+                        )
 
                         step_start = time.time()
                         r = run_fn(task, context, model, None)  # No check_fn for custom tasks
@@ -932,12 +1039,12 @@ def build_app():
                     if len(results_list) >= 2:
                         tokens = [(n, r.tokens) for n, r in results_list if r.tokens > 0]
                         costs = [(n, r.cost_usd) for n, r in results_list if r.cost_usd is not None]
-                        
+
                         if tokens:
                             best, worst = min(tokens, key=lambda x: x[1]), max(tokens, key=lambda x: x[1])
                             if best[1] < worst[1]:
-                                output += f"\n**{best[0]}** used {(1-best[1]/worst[1])*100:.0f}% fewer tokens."
-                        
+                                output += f"\n**{best[0]}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
+
                         if costs:
                             best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(costs, key=lambda x: x[1])
                             if best_cost[1] < worst_cost[1]:
@@ -947,7 +1054,9 @@ def build_app():
                     # Build responses display
                     responses_md = "### Responses\n\n"
                     for name, r in results_list:
-                        responses_md += f"**{name}:**\n```\n{r.response[:2000]}{'...' if len(r.response) > 2000 else ''}\n```\n\n"
+                        responses_md += (
+                            f"**{name}:**\n```\n{r.response[:2000]}{'...' if len(r.response) > 2000 else ''}\n```\n\n"
+                        )
 
                     final_status = create_status_box("✓ Complete", f"⏱️ {total_elapsed:.1f}s", "🎉", "#51cf66", False)
 
@@ -955,12 +1064,30 @@ def build_app():
 
                 run_custom_btn.click(
                     fn=run_custom_task,
-                    inputs=[custom_task_input, custom_context_input, model_dropdown, vanilla_checkbox, rlm_checkbox, official_checkbox],
-                    outputs=[custom_status_html, custom_results_output, custom_tokens_plot, custom_time_plot, custom_traces_output, custom_responses],
+                    inputs=[
+                        custom_task_input,
+                        custom_context_input,
+                        model_dropdown,
+                        vanilla_checkbox,
+                        rlm_checkbox,
+                        official_checkbox,
+                    ],
+                    outputs=[
+                        custom_status_html,
+                        custom_results_output,
+                        custom_tokens_plot,
+                        custom_time_plot,
+                        custom_traces_output,
+                        custom_responses,
+                    ],
                 )
 
         # Initial load for eval tab
-        demo.load(fn=on_generate, inputs=[benchmark_dropdown], outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state])
+        demo.load(
+            fn=on_generate,
+            inputs=[benchmark_dropdown],
+            outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state],
+        )
 
         # Footer
         gr.HTML("""
@@ -973,8 +1100,8 @@ def build_app():
             font-size: 0.85rem;
         ">
             <p style="margin: 0;">
-                Built with 💜 using <a href="https://gradio.app" target="_blank" style="color: #818cf8;">Gradio</a> · 
-                <a href="https://arxiv.org/abs/2512.24601" target="_blank" style="color: #818cf8;">Paper</a> · 
+                Built with 💜 using <a href="https://gradio.app" target="_blank" style="color: #818cf8;">Gradio</a> ·
+                <a href="https://arxiv.org/abs/2512.24601" target="_blank" style="color: #818cf8;">Paper</a> ·
                 <a href="https://github.com/avilum/minrlm" target="_blank" style="color: #818cf8;">GitHub</a>
             </p>
         </div>
@@ -988,6 +1115,6 @@ if __name__ == "__main__":
     print("🔬 RLM Visualizer")
     print("=" * 60)
     print(f"📊 Available eval tasks: {len(BENCHMARKS)}")
-    print(f"🏷️  Task types: {sorted(set(c['task'] for c in BENCHMARKS.values()))}")
+    print(f"🏷️  Task types: {sorted({c['task'] for c in BENCHMARKS.values()})}")
     print("=" * 60)
     build_app().launch()

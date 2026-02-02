@@ -47,7 +47,6 @@ import argparse
 import atexit
 import gc
 import logging
-import os
 import resource
 import signal
 import sys
@@ -67,6 +66,7 @@ def get_memory_mb() -> float:
             return usage.ru_maxrss / 1024  # KB -> MB
     except Exception:
         return 0.0
+
 
 from tqdm import tqdm
 
@@ -574,7 +574,7 @@ def print_summary(results: list[EvalResult]):
         eff_str = f"{eff:.2f}x" if eff != 1.0 else "-"
         cost = data.get("total_cost_usd")
         cost_str = f"${cost:.6f}" if cost is not None else "N/A"
-        
+
         # Show input+output tokens separately
         in_tok = int(data.get("avg_input_tokens", 0))
         out_tok = int(data.get("avg_output_tokens", 0))
@@ -617,12 +617,12 @@ def print_summary(results: list[EvalResult]):
                 f"{in_tok:,}+{out_tok:,} tokens | "
                 f"{data.get('avg_time_seconds', 0):>6.1f}s"
             )
-    
+
     # Context size analysis
     print("\n" + "=" * 80)
     print("CONTEXT SIZE ANALYSIS")
     print("=" * 80)
-    
+
     # Group by context size
     size_groups: dict[int, dict[str, list[EvalResult]]] = {}
     for r in results:
@@ -631,28 +631,32 @@ def print_summary(results: list[EvalResult]):
         if r.runner_name not in size_groups[r.context_size]:
             size_groups[r.context_size][r.runner_name] = []
         size_groups[r.context_size][r.runner_name].append(r)
-    
+
     if len(size_groups) > 1:
-        print(f"\n{'Context Size':<15} {'Vanilla Acc':<12} {'RLM Acc':<12} {'Advantage':<12} {'RLM Tokens':<15} {'Vanilla Tokens':<15}")
+        print(
+            f"\n{'Context Size':<15} {'Vanilla Acc':<12} {'RLM Acc':<12} {'Advantage':<12} {'RLM Tokens':<15} {'Vanilla Tokens':<15}"
+        )
         print("-" * 80)
-        
+
         for size in sorted(size_groups.keys()):
             vanilla_results = size_groups[size].get("vanilla", [])
             rlm_results = size_groups[size].get("ours", []) or size_groups[size].get("official", [])
-            
+
             if vanilla_results and rlm_results:
                 vanilla_acc = sum(r.correct for r in vanilla_results) / len(vanilla_results) * 100
                 rlm_acc = sum(r.correct for r in rlm_results) / len(rlm_results) * 100
                 advantage = rlm_acc - vanilla_acc
-                
+
                 vanilla_tokens = int(sum(r.total_tokens for r in vanilla_results) / len(vanilla_results))
                 rlm_tokens = int(sum(r.total_tokens for r in rlm_results) / len(rlm_results))
-                
+
                 size_str = f"{size // 1024}K" if size < 1024 * 1024 else f"{size // (1024 * 1024)}M"
                 advantage_str = f"+{advantage:.1f}%" if advantage > 0 else f"{advantage:.1f}%"
-                
-                print(f"{size_str:<15} {vanilla_acc:>10.1f}% {rlm_acc:>10.1f}% {advantage_str:>11} {rlm_tokens:>14,} {vanilla_tokens:>14,}")
-        
+
+                print(
+                    f"{size_str:<15} {vanilla_acc:>10.1f}% {rlm_acc:>10.1f}% {advantage_str:>11} {rlm_tokens:>14,} {vanilla_tokens:>14,}"
+                )
+
         # Find crossover point where RLM starts outperforming
         crossover_sizes = []
         for size in sorted(size_groups.keys()):
@@ -663,11 +667,17 @@ def print_summary(results: list[EvalResult]):
                 rlm_acc = sum(r.correct for r in rlm_results) / len(rlm_results) * 100
                 if rlm_acc > vanilla_acc:
                     crossover_sizes.append((size, rlm_acc - vanilla_acc))
-        
+
         if crossover_sizes:
             min_crossover = min(crossover_sizes, key=lambda x: x[0])
-            size_str = f"{min_crossover[0] // 1024}K" if min_crossover[0] < 1024 * 1024 else f"{min_crossover[0] // (1024 * 1024)}M"
-            print(f"\n✓ RLM starts outperforming vanilla at {size_str} context size (+{min_crossover[1]:.1f}% advantage)")
+            size_str = (
+                f"{min_crossover[0] // 1024}K"
+                if min_crossover[0] < 1024 * 1024
+                else f"{min_crossover[0] // (1024 * 1024)}M"
+            )
+            print(
+                f"\n✓ RLM starts outperforming vanilla at {size_str} context size (+{min_crossover[1]:.1f}% advantage)"
+            )
 
     print("\n" + "=" * 80)
 

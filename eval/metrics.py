@@ -396,7 +396,7 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
             "",
         ]
     )
-    
+
     # Group results by context size and runner
     size_analysis: dict[int, dict[str, list[EvalResult]]] = {}
     for r in results:
@@ -405,24 +405,24 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
         if r.runner_name not in size_analysis[r.context_size]:
             size_analysis[r.context_size][r.runner_name] = []
         size_analysis[r.context_size][r.runner_name].append(r)
-    
+
     if len(size_analysis) > 1:
         lines.append("| Context Size | Vanilla Accuracy | RLM Accuracy | RLM Advantage |")
         lines.append("|--------------|------------------|--------------|---------------|")
-        
+
         for size in sorted(size_analysis.keys()):
             vanilla_results = size_analysis[size].get("vanilla", [])
             rlm_results = size_analysis[size].get("ours", []) or size_analysis[size].get("official", [])
-            
+
             vanilla_acc = sum(r.correct for r in vanilla_results) / len(vanilla_results) * 100 if vanilla_results else 0
             rlm_acc = sum(r.correct for r in rlm_results) / len(rlm_results) * 100 if rlm_results else 0
-            
+
             if vanilla_results and rlm_results:
                 advantage = rlm_acc - vanilla_acc
                 advantage_str = f"+{advantage:.1f}%" if advantage > 0 else f"{advantage:.1f}%"
                 size_str = f"{size // 1024}K" if size < 1024 * 1024 else f"{size // (1024 * 1024)}M"
                 lines.append(f"| {size_str} | {vanilla_acc:.1f}% | {rlm_acc:.1f}% | {advantage_str} |")
-    
+
     # Key findings
     lines.extend(
         [

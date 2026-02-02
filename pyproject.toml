@@ -30,6 +30,10 @@ visualizer = [
     "pandas>=2.0.0",
     "plotly>=5.0.0",
 ]
+proxy = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+]
 dev = [
     "matplotlib>=3.8.0",
     "numpy>=1.24.0",
@@ -38,7 +42,7 @@ dev = [
     "tqdm>=4.66.0",
 ]
 all = [
-    "minrlm[visualizer,dev]",
+    "minrlm[visualizer,proxy,dev]",
 ]
 
 [project.urls]

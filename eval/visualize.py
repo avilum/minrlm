@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")  # Use non-GUI backend before importing pyplot
 import matplotlib.pyplot as plt
 import numpy as np
@@ -395,9 +396,9 @@ def plot_scaling_analysis(
             return f"{int(x // (1024 * 1024))}M"
         else:
             return f"{int(x // (1024 * 1024 * 1024))}G"
-    
+
     ax.xaxis.set_major_formatter(plt.FuncFormatter(format_size))
-    
+
     # Highlight where RLM outperforms vanilla (if both present)
     vanilla_runner = None
     rlm_runner = None
@@ -406,21 +407,27 @@ def plot_scaling_analysis(
             vanilla_runner = runner
         elif runner in ["ours", "official"]:
             rlm_runner = runner
-    
+
     if vanilla_runner and rlm_runner and vanilla_runner in scaling_data and rlm_runner in scaling_data:
         # Find sizes where RLM accuracy > vanilla accuracy
         vanilla_sizes = sorted(scaling_data[vanilla_runner].keys())
         rlm_sizes = sorted(scaling_data[rlm_runner].keys())
         common_sizes = sorted(set(vanilla_sizes) & set(rlm_sizes))
-        
+
         if common_sizes:
             rlm_better_sizes = []
             for size in common_sizes:
-                vanilla_acc = sum(r.correct for r in scaling_data[vanilla_runner][size]) / len(scaling_data[vanilla_runner][size]) * 100
-                rlm_acc = sum(r.correct for r in scaling_data[rlm_runner][size]) / len(scaling_data[rlm_runner][size]) * 100
+                vanilla_acc = (
+                    sum(r.correct for r in scaling_data[vanilla_runner][size])
+                    / len(scaling_data[vanilla_runner][size])
+                    * 100
+                )
+                rlm_acc = (
+                    sum(r.correct for r in scaling_data[rlm_runner][size]) / len(scaling_data[rlm_runner][size]) * 100
+                )
                 if rlm_acc > vanilla_acc:
                     rlm_better_sizes.append(size)
-            
+
             if rlm_better_sizes:
                 # Add annotation showing where RLM outperforms
                 min_better = min(rlm_better_sizes)
@@ -428,8 +435,9 @@ def plot_scaling_analysis(
                 ax.axvspan(min_better, max_better, alpha=0.1, color="green", label="RLM > Vanilla")
                 # Add text annotation
                 mid_size = (min_better * max_better) ** 0.5
-                ax.text(mid_size, 95, "RLM outperforms", ha="center", fontsize=9, 
-                       style="italic", color="green", alpha=0.7)
+                ax.text(
+                    mid_size, 95, "RLM outperforms", ha="center", fontsize=9, style="italic", color="green", alpha=0.7
+                )
 
     plt.tight_layout()
 
@@ -661,8 +669,13 @@ def plot_cost_by_task_and_context(
             summary_lines.append(f"Official RLM: ${official_cost:.6f}")
 
         ax2.text(
-            0.5, 0.5, "\n".join(summary_lines),
-            transform=ax2.transAxes, fontsize=12, ha="center", va="center",
+            0.5,
+            0.5,
+            "\n".join(summary_lines),
+            transform=ax2.transAxes,
+            fontsize=12,
+            ha="center",
+            va="center",
             bbox={"boxstyle": "round", "facecolor": "lightgreen", "alpha": 0.3},
         )
 

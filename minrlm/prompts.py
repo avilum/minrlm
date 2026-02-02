@@ -11,6 +11,8 @@ Key insights from the paper:
 5. Iterative exploration before solving
 """
 
+from typing import Any
+
 SYSTEM_PROMPT_WITH_CONTEXT = """Write Python code in ```python blocks. No explanations.
 
 input_0 = {context_meta}
@@ -35,10 +37,10 @@ import json
 data = json.loads(input_0)
 
 # Step 2: Filter/aggregate based on the question
-# Example: Count employees in Engineering with status "active"
-matching = [emp for emp in data["employees"] 
-            if emp["department"] == "Engineering" and emp["status"] == "active"]
-answer = len(matching)  # or sum(emp["salary"] for emp in matching)
+# Example: Count items matching certain criteria
+matching = [item for item in data["items"]
+            if item["category"] == "target_category" and item["status"] == "target_status"]
+answer = len(matching)  # or sum(item["value"] for item in matching)
 
 # Step 3: Return the answer
 FINAL(answer)
@@ -76,9 +78,9 @@ Option B: Using regex directly on input_0 (better for pattern matching):
 # For well-defined patterns (e.g., "[ID: CODE-123]" or "Name: value"), use regex directly
 import re
 # Find all matches at once
-matches = re.findall(r'\[ID: ([A-Z0-9-]+)\]', input_0)
+matches = re.findall(r'\\[ID: ([A-Z0-9-]+)\\]', input_0)
 # Or find a specific pattern with context
-m = re.search(r'EntityName.*?Location:\s*(\w+)', input_0)
+m = re.search(r'EntityName.*?Location:\\s*(\\w+)', input_0)
 if m:
     answer = m.group(1)
 FINAL(answer)
@@ -86,11 +88,12 @@ FINAL(answer)
 
 # For extracting pairs (multiple capture groups):
 ```python
-# Example: Extract code-concept pairs from "[DEFINITION DEF-XXX]: The concept of YYY."
+# Example: Extract key-value pairs from structured text
 import re
-pairs = re.findall(r'\[DEFINITION (DEF-[A-Z0-9-]+)\]: The concept of ([^.]+)\.', input_0)
-# pairs = [('DEF-XXX', 'concept1'), ('DEF-YYY', 'concept2'), ...]
-answer = ", ".join([f"{code}={concept}" for code, concept in pairs])
+# Pattern: "[TAG CODE-123]: Description text."
+pairs = re.findall(r'\\[TAG ([A-Z0-9-]+)\\]: ([^.]+)\\.', input_0)
+# pairs = [('CODE-123', 'description1'), ('CODE-456', 'description2'), ...]
+answer = ", ".join([f"{key}={value}" for key, value in pairs])
 FINAL(answer)
 ```
 
@@ -100,7 +103,7 @@ FINAL(answer)
 results = search(input_0, "keyword")
 import re
 # Extract all matches from each result's 'after' field
-all_matches = [m.group(1) for match, before, after in results 
+all_matches = [m.group(1) for match, before, after in results
                for m in re.finditer(r'pattern', after)]
 # Or extract pairs from each result
 pairs = [(m.group(1), m.group(2)) for match, before, after in results
@@ -133,7 +136,7 @@ Tools:
   # match = literal matched text (may be incomplete fragment)
   # before = 500 chars before match
   # after = 500 chars after match (often contains the full pattern you need)
-  
+
   Usage: Check 'after' field for full patterns, or combine fields:
   for match, before, after in results:
       m = re.search(r'pattern', after)  # Check 'after' for full pattern
@@ -145,7 +148,7 @@ Tools:
 
 💡 TIP: For well-defined patterns, use regex directly on input_0 instead of search():
 import re
-matches = re.findall(r'\[Tag: ([A-Z0-9-]+)\]', input_0)  # Generic pattern example
+matches = re.findall(r'\\[Tag: ([A-Z0-9-]+)\\]', input_0)  # Generic pattern example
 
 Remember: search() FIRST (maybe multiple times to build context), parse SECOND, FINAL() LAST. No guessing.
 """
@@ -161,7 +164,9 @@ FINAL("answer") -> return answer
 SYSTEM_PROMPT = SYSTEM_PROMPT_WITH_CONTEXT
 
 # Minimal prompt for sub-calls
-SYSTEM_PROMPT_MINIMAL = """Write Python code. input_0 has the data. Call FINAL("answer") or FINAL_var("varname") when done."""
+SYSTEM_PROMPT_MINIMAL = (
+    """Write Python code. input_0 has the data. Call FINAL("answer") or FINAL_var("varname") when done."""
+)
 
 USER_PROMPT_TEMPLATE = """{task}"""
 
@@ -178,7 +183,7 @@ def format_user_prompt(task: str, context: str = "", peek_output: str = "") -> s
     return USER_PROMPT_TEMPLATE.format(task=task)
 
 
-def format_system_prompt(context: str = "", context_type: str = "string", **kwargs) -> str:
+def format_system_prompt(context: str = "", context_type: str = "string", **kwargs: Any) -> str:
     """Format system prompt with context metadata."""
     if context:
         # Provide metadata about context

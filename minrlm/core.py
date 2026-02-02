@@ -45,9 +45,9 @@ class RLMResult:
 
 class ProtectedNamespace(dict):
     """Dict that prevents reassignment of protected keys (like input_0)."""
-    
+
     PROTECTED = {"input_0", "input_1", "input_2"}  # Context variables are protected
-    
+
     def __setitem__(self, key: str, value: Any) -> None:
         if key in self.PROTECTED and key in self:
             raise NameError(f"Cannot reassign '{key}' - it already contains your data. Use it directly.")
@@ -62,16 +62,18 @@ class PythonREPL:
     def __init__(self, sub_llm_callback: Callable | None = None, sub_llm_batch_callback: Callable | None = None):
         self._output: str | None = None
         self._data_accessed = False  # Track if search() or input_0 was used
-        self._namespace = ProtectedNamespace({
-            "__builtins__": __builtins__,
-            "__name__": "__main__",  # So `if __name__ == "__main__":` works
-            "sub_llm": self._make_sub_llm(sub_llm_callback),
-            "sub_llm_batch": self._make_sub_llm_batch(sub_llm_batch_callback),
-            "FINAL": self._set_output,
-            "FINAL_var": self._set_output_var,
-            "peek": self._peek,
-            "search": self._search,
-        })
+        self._namespace = ProtectedNamespace(
+            {
+                "__builtins__": __builtins__,
+                "__name__": "__main__",  # So `if __name__ == "__main__":` works
+                "sub_llm": self._make_sub_llm(sub_llm_callback),
+                "sub_llm_batch": self._make_sub_llm_batch(sub_llm_batch_callback),
+                "FINAL": self._set_output,
+                "FINAL_var": self._set_output_var,
+                "peek": self._peek,
+                "search": self._search,
+            }
+        )
 
     def _make_sub_llm(self, callback: Callable[[str, str], str] | None) -> Callable[[str, str], str]:
         def sub_llm(task: str, context: str = "") -> str:
@@ -97,25 +99,24 @@ class PythonREPL:
         # Reject None or empty values
         if value is None:
             raise ValueError("FINAL() called with None - provide a non-empty string value")
-        
+
         # Enforce data grounding: if input_0 exists, must access data first
         if "input_0" in self._namespace and not self._data_accessed:
             raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
-        
+
         self._output = str(value).strip()
-        
+
         # Clean common artifacts from search() tuple returns
         # e.g., "['New York']" -> "New York", "[]" -> ""
         if self._output.startswith("[") and self._output.endswith("]"):
             inner = self._output[1:-1].strip()
             # Handle ['value'] or ["value"]
-            if (inner.startswith("'") and inner.endswith("'")) or \
-               (inner.startswith('"') and inner.endswith('"')):
+            if (inner.startswith("'") and inner.endswith("'")) or (inner.startswith('"') and inner.endswith('"')):
                 inner = inner[1:-1]
             self._output = inner
             if inner:
                 print(f"ℹ️ Cleaned output: '{self._output}'")
-        
+
         # Reject empty string after cleaning
         if self._output == "":
             raise ValueError("FINAL() called with empty string - provide a non-empty answer")
@@ -148,10 +149,10 @@ class PythonREPL:
             while end < len(text) and text[end] not in " \t\n\r,;:!?()[]{}\"'<>":
                 end += 1
             actual_match = text[pos:end]
-            
+
             # Get context before and after
-            ctx_before = text[max(0, pos - context):pos]
-            ctx_after = text[end:min(len(text), end + context)]
+            ctx_before = text[max(0, pos - context) : pos]
+            ctx_after = text[end : min(len(text), end + context)]
             matches.append((actual_match, ctx_before, ctx_after))
 
             print(f"\n[Match {len(matches)}]: {actual_match}")
@@ -162,7 +163,7 @@ class PythonREPL:
 
         if not matches:
             print(f"⚠️ NO MATCHES for '{pattern}'")
-            print(f"   -> Try shorter/partial pattern")
+            print("   -> Try shorter/partial pattern")
         else:
             print(f"\n✓ Found {len(matches)} match(es)")
 
@@ -173,14 +174,14 @@ class PythonREPL:
         # Enforce data grounding: if input_0 exists, must access data first
         if "input_0" in self._namespace and not self._data_accessed:
             raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
-        
+
         if var_name not in self._namespace:
             raise NameError(f"Variable '{var_name}' not found in REPL")
-        
+
         value = self._namespace[var_name]
         if value is None:
             raise ValueError(f"Variable '{var_name}' is None - provide a non-empty value")
-        
+
         self._output = str(value).strip()
         if self._output == "":
             raise ValueError(f"Variable '{var_name}' contains empty string - provide a non-empty value")
@@ -256,14 +257,15 @@ class PythonREPL:
         # This allows structured data parsing and pattern matching without requiring search()
         if "input_0" in self._namespace and not self._data_accessed:
             import re
+
             # Look for common patterns that indicate input_0 is being used
-            has_input_0 = 'input_0' in code
-            has_regex = bool(re.search(r're\.(findall|search|finditer|match|fullmatch)', code))
+            has_input_0 = "input_0" in code
+            has_regex = bool(re.search(r"re\.(findall|search|finditer|match|fullmatch)", code))
             patterns = [
-                r'json\.loads\s*\(\s*input_0',  # json.loads(input_0)
-                r'input_0\s*\[',  # input_0[...]
-                r'input_0\s*\.',  # input_0.method()
-                r'=\s*input_0',  # var = input_0
+                r"json\.loads\s*\(\s*input_0",  # json.loads(input_0)
+                r"input_0\s*\[",  # input_0[...]
+                r"input_0\s*\.",  # input_0.method()
+                r"=\s*input_0",  # var = input_0
             ]
             # If input_0 is used AND (regex function is called OR direct access pattern matches)
             if has_input_0 and (has_regex or any(re.search(p, code) for p in patterns)):
@@ -300,7 +302,8 @@ class PythonREPL:
             "__builtins__",
             "__name__",
         }
-        self._namespace = {k: v for k, v in self._namespace.items() if k in keys_to_keep}
+        filtered_dict = {k: v for k, v in self._namespace.items() if k in keys_to_keep}
+        self._namespace = ProtectedNamespace(filtered_dict)
 
     def get_state(self) -> dict[str, str]:
         """Get current namespace state as {name: type_and_preview}."""
@@ -492,14 +495,15 @@ class RLM:
     @staticmethod
     def _is_reasoning_model(model: str) -> bool:
         """Check if model is a reasoning model that uses hidden chain-of-thought.
-        
+
         TODO: Keep this list updated as OpenAI releases new reasoning models.
         These models have internal reasoning tokens that are billed but not visible.
         """
         model_lower = model.lower()
         reasoning_patterns = [
-            "o1", "o3",  # o1, o1-mini, o1-preview, o3, o3-mini
-            "gpt-5",     # gpt-5, gpt-5-nano, gpt-5-mini
+            "o1",
+            "o3",  # o1, o1-mini, o1-preview, o3, o3-mini
+            "gpt-5",  # gpt-5, gpt-5-nano, gpt-5-mini
         ]
         return any(pattern in model_lower for pattern in reasoning_patterns)
 
@@ -676,7 +680,15 @@ class RLM:
                 self.on_step("executing", {"iteration": iteration + 1, "code": code})  # Full code for debugging
 
             result = self._repl.execute(code)
-            self._log("code_exec", {"code": code[:500], "output": result.get("output"), "error": result.get("error"), "state": result.get("state")})
+            self._log(
+                "code_exec",
+                {
+                    "code": code[:500],
+                    "output": result.get("output"),
+                    "error": result.get("error"),
+                    "state": result.get("state"),
+                },
+            )
 
             if self.on_step:
                 self.on_step(
