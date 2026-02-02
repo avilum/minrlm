@@ -162,37 +162,57 @@ To reproduce our benchmark results:
    cat eval/results/summary_*.md
    ```
 
-## Key Findings
+## Benchmark Results
 
-### Performance Summary
+**Note**: The original RLM paper authors report that RLMs *improve* accuracy on long-context tasks (e.g., CodeQA: 24% → 62%, OOLONG: RLM outperforms GPT-5 by 2x+). The results below are from **this minrlm implementation** tested on gpt-5-nano across 162 evaluations.
 
-| Metric | minRLM vs Vanilla | minRLM vs Official |
-|--------|-------------------|-------------------|
-| **Token Efficiency** | **16x fewer** | **6x fewer** |
-| **Cost** | **3x cheaper** | **2x cheaper** |
-| **Latency** | ~1.4x slower | ~1.6x faster |
+### Overall Performance
 
-### Where minRLM Excels ✨
+| Metric | minRLM | Vanilla | Official |
+|--------|--------|---------|----------|
+| **Accuracy** | 87.0% | 92.6% | 79.6% |
+| **Token Efficiency** | 2,247 avg | 9,441 avg | 13,602 avg |
+| **Token Savings** | - | **4.20x fewer** | **6.1x fewer** |
+| **Cost** | $0.001750 | $0.007099 | $0.018924 |
+| **Cost Savings** | - | **4.1x cheaper** | **10.8x cheaper** |
+| **Speed** | 5.0s | 15.3s | 53.2s |
+| **Avg Iterations** | 1.1 | 1.0 | 1.0 |
 
-- **JSON Aggregation at 262K**: Succeeded where vanilla failed (50K+ tokens)
-- **Long context retrieval**: Consistent performance from 8K to 256K
-- **Multi-needle tasks**: Finds scattered needles at any scale
-- **Token efficiency**: Uses <1K tokens regardless of context size
+### Where RLMs Excel
 
-### Task-Specific Highlights
+- **Large contexts (128K+)**: RLMs often outperform vanilla (JSON_AGGREGATION_131K: 100% vs 0%, OOLONG_128K: 100% vs 0%)
+- **Extreme contexts (6M-11M)**: minRLM achieves 100% accuracy where vanilla fails (token limit exceeded)
+- **JSON tasks**: 100% accuracy, massive savings (e.g., 131K JSON extraction: 1,993 vs 46,890 tokens = **23.5x**)
+- **Token usage stays flat**: ~2K tokens regardless of context size (vs vanilla's linear growth)
+- **Scaling tasks**: Consistent performance across all sizes (8K to 131K+), while vanilla token usage grows linearly
+- **Multi-hop reasoning**: BrowseComp+ at 11M contexts - minRLM succeeds where vanilla cannot even attempt the task
 
-| Task | minRLM Tokens | Vanilla Tokens | Savings |
-|------|---------------|----------------|---------|
-| PAIRS (8 defs) | 1,265 | 6,793 | 5.4x |
-| JSON_EXTRACTION_262K | 1,048 | 93,438 | **89x** |
-| JSON_AGGREGATION_131K | 669 | 26,906 | **40x** |
-| MULTI_NEEDLE_256K | 1,293 | 33,312 | **26x** |
+### Where RLMs Trade Accuracy for Efficiency
 
-### Limitations ⚠️
+- **Small contexts (<64K)**: Vanilla often has higher accuracy (better for simple tasks where token cost is negligible)
+- **Some code understanding (CODEQA)**: Mixed results, depends on context size and task complexity
 
-- **Simple tasks**: RLM overhead not worth it for straightforward queries
-- **Latency**: Multiple API calls add wall-clock time (~10s avg vs ~7s for vanilla)
-- **Requires code generation**: Model must generate valid Python
+### Detailed Task Results
+
+| Task | Context | Vanilla | minrlm | Savings | Notes |
+|------|---------|---------|--------|---------|-------|
+| JSON Extraction | 131K | 46,890 tokens | 1,993 tokens | **23.5x** | 100% accuracy both |
+| JSON Aggregation | 131K | 38,746 tokens (0%) | 1,975 tokens (100%) | **19.6x** | RLM wins on accuracy |
+| OOLONG | 128K | 37,873 tokens (0%) | 1,917 tokens (100%) | **19.7x** | RLM wins on accuracy |
+| Multi-needle | 128K | 17,059 tokens | 1,848 tokens | **9.2x** | 100% accuracy both |
+| Long context | 128K | 16,576 tokens | 1,827 tokens | **9.1x** | 100% accuracy both |
+| BrowseComp+ | 11M | ❌ Fails | ✅ 100% (~2K tokens) | **∞** | Vanilla hits token limit |
+
+### Analysis
+
+**The takeaway**: This implementation trades a small accuracy drop (5.6%) for massive token savings (4.20x) and cost reduction (4.1x). The approach shines on structured data and large contexts where token costs dominate. At extreme scales (6M-11M), RLMs are the only viable option.
+
+**Why the accuracy difference?** The original paper shows RLMs *improve* accuracy on long-context tasks (e.g., CodeQA: 24% → 62%). Our results differ likely due to:
+- **Context sizes**: Paper tests up to 1M-10M tokens; our tests include up to 11M for BrowseComp+
+- **Model choice**: Paper uses GPT-5-mini; we tested with GPT-5-nano (weaker reasoning)
+- **Task focus**: Paper emphasizes complex aggregation tasks where RLMs excel; our mix includes simpler tasks
+
+**Key insight**: At large contexts (128K+), RLMs often match or exceed vanilla accuracy while using 10-90x fewer tokens. At extreme scales (6M-11M), RLMs are the only viable option - vanilla fails due to token limits.
 
 ## Citation
 
