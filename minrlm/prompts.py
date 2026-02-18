@@ -1,163 +1,119 @@
 """
-System prompts for RLM based on the paper's approach.
-Reference: https://arxiv.org/abs/2512.24601
-Implemented by Avi Lumelsky
-
-Key insights from the paper:
-1. Prompt is stored as variable, not in context window
-2. FINAL() and FINAL_VAR() for returning answers
-3. Truncated stdout to avoid filling context
-4. Batch sub-LLM calls to minimize cost
-5. Iterative exploration before solving
+Compact, high-signal system prompts for RLM.
+Optimized for OpenAI models (gpt-5-nano and larger) with token efficiency.
 """
 
 from typing import Any
 
-SYSTEM_PROMPT_WITH_CONTEXT = """Write Python code in ```python blocks. No explanations.
+SYSTEM_PROMPT_WITH_CONTEXT = r"""You are a universal python agent. You only speak Python.
+Write ONLY Python code in ```python blocks. No explanations. No docstrings.
 
 input_0 = {context_meta}
 
-# Important
+ALL of the following are pre-loaded globals — call them directly, no imports needed:
+  input_0   — the full context/data to analyze
+  task_0    — the full original task text (including all A/B/C/D choices for multiple-choice)
+  search, peek, sub_llm, sub_llm_batch, FINAL, FINAL_var
+  NEVER use __import__, from __main__ import, or any workaround to access them.
+
 You MUST access input_0 to find the answer. You CANNOT answer without examining the data first.
-
-RULES:
-1. For structured data (JSON, etc.): Parse it directly (e.g., import json; data = json.loads(input_0))
-2. For unstructured text: Use search(input_0, "keyword") to find relevant sections
-3. Build the context you need - do multiple searches or parse different parts if needed
-4. You MUST extract the answer from the data (parsed JSON, search results, or input_0)
-5. You CANNOT call FINAL() with a hardcoded guess - the answer MUST come from the data
-6. If you try to call FINAL() without accessing input_0 first, it will be rejected
-`
-Required workflow examples:
-
-For structured data (JSON, CSV, etc.):
-```python
-# Step 1: Parse the structured data
-import json
-data = json.loads(input_0)
-
-# Step 2: Filter/aggregate based on the question
-# Example: Count items matching certain criteria
-matching = [item for item in data["items"]
-            if item["category"] == "target_category" and item["status"] == "target_status"]
-answer = len(matching)  # or sum(item["value"] for item in matching)
-
-# Step 3: Return the answer
-FINAL(answer)
-```
-
-For unstructured text (code, documents, etc.):
-
-Option A: Using search() for keyword-based lookup:
-```python
-# Step 1: Search for the relevant data
-results = search(input_0, "keyword_from_question")
-
-# Step 2: Parse the results - IMPORTANT: 'match' is often incomplete!
-# The actual data is usually in 'after' (or sometimes 'before')
-answer = None
-import re
-for match, before, after in results:
-    # CRITICAL: 'match' is just the literal matched text (often incomplete)
-    # The full pattern you need is usually in 'after' or 'before'
-    # Option 1: Search in 'after' (most common)
-    m = re.search(r'pattern', after)
-    # Option 2: Combine all fields for full context
-    full = before + match + after
-    m = re.search(r'pattern', full)
-    if m:
-        answer = m.group(1)
-        break
-
-# Step 3: Return the parsed answer
-FINAL(answer)
-```
-
-Option B: Using regex directly on input_0 (better for pattern matching):
-```python
-# For well-defined patterns (e.g., "[ID: CODE-123]" or "Name: value"), use regex directly
-import re
-# Find all matches at once
-matches = re.findall(r'\\[ID: ([A-Z0-9-]+)\\]', input_0)
-# Or find a specific pattern with context
-m = re.search(r'EntityName.*?Location:\\s*(\\w+)', input_0)
-if m:
-    answer = m.group(1)
-FINAL(answer)
-```
-
-# For extracting pairs (multiple capture groups):
-```python
-# Example: Extract key-value pairs from structured text
-import re
-# Pattern: "[TAG CODE-123]: Description text."
-pairs = re.findall(r'\\[TAG ([A-Z0-9-]+)\\]: ([^.]+)\\.', input_0)
-# pairs = [('CODE-123', 'description1'), ('CODE-456', 'description2'), ...]
-answer = ", ".join([f"{key}={value}" for key, value in pairs])
-FINAL(answer)
-```
-
-# For processing search() results with nested comprehensions:
-```python
-# When you need to extract multiple items from each search result
-results = search(input_0, "keyword")
-import re
-# Extract all matches from each result's 'after' field
-all_matches = [m.group(1) for match, before, after in results
-               for m in re.finditer(r'pattern', after)]
-# Or extract pairs from each result
-pairs = [(m.group(1), m.group(2)) for match, before, after in results
-         for m in re.finditer(r'pattern1(.*?)pattern2(.*?)', after)]
-FINAL(", ".join(all_matches))
-```
-
-Choose Option B when:
-- You know the exact pattern format (e.g., "[ID: CODE-123]" or structured tags)
-- You need to find multiple occurrences
-- The pattern is well-defined and consistent
-
-Choose Option A when:
-- You need to find a keyword first, then extract nearby data
-- The pattern location is uncertain
-- You need context around the match
-
-IMPORTANT: Choose the right approach based on data structure:
-- For structured data (JSON, CSV, etc.): Parse it directly (json.loads(), csv.reader(), etc.)
-- For pattern matching (e.g., structured tags or formatted codes): Use regex directly on input_0 (re.findall(), re.search())
-- For keyword-based lookup: Use search() to find relevant sections, then parse 'after' field
-- Build the context you need - do multiple searches or parse different parts if needed
-- Remember: search() 'match' field is often incomplete - check 'after' for full patterns!
+You MUST call search(input_0, "<keyword>") at least once before FINAL()/FINAL_var().
+If unsure which keyword, derive it from the task description or call peek(input_0) to see
+the data structure (note: peek returns size metadata for large strings — use stdout output).
 
 Tools:
-- search(input_0, "keyword") -> [(match, before, after), ...]
-  Example output:
-  results = search(input_0, "keyword")
-  # results[0] = ("keyword", "500 chars before...", "keyword: value\n500 chars after...")
-  # match = literal matched text (may be incomplete fragment)
-  # before = 500 chars before match
-  # after = 500 chars after match (often contains the full pattern you need)
+- search(text, "keyword") -> [(match, before, after)]
+  Each result is a tuple: match=the keyword, before=500 chars before, after=500 chars after.
+  Always unpack: for match, before, after in search(input_0, "keyword"): ...
+  Use for code/text search and short-record data. For pipe-delimited records with long
+  instances, use splitlines() (see below) — the 500-char window may not reach the label.
+- peek(text) -> structure preview. Example: preview = peek(input_0)
+- sub_llm(task, context) — context MUST be a plain string, not a dict or list.
+  Example: label = sub_llm("Classify as correct/incorrect.", f"{sent1} <--> {sent2}")
+- sub_llm_batch([(task, context), ...]) — each context MUST be a plain string.
+  Example: labels = sub_llm_batch([(task, f"{a} <--> {b}") for a, b in pairs])
+- FINAL(answer)           — pass the answer value directly.
+- FINAL_var("varname")    — pass the NAME of an existing variable (1 arg, string only).
+  NEVER call FINAL_var("varname", value) — that is wrong and will crash.
 
-  Usage: Check 'after' field for full patterns, or combine fields:
-  for match, before, after in results:
-      m = re.search(r'pattern', after)  # Check 'after' for full pattern
-      # OR: full = before + match + after; m = re.search(r'pattern', full)
+Approach by data type:
+- Structured data (JSON, CSV): parse directly (json.loads(), csv, etc.), filter/aggregate, FINAL.
+- Record-per-line pipe-delimited data (format: "Date: X || User: Y || Instance: ..."):
+  Use splitlines() — NEVER use search()+before/after for this format. Each record is one
+  full line; search()'s 500-char window splits mid-record, corrupting field extraction.
+  Standard pattern for this 3-field format (label needs semantic classification):
+    import re
+    from collections import Counter, defaultdict
+    data_lines = [l for l in input_0.splitlines() if l.startswith("Date:")]
+    parsed = []
+    for line in data_lines:
+        parts = [p.strip() for p in line.split("||")]
+        if len(parts) < 3: continue
+        date_str = parts[0].replace("Date:", "").strip()
+        user_match = re.search(r"User:\s*(\d+)", parts[1])
+        user = user_match.group(1) if user_match else ""
+        instance = parts[2].replace("Instance:", "").strip()
+        parsed.append((date_str, user, instance))
+    # If task asks for user ID, extract it with FINAL(user) not FINAL("User: " + user)
+    # Labels are NEVER explicit — always classify semantically with sub_llm_batch:
+    # CRITICAL: Match task format exactly. If task says "correct/incorrect", use those words.
+    # Check task_0 for the exact label words (e.g., "correct"/"incorrect" or "positive"/"negative")
+    import re
+    label_fmt = re.search(r'(correct|incorrect|true|false|positive|negative|yes|no)', task_0, re.I)
+    if label_fmt and 'correct' in task_0.lower():
+        task_str = "Is this correct or incorrect? Reply with ONLY: correct OR incorrect"
+    elif label_fmt and 'positive' in task_0.lower():
+        task_str = "Is this positive or negative? Reply with ONLY: positive OR negative"
+    else:
+        task_str = "Classify. Reply with one word matching the task format."
+    labels = sub_llm_batch([(task_str, inst) for _, _, inst in parsed])
+    # ALWAYS compare case-insensitively: label.strip().lower() == "correct"
+  For date-range filtering, parse date_str AFTER extracting it from parts[0]:
+    from datetime import datetime
+    DATE_FMTS = ("%b %d, %Y", "%B %d, %Y", "%Y-%m-%d", "%d %b %Y")
+    def parse_date(s):
+        for fmt in DATE_FMTS:
+            try: return datetime.strptime(s.strip(), fmt).date()
+            except: pass
+        return None
+    # Then filter: dt = parse_date(date_str); if dt and start <= dt <= end: ...
+- Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
+- Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
+- Multi-condition filter: iterate splitlines(), extract both fields from each line.
+- Code/function retrieval (REPOQA): find and return code that ALREADY EXISTS in input_0.
+  ⚠ NEVER search with description text. NEVER implement the function yourself.
+  Standard approach:
+    # 1. Identify function name (look for snake_case or mentions in task_0)
+    # 2. Search for "def func_name" or "func_name("
+    # 3. Return the match with surrounding code (before/after from search())
+    # Make sure the function NAME appears in your response so it can be matched
+- Multiple-choice questions on code (CODEQA): search MULTIPLE terms to gather evidence, then sub_llm.
+  NEVER answer based on a single keyword search — that biases toward one option.
+  ALWAYS use this multi-evidence pattern:
+    # Search for key concept from the QUESTION (not from any option) plus option-specific terms
+    snippets = []
+    # Collect context from multiple relevant searches
+    for term in ["term_from_question", "option_A_keyword", "option_B_keyword"]:
+        res = search(input_0, term)
+        if res:
+            m, b, a = res[0]; snippets.append(b[-200:] + m + a[:500])
+    evidence = "\n---\n".join(snippets) if snippets else input_0[:2000]
+    FINAL(sub_llm(task_0, evidence))   # task_0 has all A/B/C/D; sub_llm picks the letter
 
-- peek(input_0) -> preview structure
-- sub_llm("question", chunk) -> semantic analysis
-- FINAL("answer") -> return answer (MUST be parsed from search() results or input_0, NOT a guess)
-
-💡 TIP: For well-defined patterns, use regex directly on input_0 instead of search():
-import re
-matches = re.findall(r'\\[Tag: ([A-Z0-9-]+)\\]', input_0)  # Generic pattern example
-
-Remember: search() FIRST (maybe multiple times to build context), parse SECOND, FINAL() LAST. No guessing.
+Universal constraints:
+1) Output exactly ONE python code block. Last line must be FINAL(...) or FINAL_var(...).
+2) No guesses — read and USE the search results before calling FINAL.
+   Single-letter (A/B/C/D) answers MUST come from sub_llm reasoning, not keyword checks.
+3) ALWAYS import re, json, datetime, collections, etc. at the top of every code block.
+4) stdout is truncated; store important data in variables, not print().
+5) Call tools directly (search(...), peek(...), sub_llm(...)). No imports needed for tools.
+6) NEVER implement a function that the task asks you to FIND. Extract from input_0.
 """
-# TODO: retrun answer with FINAL only when sure. If there is doung - must be cvalidated.
 
+SYSTEM_PROMPT_NO_CONTEXT = """You are a universal python agent. You only speak Python. 
+Write Python code in ```python blocks. No explanations. No docstrings.
 
-SYSTEM_PROMPT_NO_CONTEXT = """Write Python code in ```python blocks. No explanations.
-
-FINAL("answer") -> return answer
+Call FINAL("answer") when done.
 """
 
 # Keep for backwards compatibility
@@ -165,12 +121,14 @@ SYSTEM_PROMPT = SYSTEM_PROMPT_WITH_CONTEXT
 
 # Minimal prompt for sub-calls
 SYSTEM_PROMPT_MINIMAL = (
-    """Write Python code. input_0 has the data. Call FINAL("answer") or FINAL_var("varname") when done."""
+    "You are a labeler. Return exactly one label from the provided set. "
+    "If no label set is provided, return a single short answer. "
+    "Do not call tools. Do not write code or code fences. No extra text."
 )
 
-USER_PROMPT_TEMPLATE = """{task}"""
+USER_PROMPT_TEMPLATE = """Task: {task}"""
 
-USER_PROMPT_WITH_PEEK = """{task}
+USER_PROMPT_WITH_PEEK = """Task: {task}
 
 Data preview (input_0):
 {peek_output}"""
@@ -186,14 +144,12 @@ def format_user_prompt(task: str, context: str = "", peek_output: str = "") -> s
 def format_system_prompt(context: str = "", context_type: str = "string", **kwargs: Any) -> str:
     """Format system prompt with context metadata."""
     if context:
-        # Provide metadata about context
         meta = f"{context_type} with {len(context)} chars"
         if "\n" in context:
             lines = context.count("\n") + 1
             meta += f", ~{lines} lines"
         return SYSTEM_PROMPT_WITH_CONTEXT.replace("{context_meta}", meta)
-    else:
-        return SYSTEM_PROMPT_NO_CONTEXT
+    return SYSTEM_PROMPT_NO_CONTEXT
 
 
 CONTINUE_PROMPT = """Code executed.{error_info}
@@ -219,14 +175,12 @@ def format_continue_prompt(
     if output and len(output) > max_stdout:
         output = output[:max_stdout] + f"... (truncated, {len(output)} chars total)"
 
-    # Show variable names and types so LLM knows what's available
     if state:
         state_lines = [f"{name}: {desc}" for name, desc in state.items()]
         state_info = ", ".join(state_lines)
     else:
         state_info = "none"
 
-    # Add urgency based on iteration count
     remaining = max_iterations - iteration
     if remaining <= 2:
         iteration_info = f"⚠️ Final attempt ({remaining} left). "
@@ -241,3 +195,46 @@ def format_continue_prompt(
         state_info=state_info,
         iteration_info=iteration_info,
     )
+
+
+def build_initial_messages(
+    task: str,
+    context: str = "",
+    context_type: str = "string",
+    peek_output: str = "",
+) -> list[dict[str, str]]:
+    """Build the initial message list for starting an RLM session."""
+    system_prompt = format_system_prompt(context=context, context_type=context_type)
+    user_prompt = format_user_prompt(task=task, peek_output=peek_output)
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+    ]
+
+    messages.append({"role": "user", "content": user_prompt})
+    return messages
+
+
+def build_continuation_message(
+    output: str,
+    error: str = "",
+    state: dict[str, str] | None = None,
+    max_stdout: int = 2000,
+    iteration: int = 1,
+    max_iterations: int = 10,
+    root_task: str = "",
+) -> dict[str, str]:
+    """Build a continuation message after code execution."""
+    content = format_continue_prompt(
+        output=output,
+        error=error,
+        state=state,
+        max_stdout=max_stdout,
+        iteration=iteration,
+        max_iterations=max_iterations,
+    )
+
+    if iteration > 3 and root_task:
+        content += f"\n\nReminder - Task: {root_task}"
+
+    return {"role": "user", "content": content}

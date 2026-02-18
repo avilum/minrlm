@@ -12,9 +12,13 @@ wheels/
 # Generated outputs (not part of codebase)
 logs/
 benchmark_results/
+eval/
 eval/results/*.json
 eval/results/*.md
 eval/results/plots/
+evals/data/
+evals/cache/
+evals/tmp/
 temp/
 
 # IDE
