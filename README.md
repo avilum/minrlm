@@ -29,15 +29,7 @@ print(result.total_tokens)  # ~2K tokens regardless of size
 
 **Overall**: **4.2x fewer tokens**, **4.1x cheaper**
 
-| Task | Context | Vanilla | minrlm | Savings |
-|------|---------|---------|--------|---------|
-| JSON Extraction | 131K | 46,890 tokens | 1,993 tokens | **23.5x** |
-| JSON Aggregation | 131K | 38,746 tokens (0%) | 1,975 tokens (100%) | **19.6x** |
-| BrowseComp+ | 11M | ❌ Fails | ✅ 100% (~2K tokens) | **∞** |
-
-**Key insight**: At large contexts (128K+), RLMs often match or exceed vanilla accuracy while using **10-90x fewer tokens**. At larger scales (6M-11M), RLMs are the only viable option - vanilla fails due to token limits.
-
-### Cost & Token Efficiency
+At large contexts (128K+), RLMs match or exceed vanilla accuracy while using **10-90x fewer tokens**. At extreme scales (6M+), RLMs are the only viable option—vanilla fails due to token limits.
 
 ![Cost by Task & Context Length](docs/cost_by_task_context.png)
 
@@ -45,7 +37,7 @@ print(result.total_tokens)  # ~2K tokens regardless of size
 
 ![Token Efficiency](docs/token_efficiency.png)
 
-See [`eval/README.md`](eval/README.md) for detailed benchmark analysis.
+**Full benchmark results, tasks, and reproduction commands**: [`eval/README.md`](eval/README.md)
 
 ## How It Works
 
@@ -191,13 +183,19 @@ This gives you:
 Benchmarks show we're heading in the right direction. At large contexts (128K+), RLMs often match or exceed vanilla accuracy while using 10-90x fewer tokens. At extreme scales (6M-11M), RLMs are the only viable option.
 
 
-## Running evals
+## Running Evals
 
 ```bash
-uv run python eval/run.py --model gpt-5-mini --tasks scaling --runs 1
+# Quick test
+uv run python eval/run.py --model gpt-5-mini --tasks paper --runs 1
+
+# Full benchmark suite
+uv run python eval/run.py --model gpt-5-mini --tasks all --runs 5
 ```
 
-See [`eval/README.md`](eval/README.md) for full benchmark suite.
+See [`eval/README.md`](eval/README.md) for all tasks, official datasets, and reproduction commands.
+
+To download official datasets (OOLONG, BrowseComp+, RepoQA, etc.), see [`evals/README.md`](evals/README.md).
 
 
 ## Interactive UI

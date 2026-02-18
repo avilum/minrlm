@@ -22,6 +22,7 @@ from .prompts import (
     format_continue_prompt,
     format_system_prompt,
     format_user_prompt,
+    SYSTEM_PROMPT_MINIMAL,
 )
 
 # Context chars to show before/after each search() match
@@ -43,21 +44,37 @@ class RLMResult:
     history: list[dict[str, str]] = field(default_factory=list)
 
 
+class _StopExecution(BaseException):
+    """Raised by FINAL()/FINAL_var() to cleanly halt REPL execution.
+
+    Inherits from BaseException (not Exception) so it is NOT caught by
+    ``except Exception`` blocks inside user code, but IS caught by the
+    explicit handler in PythonREPL.execute().
+    """
+
+
 class ProtectedNamespace(dict):
     """Dict that prevents reassignment of protected keys (like input_0)."""
 
-    PROTECTED = {"input_0", "input_1", "input_2"}  # Context variables are protected
+    PROTECTED = {"input_0", "input_1", "input_2", "task_0"}  # Context/task variables are protected
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._allow_reassign = False
 
     def __setitem__(self, key: str, value: Any) -> None:
-        if key in self.PROTECTED and key in self:
+        if key in self.PROTECTED and key in self and not self._allow_reassign:
             raise NameError(f"Cannot reassign '{key}' - it already contains your data. Use it directly.")
         super().__setitem__(key, value)
+
+    def allow_reassign(self, allow: bool) -> None:
+        self._allow_reassign = allow
 
 
 class PythonREPL:
     """Persistent Python REPL with sub_llm() and FINAL() support."""
 
-    HIDDEN_KEYS = {"__builtins__", "__name__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search"}
+    HIDDEN_KEYS = {"__builtins__", "__name__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search", "task_0", "input_0", "input_1", "input_2"}
 
     def __init__(self, sub_llm_callback: Callable | None = None, sub_llm_batch_callback: Callable | None = None):
         self._output: str | None = None
@@ -102,7 +119,11 @@ class PythonREPL:
 
         # Enforce data grounding: if input_0 exists, must access data first
         if "input_0" in self._namespace and not self._data_accessed:
-            raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
+            # Allow patch outputs without forcing search()
+            if self._looks_like_patch(str(value)):
+                self._data_accessed = True
+            else:
+                raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
 
         self._output = str(value).strip()
 
@@ -117,9 +138,21 @@ class PythonREPL:
             if inner:
                 print(f"ℹ️ Cleaned output: '{self._output}'")
 
+        # Disallow placeholder outputs
+        if self._output.strip().lower() in {"unknown", "n/a", "none"}:
+            raise ValueError("FINAL() cannot be a placeholder (unknown/n/a/none). Extract the answer from input_0.")
+
         # Reject empty string after cleaning
         if self._output == "":
             raise ValueError("FINAL() called with empty string - provide a non-empty answer")
+
+        # Halt execution cleanly - FINAL() is a terminal call
+        raise _StopExecution()
+
+    @staticmethod
+    def _looks_like_patch(text: str) -> bool:
+        """Detect patch-like outputs to relax grounding requirements."""
+        return "diff --git " in text or "*** Begin Patch" in text
 
     def _search(self, text: str, pattern: str, context: int = SEARCH_CONTEXT_CHARS) -> list[tuple[str, str, str]]:
         """Search for literal pattern in text (case-insensitive).
@@ -183,8 +216,16 @@ class PythonREPL:
             raise ValueError(f"Variable '{var_name}' is None - provide a non-empty value")
 
         self._output = str(value).strip()
+        if self._output.strip().lower() in {"unknown", "n/a", "none"}:
+            raise ValueError(
+                f"Variable '{var_name}' resolves to a placeholder (unknown/n/a/none). "
+                "Extract the answer from input_0."
+            )
         if self._output == "":
             raise ValueError(f"Variable '{var_name}' contains empty string - provide a non-empty value")
+
+        # Halt execution cleanly
+        raise _StopExecution()
 
     def _peek(self, data: Any, max_len: int = 500, max_items: int = 5, depth: int = 0) -> str:
         """Efficient preview of data - truncates large strings/lists, recurses into structures."""
@@ -266,6 +307,9 @@ class PythonREPL:
                 r"input_0\s*\[",  # input_0[...]
                 r"input_0\s*\.",  # input_0.method()
                 r"=\s*input_0",  # var = input_0
+                r"sub_llm\s*\([^)]*input_0",  # sub_llm(task, input_0)
+                r"sub_llm_batch\s*\([^)]*input_0",  # sub_llm_batch([..., input_0, ...])
+                r"[f]['\"][^'\"]*\{input_0",  # f"...{input_0}..."
             ]
             # If input_0 is used AND (regex function is called OR direct access pattern matches)
             if has_input_0 and (has_regex or any(re.search(p, code) for p in patterns)):
@@ -274,6 +318,8 @@ class PythonREPL:
         result: dict[str, Any] = {"stdout": "", "output": None, "error": None}
         try:
             exec(code, self._namespace)
+        except _StopExecution:
+            pass  # FINAL() was called - normal termination, output already set
         except Exception as e:
             result["error"] = f"{type(e).__name__}: {e}"
         finally:
@@ -286,7 +332,15 @@ class PythonREPL:
         result["state"] = self.get_state()
         return result
 
-    def set_variable(self, name: str, value: Any) -> None:
+    def set_variable(self, name: str, value: Any, allow_override: bool = False) -> None:
+        if allow_override and isinstance(self._namespace, ProtectedNamespace):
+            prev = self._namespace._allow_reassign
+            self._namespace.allow_reassign(True)
+            try:
+                self._namespace[name] = value
+            finally:
+                self._namespace.allow_reassign(prev)
+            return
         self._namespace[name] = value
 
     def reset(self) -> None:
@@ -365,6 +419,7 @@ class RLM:
         log_dir: str | None = None,
         async_batch: bool = True,  # Enable parallel sub_llm_batch calls
         on_step: Callable[[str, dict], None] | None = None,  # Callback for streaming steps
+        max_sub_llm_calls: int = 100,  # Guardrail for recursive sub_llm usage
         # Docker options
         use_docker: bool = False,  # Run code in Docker container
         docker_image: str = "python:3.11-slim",
@@ -381,6 +436,8 @@ class RLM:
         self.async_batch = async_batch
         self.on_step = on_step
         self.use_docker = use_docker
+        self.max_sub_llm_calls = max_sub_llm_calls
+        self._sub_llm_calls = 0
 
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.async_client = AsyncOpenAI(api_key=api_key, base_url=base_url) if async_batch else None
@@ -429,25 +486,45 @@ class RLM:
         matches = re.findall(r"```python\s*\n(.*?)```", text, re.DOTALL)
         if matches:
             code = "\n\n".join(matches)
+            code = self._sanitize_patch_code(code)
             if self._is_valid_python(code):
                 return code
+            patch_wrapped = self._wrap_patch_block(code)
+            if patch_wrapped is not None:
+                return patch_wrapped
         # Try ```py
         matches = re.findall(r"```py\s*\n(.*?)```", text, re.DOTALL)
         if matches:
             code = "\n\n".join(matches)
+            code = self._sanitize_patch_code(code)
             if self._is_valid_python(code):
                 return code
+            patch_wrapped = self._wrap_patch_block(code)
+            if patch_wrapped is not None:
+                return patch_wrapped
         # Try generic ``` blocks
         matches = re.findall(r"```\s*\n(.*?)```", text, re.DOTALL)
         if matches:
             code = "\n\n".join(matches)
+            code = self._sanitize_patch_code(code)
             if self._is_valid_python(code):
                 return code
+            patch_wrapped = self._wrap_patch_block(code)
+            if patch_wrapped is not None:
+                return patch_wrapped
         # Fallback: if response looks like pure code (starts with import/assignment)
         text = text.strip()
         if text.startswith("import ") or text.startswith("from ") or re.match(r"^[a-z_][a-z0-9_]*\s*=", text):
-            if self._is_valid_python(text):
-                return text
+            sanitized = self._sanitize_patch_code(text)
+            if self._is_valid_python(sanitized):
+                return sanitized
+            patch_wrapped = self._wrap_patch_block(sanitized)
+            if patch_wrapped is not None:
+                return patch_wrapped
+        # Final fallback: extract patch-like blocks directly
+        patch_wrapped = self._wrap_patch_block(text)
+        if patch_wrapped is not None:
+            return patch_wrapped
         return None
 
     def _is_valid_python(self, code: str) -> bool:
@@ -457,6 +534,48 @@ class RLM:
             return True
         except SyntaxError:
             return False
+
+    def _sanitize_patch_code(self, code: str) -> str:
+        """Make patch-holding code blocks valid when they contain triple quotes."""
+        for delim in ('"""', "'''"):
+            marker = f"patch = {delim}"
+            if marker not in code:
+                continue
+            start = code.find(marker)
+            if start == -1:
+                continue
+            start += len(marker)
+            end = code.rfind(delim)
+            if end <= start:
+                continue
+            inner = code[start:end]
+            escaped = inner.replace(delim, f"\\{delim}")
+            return code[:start] + escaped + code[end:]
+        return code
+
+    def _wrap_patch_block(self, text: str) -> str | None:
+        """Wrap patch-like text into a FINAL(patch) Python snippet."""
+        start = None
+        end = None
+        if "*** Begin Patch" in text:
+            start = text.find("*** Begin Patch")
+            end_marker = "*** End Patch"
+            end = text.find(end_marker, start)
+            if end != -1:
+                end += len(end_marker)
+        elif "diff --git" in text:
+            start = text.find("diff --git")
+            end = None
+
+        if start is None:
+            return None
+
+        patch = text[start:end].strip() if end else text[start:].strip()
+        if not patch:
+            return None
+
+        safe_patch = patch.replace("'''", "\\'\\'\\'")
+        return f"patch = '''{safe_patch}'''\nFINAL(patch)"
 
     def _call_llm(self, messages: list[dict[str, str]]) -> tuple[str, int, int, int]:
         """Call LLM, return (response_text, total_tokens, input_tokens, output_tokens)."""
@@ -507,44 +626,435 @@ class RLM:
         ]
         return any(pattern in model_lower for pattern in reasoning_patterns)
 
+    @staticmethod
+    def _extract_allowed_labels(task: str) -> list[str] | None:
+        """Extract a label set from a task string, if present."""
+        if not task:
+            return None
+
+        candidates: list[str] = []
+
+        # Prefer quoted labels: 'label' or "label"
+        for match in re.findall(r"'([^']+)'|\"([^\"]+)\"", task):
+            token = match[0] or match[1]
+            token = token.strip()
+            if token and token not in candidates:
+                candidates.append(token)
+
+        # Pattern like: "labels: a, b, c" or "one of: a, b"
+        if not candidates:
+            m = re.search(r"(?:labels?|one of)\s*[:\-]\s*([^\n.]+)", task, re.IGNORECASE)
+            if m:
+                chunk = m.group(1)
+                parts = re.split(r",|/|\bor\b", chunk)
+                for p in parts:
+                    t = p.strip().strip(".")
+                    if t and t not in candidates:
+                        candidates.append(t)
+
+        # Multiple-choice format: A), B), C), D) or (A), (B), (C), (D)
+        if not candidates:
+            if re.search(r'[Cc]hoices?:\s*\n?\s*[A-D]\)', task) or \
+               re.search(r'[Rr]eturn.*\(A,?\s*B,?\s*C,?\s*(?:or\s*)?D\)', task):
+                candidates = ['A', 'B', 'C', 'D']
+
+        # Common label pairs
+        task_lower = task.lower()
+        if not candidates:
+            if "true" in task_lower and "false" in task_lower:
+                candidates = ["True", "False"]
+            elif "correct" in task_lower and "incorrect" in task_lower:
+                candidates = ["correct", "incorrect"]
+            elif "yes" in task_lower and "no" in task_lower:
+                candidates = ["yes", "no"]
+
+        # Sanitize: keep reasonably short tokens (allow spaces/hyphens)
+        cleaned: list[str] = []
+        for c in candidates:
+            c = c.strip()
+            # Python 3.14's re rejects "\\-" inside character classes; keep '-' at the end.
+            if 0 < len(c) <= 60 and re.match(r"^[A-Za-z0-9_ -]+$", c):
+                if c not in cleaned:
+                    cleaned.append(c)
+
+        if 1 <= len(cleaned) <= 8:
+            return cleaned
+        return None
+
+    @staticmethod
+    def _normalize_sub_llm_output(text: str, allowed: list[str] | None) -> str:
+        """Normalize sub_llm output to a single label if possible."""
+        if text is None:
+            return ""
+
+        raw = text.strip()
+        if not raw:
+            return ""
+
+        # If code block contains FINAL("..."), extract it
+        match = re.search(r"FINAL\(['\"](.+?)['\"]\)", raw)
+        if match:
+            raw = match.group(1).strip()
+
+        # Strip code fences if present
+        if raw.startswith("```"):
+            raw = re.sub(r"^```\w*\s*", "", raw)
+            raw = re.sub(r"```\s*$", "", raw).strip()
+
+        # Only keep first line
+        raw = raw.splitlines()[0].strip()
+
+        # Drop leading prefixes like "Label:" or "Answer:"
+        raw = re.sub(r"^(?:label|answer)\s*:\s*", "", raw, flags=re.IGNORECASE).strip()
+
+        if allowed:
+            # Exact match (case-insensitive)
+            for label in allowed:
+                if raw.lower() == label.lower():
+                    return label
+            # Word match inside the response
+            for label in sorted(allowed, key=len, reverse=True):
+                if " " in label:
+                    if label.lower() in raw.lower():
+                        return label
+                else:
+                    if re.search(rf"\b{re.escape(label)}\b", raw, flags=re.IGNORECASE):
+                        return label
+        return raw
+
+    @staticmethod
+    def _is_suspect_label_task(task: str) -> bool:
+        """Detect tasks that likely require label classification even without 'label' keyword."""
+        if not task:
+            return False
+        t = task.lower()
+        # Multiple-choice tasks: do not force label-classification heuristics.
+        if "choices:" in t and re.search(r"\b[a-d]\)", t):
+            return False
+        # Do not treat secret-code extraction tasks as label classification.
+        if re.search(r"\b(find|locate|return)\b.*\bsecret\s+code\b", t):
+            return False
+        keywords = [
+            "label",
+            "labels",
+            "true",
+            "false",
+            "correct",
+            "incorrect",
+            "classify",
+            "one of",
+            "option",
+            "options",
+            "choice",
+            "choices",
+            "more common",
+            "less common",
+            "same frequency",
+            "most common",
+            "least common",
+        ]
+        if any(k in t for k in keywords):
+            return True
+        # Only treat quoted tokens as labels if there is a label intent keyword nearby
+        if re.search(r"(label|classify|one of|option|choice)", t) and re.search(
+            r"'[^']+'|\"[^\"]+\"", task
+        ):
+            return True
+        return False
+
+    def _build_sub_llm_messages(self, task: str, context: str, allowed: list[str] | None) -> list[dict[str, str]]:
+        """Build a minimal, tool-free prompt for sub_llm."""
+        user = task.strip() if task else ""
+        if allowed:
+            user += f"\n\nReturn exactly one of: {', '.join(allowed)}. No other text."
+        if context:
+            user += f"\n\nContext:\n{context}"
+        return [
+            {"role": "system", "content": SYSTEM_PROMPT_MINIMAL},
+            {"role": "user", "content": user},
+        ]
+
+    def _call_sub_llm_raw(self, task: str, context: str) -> str:
+        """Call LLM for sub_llm with minimal prompt and label enforcement."""
+        task = self._sanitize_sub_llm_task(task, context)
+        allowed = self._extract_allowed_labels(task)
+        messages = self._build_sub_llm_messages(task, context, allowed)
+        response_text, _, _, _ = self._call_llm(messages)
+        normalized = self._normalize_sub_llm_output(response_text, allowed)
+
+        if allowed and normalized not in allowed:
+            # Retry once with stricter instruction
+            retry_task = task + f"\n\nReturn exactly one of: {', '.join(allowed)}. Do not add any other text."
+            messages = self._build_sub_llm_messages(retry_task, context, allowed)
+            response_text, _, _, _ = self._call_llm(messages)
+            normalized = self._normalize_sub_llm_output(response_text, allowed)
+            if normalized not in allowed:
+                self._log("sub_llm_invalid_label", {"task": task[:120], "output": response_text[:120]})
+        return normalized
+
+    def _guard_label_counting(self, task: str, code: str, context: str | None = None) -> str | None:
+        """Guard against label-word counting in implicit-label tasks."""
+        if not task or not code:
+            return None
+        # Code-retrieval tasks should not be treated as label-classification tasks.
+        if self._is_code_retrieval_task(task):
+            return None
+        if not self._is_suspect_label_task(task):
+            return None
+        has_sub_llm = "sub_llm" in code
+        # Allow if code explicitly parses Label: fields
+        if re.search(r"label\s*:", code, flags=re.IGNORECASE):
+            return None
+        # Reject using search() fragments as items for line-based datasets
+        if "search(input_0" in code and ("before" in code or "after" in code) and "splitlines" not in code:
+            return (
+                "Line-based dataset detected. Build items via input_0.splitlines() and filter lines. "
+                "Do not use search() fragments (before/after) as items."
+            )
+        # Reject returning a label/Answer: 0 without classification
+        if (not has_sub_llm) and (
+            re.search(r"FINAL\(\s*['\"]Label:", code)
+            or re.search(r"FINAL\(\s*['\"]Answer:\s*0", code)
+        ):
+            return (
+                "Do not return a label or Answer: 0 without classifying at least one item. "
+                "Extract items from lines, classify with sub_llm/sub_llm_batch, then aggregate."
+            )
+        # If the task states there are N items/pairs, require explicit limiting after filtering.
+        # If context states there are N items/pairs, require explicit limiting after filtering.
+        m = None
+        if context:
+            m = re.search(r"following\s+lines\s+contain\s+(\d+)\s+(?:pairs|items|lines)", context, flags=re.IGNORECASE)
+        if not m:
+            m = re.search(r"contain\s+(\d+)\s+(?:pairs|items|lines)", task, flags=re.IGNORECASE)
+        if m and ("splitlines" in code) and ("<-->" in code or "||" in code or "Date:" in code):
+            n = m.group(1)
+            if n not in code and f"[:{n}]" not in code:
+                return (
+                    f"Task states there are {n} items. After filtering data lines, "
+                    "limit to exactly that many items (e.g., items = items[:N]) and avoid header lines."
+                )
+        # If labels mentioned and no sub_llm, reject counting heuristics
+        if (not has_sub_llm) and re.search(r"\b(true|false|correct|incorrect|positive|negative|formal|informal)\b", code, flags=re.IGNORECASE):
+            return (
+                "Implicit-label task detected. Do NOT count label words or rely on regex heuristics. "
+                "Use sub_llm/sub_llm_batch to classify each item then aggregate."
+            )
+        if has_sub_llm:
+            return None
+        return (
+            "Label task requires explicit label extraction or sub_llm classification. "
+            "Use sub_llm/sub_llm_batch unless labels are explicitly present next to each item."
+        )
+
+    @staticmethod
+    def _is_code_retrieval_task(task: str) -> bool:
+        """Heuristic for tasks that require exact code extraction."""
+        if not task:
+            return False
+        t = task.lower()
+        keywords = [
+            "codebase",
+            "code snippet",
+            "exact snippet",
+            "exact function",
+            "exact method",
+            "exact class",
+            "exact identifier",
+            "return the exact",
+        ]
+        return any(k in t for k in keywords)
+
+    def _guard_multiple_choice(self, task: str, code: str) -> str | None:
+        """Guard against guessing single-letter MCQA answers without sub_llm reasoning."""
+        if not task or not code:
+            return None
+        task_lower = task.lower()
+        # Only apply to multiple-choice tasks
+        if not ("choices:" in task_lower and re.search(r"\b[a-d]\)", task_lower)):
+            return None
+        # Allow if sub_llm was used
+        if "sub_llm" in code:
+            return None
+        # Detect direct single-letter FINAL without sub_llm
+        if re.search(r'FINAL\s*\(\s*["\'][A-D]["\']', code):
+            return (
+                "Multiple-choice task: do NOT call FINAL('A'/'B'/'C'/'D') without sub_llm reasoning. "
+                "Find a relevant snippet with search(), then: FINAL(sub_llm(task_0, snippet))"
+            )
+        return None
+
+    def _guard_pipe_delimited_search(self, task: str, code: str, context: str) -> str | None:
+        """Guard against using search() for pipe-delimited record-per-line data."""
+        if not context or not code:
+            return None
+        # Only relevant if data looks like pipe-delimited records
+        if "Date:" not in context[:2000] or "||" not in context[:2000]:
+            return None
+        # Detect the TOOL search(input_0, "User:/Date:") being used on pipe-delimited data.
+        # Allow if splitlines() is used for actual parsing (search might just be for validation)
+        # Must match search(input_0, ...) not re.search(r"User:...", ...).
+        has_search = re.search(r'(?<!\w)search\s*\(\s*input_0\s*,\s*["\'](?:Date:|User:)', code)
+        has_splitlines = "splitlines" in code
+        if has_search and not has_splitlines:
+            return (
+                'Pipe-delimited data: do NOT use search(input_0, "User: X") or search(input_0, "Date:") '
+                "— this splits records mid-line. Use splitlines() instead:\n"
+                "  data_lines = [l for l in input_0.splitlines() if l.startswith('Date:')]\n"
+                "  for line in data_lines:\n"
+                "      parts = [p.strip() for p in line.split('||')]\n"
+                "      # parts[0]=date, parts[1]=user, parts[2]=instance"
+            )
+        return None
+
+    def _guard_repoqa(self, task: str, code: str) -> str | None:
+        """Guard for code retrieval tasks: require sub_llm before any search()."""
+        if not task or not code:
+            return None
+        task_lower = task.lower()
+        # Only apply to code-retrieval tasks (REPOQA)
+        if "return the exact function" not in task_lower and "return the exact code" not in task_lower:
+            return None
+        # Allow if sub_llm was used for discovery (correct pattern)
+        if "sub_llm" in code:
+            return None
+        # Allow peek ONLY as a standalone step (no search alongside it)
+        if "peek" in code and not re.search(r"\bsearch\s*\(", code):
+            return None
+        # Detect search() call without sub_llm — model is skipping the discovery step
+        if re.search(r"\bsearch\s*\(", code):
+            return (
+                "Code retrieval task: do NOT search with description text — the codebase "
+                "uses exact code identifiers. ALWAYS use sub_llm to find the function name FIRST:\n"
+                "  preview = input_0[:2000]  # actual code; do NOT use peek() — it returns size metadata\n"
+                "  func_name = sub_llm('Reply with ONLY the exact function name — just the name, nothing else.',\n"
+                "                      preview + '\\n\\nTask: ' + task_0).strip()\n"
+                "  res = search(input_0, func_name + '(')\n"
+                "  if not res: res = search(input_0, func_name)\n"
+                "  if res:\n"
+                "      match, before, after = res[0]; FINAL(before[-400:] + match + after)\n"
+                "  else:\n"
+                "      pos = input_0.find(func_name); FINAL(input_0[max(0,pos-400):pos+3000])"
+            )
+        return None
+
+    def _guard_code_extraction(self, task: str, context: str, output: str) -> str | None:
+        """Ensure code outputs are exact substrings of input_0 for code-retrieval tasks."""
+        if not output or not context:
+            return None
+        if not self._is_code_retrieval_task(task):
+            return None
+        # Skip verbatim-match check for multiple-choice tasks (single-letter answers A/B/C/D)
+        task_lower = task.lower()
+        if "choices:" in task_lower and re.search(r"\b[a-d]\)", task_lower):
+            return None
+        # Require verbatim substring match
+        if output not in context:
+            return (
+                "Code retrieval task: output must be an exact substring of input_0. "
+                "Use search() + direct extraction of the identifier/snippet from input_0; do not rewrite."
+            )
+        # If output is only an identifier but a def/class exists, require the full snippet.
+        if "\n" not in output and re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", output):
+            if f"def {output}" in context or f"class {output}" in context:
+                return (
+                    "Code retrieval task: output is only an identifier. "
+                    "Return the full def/class block from input_0 instead of just the name."
+                )
+        return None
+
+    def _sanitize_sub_llm_task(self, task: str, context: str) -> str:
+        """Prevent passing raw data as the sub_llm task by rewriting with labels."""
+        if not task:
+            return ""
+        t = task.strip()
+        if not context:
+            return t
+        # If task is identical to context or looks like raw data, rewrite.
+        if t == context.strip():
+            allowed = self._extract_allowed_labels(task)
+            if allowed:
+                return f"Return exactly one of: {', '.join(allowed)}. No other text."
+            return "Return a single concise label. No other text."
+        # Heuristic: task contains long raw data markers.
+        if len(t) > 200 and ("Date:" in t or "<-->" in t):
+            allowed = self._extract_allowed_labels(task)
+            if allowed:
+                return f"Return exactly one of: {', '.join(allowed)}. No other text."
+        return t
+
     def _handle_sub_llm(self, task: str, context: str = "") -> str:
         """Handle recursive sub_llm() calls, preserving parent's output state."""
         # Save parent's output state to prevent contamination
         saved_output = self._repl.save_output() if self._repl else None
+        saved_input_0 = None
+        saved_data_accessed = None
+        if self._repl:
+            saved_input_0 = self._repl._namespace.get("input_0")
+            saved_data_accessed = self._repl._data_accessed
+
+        if self.max_sub_llm_calls is not None:
+            if self._sub_llm_calls >= self.max_sub_llm_calls:
+                self._log("sub_llm_limit", {"limit": self.max_sub_llm_calls, "depth": self._depth})
+                return "SUB_LLM_CALL_LIMIT_REACHED"
+            self._sub_llm_calls += 1
 
         self._depth += 1
         try:
-            result = self.completion(task, context).response
-            return result
+            return self._call_sub_llm_raw(task, context)
         finally:
             self._depth -= 1
             # Restore parent's output state
             if self._repl:
                 self._repl.restore_output(saved_output)
+                # Restore parent context + access flag to avoid subcall pollution
+                if saved_input_0 is not None:
+                    self._repl.set_variable("input_0", saved_input_0, allow_override=True)
+                if saved_data_accessed is not None:
+                    self._repl._data_accessed = saved_data_accessed
 
     def _handle_sub_llm_batch(self, tasks: list[tuple[str, str]]) -> list[str]:
         """Handle parallel sub_llm calls. tasks = [(task, context), ...]"""
         if not tasks:
             return []
 
+        if self.max_sub_llm_calls is not None:
+            remaining = self.max_sub_llm_calls - self._sub_llm_calls
+            if remaining <= 0:
+                self._log("sub_llm_limit", {"limit": self.max_sub_llm_calls, "depth": self._depth})
+                return ["SUB_LLM_CALL_LIMIT_REACHED"] * len(tasks)
+            if len(tasks) > remaining:
+                tasks_to_run = tasks[:remaining]
+                pending = len(tasks) - remaining
+            else:
+                tasks_to_run = tasks
+                pending = 0
+            self._sub_llm_calls += len(tasks_to_run)
+        else:
+            tasks_to_run = tasks
+            pending = 0
+
         if self.async_batch and self.async_client:
-            return asyncio.run(self._run_batch_async(tasks))
+            results = asyncio.run(self._run_batch_async(tasks_to_run))
         else:
             # Fallback: sequential
-            return [self._handle_sub_llm(task, ctx) for task, ctx in tasks]
+            results = [self._call_sub_llm_raw(task, ctx) for task, ctx in tasks_to_run]
+
+        if pending:
+            results.extend(["SUB_LLM_CALL_LIMIT_REACHED"] * pending)
+        return results
 
     async def _run_batch_async(self, tasks: list[tuple[str, str]]) -> list[str]:
-        """Run multiple completions in parallel using async."""
+        """Run multiple sub_llm completions in parallel using async (minimal prompt)."""
         if self.async_client is None:
             raise RuntimeError("Async client not initialized")
 
         async_client = self.async_client  # Local ref for closure
 
         async def run_one(task: str, context: str) -> str:
-            messages: list[dict[str, str]] = [
-                {"role": "system", "content": format_system_prompt(context)},
-                {"role": "user", "content": format_user_prompt(task, context)},
-            ]
+            task = self._sanitize_sub_llm_task(task, context)
+            allowed = self._extract_allowed_labels(task)
+            messages = self._build_sub_llm_messages(task, context, allowed)
             kwargs: dict[str, Any] = {
                 "model": self.model,
                 "messages": messages,
@@ -554,17 +1064,7 @@ class RLM:
 
             resp = await async_client.chat.completions.create(**kwargs)
             text = resp.choices[0].message.content or ""
-
-            # Simple extraction: if FINAL pattern found, extract value
-            match = re.search(r"FINAL\(['\"](.+?)['\"]\)", text)
-            if match:
-                return match.group(1)
-            # Or code block with FINAL
-            code_match = re.search(r'```python.*?FINAL\([\'"](.+?)[\'"]\).*?```', text, re.DOTALL)
-            if code_match:
-                return code_match.group(1)
-            # Fallback: return the raw response
-            return text.strip()
+            return self._normalize_sub_llm_output(text, allowed)
 
         results = await asyncio.gather(*[run_one(task, ctx) for task, ctx in tasks])
         self._log("batch_call", {"count": len(tasks), "tasks": [t[0][:50] for t in tasks]})
@@ -612,11 +1112,15 @@ class RLM:
             self._repl.reset()
             self._log_entries = []
             self._log("start", {"task": task, "model": self.model})
+            self._sub_llm_calls = 0
 
-        # Set input_0 for this completion (both top-level and sub_llm calls)
+        # Set input_0 and task_0 for this completion (both top-level and sub_llm calls)
+        # task_0 lets the model pass the full original task (with all choices) to sub_llm
         peek_output = ""
+        if is_top_level and task:
+            self._repl.set_variable("task_0", task, allow_override=False)
         if context:
-            self._repl.set_variable("input_0", context)
+            self._repl.set_variable("input_0", context, allow_override=self._depth > 0)
             # Auto-peek: show data preview in first prompt (saves an API call)
             peek_result = self._repl.execute("peek(input_0)")
             peek_output = peek_result.get("stdout", "")
@@ -665,13 +1169,50 @@ class RLM:
                 )
 
             if not code:
-                # No code found - prompt to use FINAL()
-                self._log("no_code", {"response_preview": response_text[:500]})
+                cleaned = response_text.strip()
+                auto_wrapped = False
+                if cleaned:
+                    if "FINAL(" in cleaned:
+                        code = cleaned
+                        auto_wrapped = True
+                    elif (
+                        self._is_code_retrieval_task(task)
+                        or re.search(r"^(?:from|import|def|class)\b", cleaned)
+                        or len(cleaned) <= 80
+                    ):
+                        # Wrap plain-text answers or code snippets to avoid format drift.
+                        code = f"FINAL({cleaned!r})"
+                        auto_wrapped = True
+
+                if auto_wrapped:
+                    self._log("no_code_autowrap", {"response_preview": cleaned[:200]})
+                else:
+                    # No code found - prompt to use FINAL()
+                    self._log("no_code", {"response_preview": response_text[:500]})
+                    messages += [
+                        {"role": "assistant", "content": response_text},
+                        {
+                            "role": "user",
+                            "content": "Use ```python and call FINAL('your answer').",
+                        },
+                    ]
+                    continue
+
+            # Guard: reject code that counts label words instead of using sub_llm
+            guard_msg = self._guard_label_counting(task, code, context)
+            if not guard_msg:
+                guard_msg = self._guard_pipe_delimited_search(task, code, context)
+            if not guard_msg:
+                guard_msg = self._guard_multiple_choice(task, code)
+            if not guard_msg:
+                guard_msg = self._guard_repoqa(task, code)
+            if guard_msg:
+                self._log("guard_label_counting", {"message": guard_msg, "code_preview": code[:200]})
                 messages += [
                     {"role": "assistant", "content": response_text},
                     {
                         "role": "user",
-                        "content": "Use ```python and call FINAL('your answer').",
+                        "content": f"⚠️ {guard_msg}\nRewrite the code to fix this issue.",
                     },
                 ]
                 continue
@@ -701,9 +1242,22 @@ class RLM:
                     },
                 )
 
-            # Break if FINAL() was called
+            # Break if FINAL() was called (unless a guard rejects it)
             if result.get("output") is not None:
-                final_output = result["output"]
+                candidate = result["output"]
+                # Guard: ensure code-retrieval outputs are verbatim from input_0
+                extract_guard = self._guard_code_extraction(task, context, candidate)
+                if extract_guard:
+                    self._log("guard_code_extraction", {"message": extract_guard, "output": candidate[:200]})
+                    messages += [
+                        {"role": "assistant", "content": response_text},
+                        {
+                            "role": "user",
+                            "content": f"⚠️ {extract_guard}\nFix the code.",
+                        },
+                    ]
+                    continue
+                final_output = candidate
                 break
 
             # Pass state to continue prompt

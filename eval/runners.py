@@ -167,6 +167,7 @@ class OursRunner(BaseRunner):
                 model=self.model,
                 max_iterations=self.max_iterations,
                 log_dir=self.log_dir,
+                async_batch=True,
             )
             result = rlm.completion(task=task, context=context)
             elapsed = time.time() - start

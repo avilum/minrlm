@@ -20,6 +20,7 @@ evals/data/
 evals/cache/
 evals/tmp/
 temp/
+.DS_Store
 
 # IDE
 .idea/

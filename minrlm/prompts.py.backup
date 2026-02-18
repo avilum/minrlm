@@ -54,22 +54,11 @@ Approach by data type:
         user = user_match.group(1) if user_match else ""
         instance = parts[2].replace("Instance:", "").strip()
         parsed.append((date_str, user, instance))
-    # If task asks for user ID, extract it with FINAL(user) not FINAL("User: " + user)
     # Labels are NEVER explicit — always classify semantically with sub_llm_batch:
-    # Extract expected label format from task_0 (e.g., correct/incorrect, positive/negative)
-    import re
-    label_match = re.search(r'\b(correct|incorrect|true|false|positive|negative|yes|no)\b', task_0, re.I)
-    if label_match:
-        label1 = label_match.group(1).lower()
-        # Find the opposite label
-        opposite_map = {'correct':'incorrect', 'incorrect':'correct', 'true':'false', 'false':'true',
-                        'positive':'negative', 'negative':'positive', 'yes':'no', 'no':'yes'}
-        label2 = opposite_map.get(label1, 'incorrect')
-        task_str = f"Classify as {label1} or {label2}. Reply with ONLY the word: {label1} or {label2}"
-    else:
-        task_str = "Classify as correct or incorrect. Reply with ONLY the word: correct or incorrect"
+    task_str = "Answer in one word only (correct/incorrect, true/false, positive/negative, etc.)."
     labels = sub_llm_batch([(task_str, inst) for _, _, inst in parsed])
-    # ALWAYS use labels directly without any prefix - compare: label.strip().lower() == "correct"
+    # ALWAYS compare case-insensitively: label.strip().lower() == "true"
+    # NEVER do: label == "True"  — always use .strip().lower()
   For date-range filtering, parse date_str AFTER extracting it from parts[0]:
     from datetime import datetime
     DATE_FMTS = ("%b %d, %Y", "%B %d, %Y", "%Y-%m-%d", "%d %b %Y")
@@ -86,40 +75,29 @@ Approach by data type:
   ⚠ NEVER search with description text. NEVER implement the function yourself.
   ALWAYS use this mandatory 3-step pattern — step 1 is sub_llm, NO EXCEPTIONS:
     # Step 1: sub_llm identifies the exact function name from code preview
-    preview = input_0[:2000]  # actual code — do NOT use peek() (returns size metadata)
-    func_name = sub_llm("What function name is being asked about? Reply with ONLY the function name.",
+    preview = input_0[:2000]        # actual code — do NOT use peek() (it returns size metadata)
+    func_name = sub_llm("Reply with ONLY the exact function name — just the name, nothing else.",
                         preview + "\n\nTask: " + task_0).strip()
-    # Step 2: search for the definition with fallback logic
-    res = search(input_0, "def " + func_name)
-    if not res: res = search(input_0, func_name + "(")
+    # Step 2: search for the definition (try with "(" to find declaration exactly)
+    res = search(input_0, func_name + "(")
     if not res: res = search(input_0, func_name)
-    # Step 3: return name||code format (function name + "||" + code)
+    # Step 3: return the full function (before captures return type / language keyword above)
     if res:
-        match, before, after = res[0]
-        FINAL(func_name + "||" + before[-400:] + match + after[:2000])
+        match, before, after = res[0]; FINAL(before[-400:] + match + after)
     else:
-        pos = input_0.find(func_name)
-        if pos >= 0:
-            FINAL(func_name + "||" + input_0[max(0,pos-400):pos+3000])
-        else:
-            FINAL("")  # Function not found
-- Multiple-choice questions on code (CODEQA): MUST search MULTIPLE terms and gather evidence.
-  ⚠ NEVER answer based on single keyword! NEVER guess! NEVER pick based on one search result!
-  ALWAYS collect evidence from at least 3 different searches before calling sub_llm:
-    # 1. Search for question concept + keywords from EACH option (A, B, C, D)
+        pos = input_0.find(func_name); FINAL(input_0[max(0,pos-400):pos+3000])
+- Multiple-choice questions on code (CODEQA): search MULTIPLE terms to gather evidence, then sub_llm.
+  NEVER answer based on a single keyword search — that biases toward one option.
+  ALWAYS use this multi-evidence pattern:
+    # Search for key concept from the QUESTION (not from any option) plus option-specific terms
     snippets = []
-    # Example: if question is "What does function X do?" and options mention different behaviors,
-    # search for: the function name, key terms from option A, terms from B, terms from C, etc.
-    for term in ["main_concept", "option_A_keyword", "option_B_keyword", "option_C_keyword"]:
+    # Collect context from multiple relevant searches
+    for term in ["term_from_question", "option_A_keyword", "option_B_keyword"]:
         res = search(input_0, term)
         if res:
-            m, b, a = res[0]
-            snippets.append(b[-300:] + m + a[:700])  # Gather context
-    # 2. Combine all evidence
-    evidence = "\n---\n".join(snippets) if snippets else input_0[:3000]
-    # 3. Pass task_0 (contains ALL choices A/B/C/D) + evidence to sub_llm for reasoning
-    answer = sub_llm(task_0, evidence)  # sub_llm picks the letter based on evidence
-    FINAL(answer)
+            m, b, a = res[0]; snippets.append(b[-200:] + m + a[:500])
+    evidence = "\n---\n".join(snippets) if snippets else input_0[:2000]
+    FINAL(sub_llm(task_0, evidence))   # task_0 has all A/B/C/D; sub_llm picks the letter
 
 Universal constraints:
 1) Output exactly ONE python code block. Last line must be FINAL(...) or FINAL_var(...).

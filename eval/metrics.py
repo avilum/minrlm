@@ -279,14 +279,16 @@ def compute_statistics(results: list[EvalResult]) -> dict:
             "avg_cost_usd": avg_cost,
         }
 
-    # Efficiency comparisons
+    # Efficiency comparisons (cost-based)
     vanilla_stats = stats["by_runner"].get("vanilla", {})
-    if vanilla_stats and vanilla_stats.get("avg_tokens_per_task", 0) > 0:
-        baseline_tokens = vanilla_stats["avg_tokens_per_task"]
-
+    baseline_cost = vanilla_stats.get("total_cost_usd") if vanilla_stats else None
+    if baseline_cost and baseline_cost > 0:
         for runner_name, runner_stats in stats["by_runner"].items():
-            if runner_name != "vanilla" and runner_stats.get("avg_tokens_per_task", 0) > 0:
-                runner_stats["token_efficiency_vs_vanilla"] = baseline_tokens / runner_stats["avg_tokens_per_task"]
+            if runner_name == "vanilla":
+                continue
+            runner_cost = runner_stats.get("total_cost_usd")
+            if runner_cost and runner_cost > 0:
+                runner_stats["cost_efficiency_vs_vanilla"] = baseline_cost / runner_cost
 
     return stats
 
@@ -332,14 +334,14 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
     ]
 
     if has_cost:
-        lines.append("| Runner | Accuracy | Avg Tokens | Avg Time | Total Cost | Token Efficiency |")
+        lines.append("| Runner | Accuracy | Avg Tokens | Avg Time | Total Cost | Cost Efficiency |")
         lines.append("|--------|----------|------------|----------|------------|------------------|")
     else:
-        lines.append("| Runner | Accuracy | Avg Tokens | Avg Time | Token Efficiency |")
+        lines.append("| Runner | Accuracy | Avg Tokens | Avg Time | Cost Efficiency |")
         lines.append("|--------|----------|------------|----------|------------------|")
 
     for runner, data in stats.get("by_runner", {}).items():
-        efficiency = data.get("token_efficiency_vs_vanilla", 1.0)
+        efficiency = data.get("cost_efficiency_vs_vanilla", 1.0)
         efficiency_str = f"{efficiency:.2f}x" if efficiency != 1.0 else "-"
         cost = data.get("total_cost_usd")
         cost_str = f"${cost:.6f}" if cost is not None else "N/A"

@@ -35,6 +35,46 @@ uv run python eval/run.py --model gpt-5-mini --skip-official
 uv run python eval/run.py --model gpt-5-mini --runs 5
 ```
 
+## Official Datasets
+
+Official benchmark datasets (OOLONG, BrowseComp+, RepoQA, etc.) are stored in `evals/data/`. See [`evals/README.md`](../evals/README.md) for dataset sources and licenses.
+
+### Download Datasets
+
+```bash
+# Install deps
+uv pip install datasets huggingface_hub
+
+# List available presets
+uv run python evals/download_official.py --list
+
+# Download official datasets (with sample limit)
+uv run python evals/download_official.py \
+  --dataset oolong --dataset longbench_v2 --dataset repoqa --dataset browsecomp_plus \
+  --dataset browsecomp_plus_corpus --dataset ruler_full_mirror \
+  --max-samples 100
+```
+
+### Run Official Benchmarks
+
+```bash
+# Run all official datasets (OOLONG, LongBench-v2, RepoQA, BrowseComp+, RULER NIAH)
+uv run python eval/run.py --model gpt-5-mini --tasks official --runs 100
+
+# Limit dataset size or change data location
+uv run python eval/run.py --model gpt-5-mini --tasks official --runs 50 --official-data-dir evals/data --official-max-samples 50
+
+# Cap documents per BrowseComp+ query (optional)
+uv run python eval/run.py --model gpt-5-mini --tasks official_browsecomp --browsecomp-max-docs 200
+
+# Restrict OOLONG contexts to fit a model's input size (optional)
+uv run python eval/run.py --model gpt-5-nano --tasks official_oolong --official-oolong-max-context-tokens 272000 --official-oolong-max-context-chars 10000000
+```
+
+**Notes:**
+- BrowseComp-Plus is **obfuscated** until you run the official deobfuscation script.
+- `--runs` controls how many dataset examples are evaluated per task.
+
 ## What This Evaluates
 
 ### Methods Compared

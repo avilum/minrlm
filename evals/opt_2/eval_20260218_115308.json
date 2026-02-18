@@ -1,0 +1,912 @@
+[
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "User: 44106",
+    "expected": "44106",
+    "total_tokens": 2431,
+    "input_tokens": 1945,
+    "output_tokens": 486,
+    "time_seconds": 5.313453197479248,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T11:50:30.119460",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.USER",
+      "context_window_id": 80000
+    },
+    "cost_usd": 3.7e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "User: 44106",
+    "expected": "44106",
+    "total_tokens": 2400,
+    "input_tokens": 1945,
+    "output_tokens": 455,
+    "time_seconds": 3.580095052719116,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T11:50:33.701748",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.USER",
+      "context_window_id": 80000
+    },
+    "cost_usd": 3.54e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: correct",
+    "expected": "correct",
+    "total_tokens": 3038,
+    "input_tokens": 1949,
+    "output_tokens": 1089,
+    "time_seconds": 17.69766092300415,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T11:50:42.317726",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 80000
+    },
+    "cost_usd": 6.7e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "User: 44106",
+    "expected": "44106",
+    "total_tokens": 5680,
+    "input_tokens": 4252,
+    "output_tokens": 1428,
+    "time_seconds": 19.48694109916687,
+    "iterations": 2,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T11:50:43.992039",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.USER",
+      "context_window_id": 80000
+    },
+    "cost_usd": 9.82e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "Label: false",
+    "expected": "correct",
+    "total_tokens": 2961,
+    "input_tokens": 1949,
+    "output_tokens": 1012,
+    "time_seconds": 28.85616898536682,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T11:50:53.649350",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 80000
+    },
+    "cost_usd": 6.3e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "File: src/black/ranges.py\n\n\"\"\"Functions related to Black's formatting by line ranges feature.\"\"\"\n\nimport difflib\nfrom dataclasses import dataclass\nfrom typing import Collection, Iterator, List, Sequence, Set, Tuple, Union\n\nfrom black.nodes import (\n    LN,\n    STANDALONE_COMMENT,\n    Leaf,\n    Node,\n    Visitor,\n    first_leaf,\n    furthest_ancestor_with_last_leaf,\n    last_leaf,\n    syms,\n)\nfrom blib2to3.pgen2.token import ASYNC, NEWLINE\n\n\ndef parse_line_ranges(line_ranges: Sequence[str]) -> List[Tuple[int, int]]:\n    lines: List[Tuple[int, int]] = []\n    for lines_str in line_ranges:\n        parts = lines_str.split(\"-\")\n        if len(parts) != 2:\n            raise ValueError(\n                \"Incorrect --line-ranges format, expect 'START-END', found\"\n                f\" {lines_str!r}\"\n            )\n        try:\n            start = int(parts[0])\n            end = int(parts[1])\n        except ValueError:\n            raise ValueError(\n                \"Incorrect --line-ranges value, expe",
+    "expected": "convert_unchanged_lines||def convert_unchanged_lines(src_node: Node, lines: Collection[Tuple[int, int]]) -> None:\n    \"\"\"Converts unchanged lines to STANDALONE_COMMENT.\n\n    The idea is similar to how `# fmt: on/off` is implemented. It also converts the\n    nodes between those markers as a single `STANDALONE_COMMENT` leaf node with\n    the unformatted code as its value. `STANDALONE_COMMENT` is a \"fake\" token\n    that will be formatted as-is with its prefix normalized.\n\n    Here we perform two passes:\n\n    1. Visit the top-level statements, and convert them to a single\n       `STANDALONE_COMMENT` when unchanged. This speeds up formatting when some\n       of the top-level statements aren't changed.\n    2. Convert unchanged \"unwrapped lines\" to `STANDALONE_COMMENT` nodes line by\n       line. \"unwrapped lines\" are divided by the `NEWLINE` token. e.g. a\n       multi-line statement is *one* \"unwrapped line\" that ends with `NEWLINE`,\n       even though this statement itself can span multiple lines, and the\n       tokenizer only sees the last '\\n' as the `NEWLINE` token.\n\n    NOTE: During pass (2), comment prefixes and indentations are ALWAYS\n    normalized even when the lines aren't changed. This is fixable by moving\n    more formatting to pass (1). However, it's hard to get it correct when\n    incorrect indentations are used. So we defer this to future optimizations.\n    \"\"\"\n    lines_set: Set[int] = set()\n    for start, end in lines:\n        lines_set.update(range(start, end + 1))\n    visitor = _TopLevelStatementsVisitor(lines_set)\n    _ = list(visitor.visit(src_node))  # Consume all results.\n    _convert_unchanged_line_by_line(src_node, lines_set)",
+    "total_tokens": 2748,
+    "input_tokens": 2153,
+    "output_tokens": 595,
+    "time_seconds": 6.933268070220947,
+    "iterations": 1,
+    "error": null,
+    "context_size": 18847,
+    "timestamp": "2026-02-18T11:51:01.666298",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "convert_unchanged_lines"
+    },
+    "cost_usd": 4.35e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "False",
+    "expected": "should_split_funcdef_with_rhs||def should_split_funcdef_with_rhs(line: Line, mode: Mode) -> bool:\n    \"\"\"If a funcdef has a magic trailing comma in the return type, then we should first\n    split the line with rhs to respect the comma.\n    \"\"\"\n    return_type_leaves: List[Leaf] = []\n    in_return_type = False\n\n    for leaf in line.leaves:\n        if leaf.type == token.COLON:\n            in_return_type = False\n        if in_return_type:\n            return_type_leaves.append(leaf)\n        if leaf.type == token.RARROW:\n            in_return_type = True\n\n    # using `bracket_split_build_line` will mess with whitespace, so we duplicate a\n    # couple lines from it.\n    result = Line(mode=line.mode, depth=line.depth)\n    leaves_to_track = get_leaves_inside_matching_brackets(return_type_leaves)\n    for leaf in return_type_leaves:\n        result.append(\n            leaf,\n            preformatted=True,\n            track_bracket=id(leaf) in leaves_to_track,\n        )\n\n    # we could also return true if the line is too long, and the return type is longer\n    # than the param list. Or if `should_split_rhs` returns True.\n    return result.magic_trailing_comma is not None",
+    "total_tokens": 2976,
+    "input_tokens": 2083,
+    "output_tokens": 893,
+    "time_seconds": 9.400163173675537,
+    "iterations": 1,
+    "error": null,
+    "context_size": 67173,
+    "timestamp": "2026-02-18T11:51:04.291746",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "should_split_funcdef_with_rhs"
+    },
+    "cost_usd": 5.785e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": ".futures import Executor, ProcessPoolExecutor, ThreadPoolExecutor\nfrom multiprocessing import Manager\nfrom pathlib import Path\nfrom typing import Any, Iterable, Optional, Set\n\nfrom mypy_extensions import mypyc_attr\n\nfrom black import WriteBack, format_file_in_place\nfrom black.cache import Cache\nfrom black.mode import Mode\nfrom black.output import err\nfrom black.report import Changed, Report\n\n\ndef maybe_install_uvloop() -> None:\n    \"\"\"If our environment has uvloop installed we use it.\n\n    This is called only from command-line entry points to avoid\n    interfering with the parent process if Black is used as a library.\n    \"\"\"\n    try:\n        import uvloop\n\n        uvloop.install()\n    except ImportError:\n        pass\n\n\ndef cancel(tasks: Iterable[\"asyncio.Future[Any]\"]) -> None:\n    \"\"\"asyncio signal handler that cancels all `tasks` and reports to stderr.\"\"\"\n    err(\"Aborted!\")\n    for task in tasks:",
+    "expected": "maybe_install_uvloop||def maybe_install_uvloop() -> None:\n    \"\"\"If our environment has uvloop installed we use it.\n\n    This is called only from command-line entry points to avoid\n    interfering with the parent process if Black is used as a library.\n    \"\"\"\n    try:\n        import uvloop\n\n        uvloop.install()\n    except ImportError:\n        pass",
+    "total_tokens": 8547,
+    "input_tokens": 6777,
+    "output_tokens": 1770,
+    "time_seconds": 18.558914184570312,
+    "iterations": 3,
+    "error": null,
+    "context_size": 6442,
+    "timestamp": "2026-02-18T11:51:13.008323",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "maybe_install_uvloop"
+    },
+    "cost_usd": 0.0001312
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": ".futures import Executor, ProcessPoolExecutor, ThreadPoolExecutor\nfrom multiprocessing import Manager\nfrom pathlib import Path\nfrom typing import Any, Iterable, Optional, Set\n\nfrom mypy_extensions import mypyc_attr\n\nfrom black import WriteBack, format_file_in_place\nfrom black.cache import Cache\nfrom black.mode import Mode\nfrom black.output import err\nfrom black.report import Changed, Report\n\n\ndef maybe_install_uvloop() -> None:\n    \"\"\"If our environment has uvloop installed we use it.\n\n    This is called only from command-line entry points to avoid\n    interfering with the parent process if Black is used as a library.\n    \"\"\"\n    try:\n        import uvloop\n\n        uvloop.install()\n    except ImportError:\n        pass\n\n\ndef cancel(tasks: Iterable[\"asyncio.Future[Any]\"]) -> None:\n    \"\"\"asyncio signal handler that cancels all `tasks` and reports to stderr.\"\"\"\n    err(\"Aborted!\")\n    for task in tasks:",
+    "expected": "maybe_install_uvloop||def maybe_install_uvloop() -> None:\n    \"\"\"If our environment has uvloop installed we use it.\n\n    This is called only from command-line entry points to avoid\n    interfering with the parent process if Black is used as a library.\n    \"\"\"\n    try:\n        import uvloop\n\n        uvloop.install()\n    except ImportError:\n        pass",
+    "total_tokens": 14169,
+    "input_tokens": 11757,
+    "output_tokens": 2412,
+    "time_seconds": 24.14200496673584,
+    "iterations": 5,
+    "error": null,
+    "context_size": 6442,
+    "timestamp": "2026-02-18T11:51:25.844169",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "maybe_install_uvloop"
+    },
+    "cost_usd": 0.0001943
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "Max iterations reached.",
+    "expected": "convert_unchanged_lines||def convert_unchanged_lines(src_node: Node, lines: Collection[Tuple[int, int]]) -> None:\n    \"\"\"Converts unchanged lines to STANDALONE_COMMENT.\n\n    The idea is similar to how `# fmt: on/off` is implemented. It also converts the\n    nodes between those markers as a single `STANDALONE_COMMENT` leaf node with\n    the unformatted code as its value. `STANDALONE_COMMENT` is a \"fake\" token\n    that will be formatted as-is with its prefix normalized.\n\n    Here we perform two passes:\n\n    1. Visit the top-level statements, and convert them to a single\n       `STANDALONE_COMMENT` when unchanged. This speeds up formatting when some\n       of the top-level statements aren't changed.\n    2. Convert unchanged \"unwrapped lines\" to `STANDALONE_COMMENT` nodes line by\n       line. \"unwrapped lines\" are divided by the `NEWLINE` token. e.g. a\n       multi-line statement is *one* \"unwrapped line\" that ends with `NEWLINE`,\n       even though this statement itself can span multiple lines, and the\n       tokenizer only sees the last '\\n' as the `NEWLINE` token.\n\n    NOTE: During pass (2), comment prefixes and indentations are ALWAYS\n    normalized even when the lines aren't changed. This is fixable by moving\n    more formatting to pass (1). However, it's hard to get it correct when\n    incorrect indentations are used. So we defer this to future optimizations.\n    \"\"\"\n    lines_set: Set[int] = set()\n    for start, end in lines:\n        lines_set.update(range(start, end + 1))\n    visitor = _TopLevelStatementsVisitor(lines_set)\n    _ = list(visitor.visit(src_node))  # Consume all results.\n    _convert_unchanged_line_by_line(src_node, lines_set)",
+    "total_tokens": 43106,
+    "input_tokens": 35637,
+    "output_tokens": 7469,
+    "time_seconds": 85.1018979549408,
+    "iterations": 10,
+    "error": null,
+    "context_size": 18847,
+    "timestamp": "2026-02-18T11:52:20.288774",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "convert_unchanged_lines"
+    },
+    "cost_usd": 0.00059635
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "C",
+    "expected": "A",
+    "total_tokens": 2874,
+    "input_tokens": 2393,
+    "output_tokens": 481,
+    "time_seconds": 3.6722309589385986,
+    "iterations": 1,
+    "error": null,
+    "context_size": 453895,
+    "timestamp": "2026-02-18T11:52:24.380750",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 3.94e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "C",
+    "expected": "C",
+    "total_tokens": 5019,
+    "input_tokens": 4136,
+    "output_tokens": 883,
+    "time_seconds": 9.659491062164307,
+    "iterations": 2,
+    "error": null,
+    "context_size": 278183,
+    "timestamp": "2026-02-18T11:52:30.369710",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 7.025e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "D",
+    "expected": "B",
+    "total_tokens": 5190,
+    "input_tokens": 4231,
+    "output_tokens": 959,
+    "time_seconds": 11.83051609992981,
+    "iterations": 2,
+    "error": null,
+    "context_size": 299000,
+    "timestamp": "2026-02-18T11:52:32.542663",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 7.49e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "D",
+    "expected": "B",
+    "total_tokens": 2746,
+    "input_tokens": 1989,
+    "output_tokens": 757,
+    "time_seconds": 9.372318983078003,
+    "iterations": 1,
+    "error": null,
+    "context_size": 299000,
+    "timestamp": "2026-02-18T11:52:33.756903",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 5.045e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "C",
+    "expected": "A",
+    "total_tokens": 5783,
+    "input_tokens": 4907,
+    "output_tokens": 876,
+    "time_seconds": 13.125189065933228,
+    "iterations": 2,
+    "error": null,
+    "context_size": 453895,
+    "timestamp": "2026-02-18T11:52:33.839265",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 7.47e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-BZFQY2QR",
+    "expected": "SECRET-BZFQY2QR",
+    "total_tokens": 2149,
+    "input_tokens": 1894,
+    "output_tokens": 255,
+    "time_seconds": 2.804744005203247,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T11:52:36.733470",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 13069
+    },
+    "cost_usd": 2.51e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-64BII0RU",
+    "expected": "SECRET-64BII0RU",
+    "total_tokens": 2369,
+    "input_tokens": 1897,
+    "output_tokens": 472,
+    "time_seconds": 4.222850799560547,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T11:52:38.152858",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32782
+    },
+    "cost_usd": 3.55e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-G17QDSOJ",
+    "expected": "SECRET-G17QDSOJ",
+    "total_tokens": 2449,
+    "input_tokens": 1900,
+    "output_tokens": 549,
+    "time_seconds": 4.492769002914429,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T11:52:38.422061",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18493
+    },
+    "cost_usd": 3.95e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-9SPQLJAN",
+    "expected": "SECRET-9SPQLJAN",
+    "total_tokens": 2415,
+    "input_tokens": 1896,
+    "output_tokens": 519,
+    "time_seconds": 5.360205888748169,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T11:52:39.290283",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32490
+    },
+    "cost_usd": 3.825e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-1AXJKKA5",
+    "expected": "SECRET-1AXJKKA5",
+    "total_tokens": 2357,
+    "input_tokens": 1898,
+    "output_tokens": 459,
+    "time_seconds": 4.847954988479614,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T11:52:41.585577",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18030
+    },
+    "cost_usd": 3.51e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "expected": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "total_tokens": 2401,
+    "input_tokens": 1904,
+    "output_tokens": 497,
+    "time_seconds": 3.3371098041534424,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T11:52:45.050456",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-UYRRM4",
+        "NEEDLE-9OF82W",
+        "NEEDLE-B6HHRV",
+        "NEEDLE-MH407Q",
+        "NEEDLE-QI7MK2"
+      ]
+    },
+    "cost_usd": 3.71e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "expected": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "total_tokens": 2175,
+    "input_tokens": 1906,
+    "output_tokens": 269,
+    "time_seconds": 3.3364667892456055,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T11:52:45.050750",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-EVCR18",
+        "NEEDLE-5FC9F9",
+        "NEEDLE-1SVNIX",
+        "NEEDLE-E90ITZ",
+        "NEEDLE-CEI1M1"
+      ]
+    },
+    "cost_usd": 2.555e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-XAJI0Y, NEEDLE-9B0R7O, NEEDLE-7G8IQ6, NEEDLE-CV9MTN, NEEDLE-FRS832",
+    "expected": "NEEDLE-XAJI0Y, NEEDLE-9B0R7O, NEEDLE-7G8IQ6, NEEDLE-CV9MTN, NEEDLE-FRS832",
+    "total_tokens": 2330,
+    "input_tokens": 1919,
+    "output_tokens": 411,
+    "time_seconds": 3.6669111251831055,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T11:52:45.378970",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-XAJI0Y",
+        "NEEDLE-9B0R7O",
+        "NEEDLE-7G8IQ6",
+        "NEEDLE-CV9MTN",
+        "NEEDLE-FRS832"
+      ]
+    },
+    "cost_usd": 3.285e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "expected": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "total_tokens": 5358,
+    "input_tokens": 4186,
+    "output_tokens": 1172,
+    "time_seconds": 8.37315821647644,
+    "iterations": 2,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T11:52:50.092329",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-MR8WS1",
+        "NEEDLE-1AYT3M",
+        "NEEDLE-LTQNMI",
+        "NEEDLE-9MXRNY",
+        "NEEDLE-Y7R6Y9"
+      ]
+    },
+    "cost_usd": 8.5e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-NQQPRF,NEEDLE-MX0LL6,NEEDLE-VC3N8A,NEEDLE-589QYE,NEEDLE-SKP3TX",
+    "expected": "NEEDLE-NQQPRF, NEEDLE-MX0LL6, NEEDLE-VC3N8A, NEEDLE-589QYE, NEEDLE-SKP3TX",
+    "total_tokens": 5136,
+    "input_tokens": 4130,
+    "output_tokens": 1006,
+    "time_seconds": 11.00111198425293,
+    "iterations": 2,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T11:52:56.059518",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-NQQPRF",
+        "NEEDLE-MX0LL6",
+        "NEEDLE-VC3N8A",
+        "NEEDLE-589QYE",
+        "NEEDLE-SKP3TX"
+      ]
+    },
+    "cost_usd": 7.665e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "expected": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "total_tokens": 2286,
+    "input_tokens": 1902,
+    "output_tokens": 384,
+    "time_seconds": 3.5763490200042725,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50448,
+    "timestamp": "2026-02-18T11:52:59.759800",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-THETA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-KAPPA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ZETA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "continental drift"
+        ],
+        [
+          "DEF-LAMBDA",
+          "entropy"
+        ],
+        [
+          "DEF-NU",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 3.115e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "DEF-DELTA=, DEF-IOTA=, DEF-ETA=, DEF-LAMBDA=, DEF-KAPPA=, DEF-XI=, DEF-OMICRON=, DEF-BETA=",
+    "expected": "DEF-DELTA=prime numbers, DEF-IOTA=golden ratio, DEF-ETA=entropy, DEF-LAMBDA=continental drift, DEF-KAPPA=quantum entanglement, DEF-XI=superconductivity, DEF-OMICRON=electromagnetism, DEF-BETA=black holes",
+    "total_tokens": 2252,
+    "input_tokens": 1905,
+    "output_tokens": 347,
+    "time_seconds": 4.295323848724365,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50461,
+    "timestamp": "2026-02-18T11:53:00.479321",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "golden ratio"
+        ],
+        [
+          "DEF-ETA",
+          "entropy"
+        ],
+        [
+          "DEF-LAMBDA",
+          "continental drift"
+        ],
+        [
+          "DEF-KAPPA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "superconductivity"
+        ],
+        [
+          "DEF-OMICRON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 2.955e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "expected": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "total_tokens": 2445,
+    "input_tokens": 1903,
+    "output_tokens": 542,
+    "time_seconds": 4.346490859985352,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T11:53:00.530118",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-OMICRON",
+          "relativity"
+        ],
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-GAMMA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-XI",
+          "electromagnetism"
+        ],
+        [
+          "DEF-EPSILON",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 3.955e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "expected": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "total_tokens": 2555,
+    "input_tokens": 1903,
+    "output_tokens": 652,
+    "time_seconds": 5.420042037963867,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50445,
+    "timestamp": "2026-02-18T11:53:01.604545",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-PI",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "black holes"
+        ],
+        [
+          "DEF-MU",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "entropy"
+        ],
+        [
+          "DEF-OMICRON",
+          "antimatter"
+        ]
+      ]
+    },
+    "cost_usd": 4.475e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-ZETA=quantum entanglement, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution",
+    "expected": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-ZETA=quantum entanglement, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution",
+    "total_tokens": 5375,
+    "input_tokens": 4271,
+    "output_tokens": 1104,
+    "time_seconds": 9.116579055786133,
+    "iterations": 2,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T11:53:08.882534",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ALPHA",
+          "dark matter"
+        ],
+        [
+          "DEF-ZETA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-GAMMA",
+          "entropy"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ],
+        [
+          "DEF-EPSILON",
+          "superconductivity"
+        ],
+        [
+          "DEF-BETA",
+          "electromagnetism"
+        ],
+        [
+          "DEF-OMICRON",
+          "evolution"
+        ]
+      ]
+    },
+    "cost_usd": 8.195e-05
+  }
+]

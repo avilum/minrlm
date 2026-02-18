@@ -117,7 +117,9 @@ Examples:
         default="sniah,multi_needle,pairs",
         help=(
             f"Tasks to run (comma-separated). Options: {', '.join(TASK_REGISTRY.keys())}, "
-            "all, paper (core paper tasks: sniah, oolong, pairs, codeqa, browsecomp)"
+            "all, paper (core paper tasks: sniah, oolong, pairs, codeqa, browsecomp), "
+            "official (official datasets: official_sniah, official_oolong, official_codeqa, "
+            "official_longbench_v2, official_repoqa, official_browsecomp)"
         ),
     )
 
@@ -160,6 +162,44 @@ Examples:
 
     parser.add_argument("--context-size", type=int, default=50000, help="Default context size for non-scaling tasks")
 
+    parser.add_argument(
+        "--official-data-dir",
+        default="evals/data",
+        help="Root directory for official datasets (default: evals/data)",
+    )
+
+    parser.add_argument(
+        "--official-split",
+        default=None,
+        help="Override split name for official datasets (e.g., test, validation, train)",
+    )
+
+    parser.add_argument(
+        "--official-max-samples",
+        type=int,
+        default=None,
+        help="Limit number of samples loaded per official dataset",
+    )
+    parser.add_argument(
+        "--official-oolong-max-context-chars",
+        type=int,
+        default=None,
+        help="Max OOLONG context length in characters (filters official_oolong samples)",
+    )
+    parser.add_argument(
+        "--official-oolong-max-context-tokens",
+        type=int,
+        default=None,
+        help="Max OOLONG context length in tokens (uses dataset context_len if present)",
+    )
+
+    parser.add_argument(
+        "--browsecomp-max-docs",
+        type=int,
+        default=None,
+        help="Limit number of documents per BrowseComp+ query",
+    )
+
     parser.add_argument("--no-plot", action="store_true", help="Skip generating visualization plots")
 
     parser.add_argument("--quiet", "-q", action="store_true", help="Reduce output verbosity")
@@ -169,7 +209,14 @@ Examples:
         "-p",
         type=int,
         default=3,
-        help="Max parallel runners per task (default: 3 = all runners in parallel)",
+        help="Max parallel runners per task instance (default: 3)",
+    )
+
+    parser.add_argument(
+        "--task-parallel",
+        type=int,
+        default=4,
+        help="Max parallel task instances (samples) per task (default: 4)",
     )
 
     return parser.parse_args()
@@ -191,7 +238,14 @@ def run_evaluation(
     verbose: bool = True,
     results_accumulator: list[EvalResult] | None = None,
     max_parallel: int = 3,
+    task_parallel: int = 4,
     log_dir: str | None = None,
+    official_data_dir: str = "evals/data",
+    official_split: str | None = None,
+    official_max_samples: int | None = None,
+    official_oolong_max_context_chars: int | None = None,
+    official_oolong_max_context_tokens: int | None = None,
+    browsecomp_max_docs: int | None = None,
 ) -> list[EvalResult]:
     """
     Run the full evaluation suite.
@@ -246,7 +300,36 @@ def run_evaluation(
         return []
 
     # Run evaluations
+    max_context_chars = official_oolong_max_context_chars
+    max_context_tokens = official_oolong_max_context_tokens
+
+    if max_context_chars is None and max_context_tokens is None and "gpt-5-nano" in model:
+        max_context_tokens = 272000
+        max_context_chars = 10_000_000
+
+    official_kwargs = {
+        "data_dir": official_data_dir,
+        "split": official_split,
+        "max_samples": official_max_samples,
+        "max_docs": browsecomp_max_docs,
+        "max_context_chars": max_context_chars,
+        "max_context_tokens": max_context_tokens,
+    }
+
     for task_name in tqdm(tasks, desc="Tasks", disable=not verbose):
+        if task_name.startswith("official_"):
+            results = _run_task_evaluations(
+                task_name=task_name,
+                task_kwargs=official_kwargs,
+                runners=active_runners,
+                model=model,
+                runs=runs,
+                verbose=verbose,
+                max_parallel=max_parallel,
+                task_parallel=task_parallel,
+            )
+            all_results.extend(results)
+            continue
         # Handle scaling task specially
         if task_name == "scaling":
             # Default: Test up to 1M as per paper (Figure 1)
@@ -260,6 +343,7 @@ def run_evaluation(
                     runs=runs,
                     verbose=verbose,
                     max_parallel=max_parallel,
+                    task_parallel=task_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "long_context":
@@ -275,6 +359,8 @@ def run_evaluation(
                         model=model,
                         runs=runs,
                         verbose=verbose,
+                        max_parallel=max_parallel,
+                        task_parallel=task_parallel,
                     )
                     all_results.extend(results)
         elif task_name == "multi_needle_long":
@@ -289,6 +375,7 @@ def run_evaluation(
                     runs=runs,
                     verbose=verbose,
                     max_parallel=max_parallel,
+                    task_parallel=task_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "json_extraction":
@@ -303,6 +390,7 @@ def run_evaluation(
                     runs=runs,
                     verbose=verbose,
                     max_parallel=max_parallel,
+                    task_parallel=task_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "json_aggregation":
@@ -317,6 +405,7 @@ def run_evaluation(
                     runs=runs,
                     verbose=verbose,
                     max_parallel=max_parallel,
+                    task_parallel=task_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "oolong":
@@ -331,6 +420,7 @@ def run_evaluation(
                     runs=runs,
                     verbose=verbose,
                     max_parallel=max_parallel,
+                    task_parallel=task_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "codeqa":
@@ -346,6 +436,7 @@ def run_evaluation(
                     runs=runs,
                     verbose=verbose,
                     max_parallel=max_parallel,
+                    task_parallel=task_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "browsecomp":
@@ -361,6 +452,7 @@ def run_evaluation(
                     runs=runs,
                     verbose=verbose,
                     max_parallel=max_parallel,
+                    task_parallel=task_parallel,
                 )
                 all_results.extend(results)
         elif task_name == "pairs":
@@ -375,6 +467,7 @@ def run_evaluation(
                 runs=pairs_runs,
                 verbose=verbose,
                 max_parallel=max_parallel,
+                task_parallel=task_parallel,
             )
             all_results.extend(results)
         else:
@@ -385,6 +478,8 @@ def run_evaluation(
                 model=model,
                 runs=runs,
                 verbose=verbose,
+                max_parallel=max_parallel,
+                task_parallel=task_parallel,
             )
             all_results.extend(results)
 
@@ -440,82 +535,51 @@ def _run_single_runner(
         return runner_name, run_result, False, 0.0
 
 
-def _run_task_evaluations(
+def _run_one_instance(
+    run_idx: int,
     task_name: str,
-    task_kwargs: dict,
+    task,
+    generate_kwargs: dict,
     runners: dict,
     model: str,
-    runs: int,
+    max_parallel: int,
     verbose: bool,
-    max_parallel: int = 3,
 ) -> list[EvalResult]:
-    """Run evaluations for a single task across all runners (in parallel)."""
+    """Run one task instance (one seed) across all runners. Returns list of EvalResult."""
+    seed = 42 + run_idx * 100
+    instance = task.generate(seed=seed, **generate_kwargs)
     results = []
 
-    # Get base task name (handle parameterized names like scaling_8192, json_extraction_100k)
-    base_task_name = _get_base_task_name(task_name)
+    with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+        futures = {
+            executor.submit(_run_single_runner, rname, runner, task, instance, model): rname
+            for rname, runner in runners.items()
+        }
+        for future in as_completed(futures):
+            rname = futures[future]
+            try:
+                _, run_result, correct, partial_score = future.result()
+            except Exception as e:
+                if verbose:
+                    tqdm.write(f"\n❌ ERROR in {rname} on {task_name} run_idx={run_idx}: {type(e).__name__}: {e}")
+                run_result = RunResult(
+                    response="",
+                    total_tokens=0,
+                    input_tokens=0,
+                    output_tokens=0,
+                    time_seconds=0.0,
+                    iterations=0,
+                    error=str(e),
+                )
+                correct = False
+                partial_score = 0.0
 
-    try:
-        task = get_task(base_task_name)
-    except ValueError:
-        log.warning(f"Skipping unknown task: {base_task_name}")
-        return []
-
-    if verbose:
-        log.info(f"\n{'=' * 60}")
-        log.info(f"TASK: {task_name.upper()} (parallel: {min(len(runners), max_parallel)})")
-        log.info(f"{'=' * 60}")
-
-    run_pbar = tqdm(range(runs), desc=f"{task_name}", leave=False, disable=not verbose)
-    for run_idx in run_pbar:
-        seed = 42 + run_idx * 100
-
-        # Generate task instance
-        instance = task.generate(seed=seed, **task_kwargs)
-
-        run_pbar.set_postfix({"context": f"{len(instance.context):,} chars", "run": f"{run_idx + 1}/{runs}"})
-
-        # Run all runners in parallel (up to max_parallel)
-        gc.collect()  # GC before parallel execution
-
-        with ThreadPoolExecutor(max_workers=max_parallel) as executor:
-            # Submit all runners
-            futures = {
-                executor.submit(_run_single_runner, runner_name, runner, task, instance, model): runner_name
-                for runner_name, runner in runners.items()
-            }
-
-            # Collect results as they complete
-            for future in as_completed(futures):
-                runner_name = futures[future]
-                try:
-                    runner_name, run_result, correct, partial_score = future.result()
-                except KeyboardInterrupt:
-                    tqdm.write(f"\n⚠️  Interrupted by user during {runner_name} on {task_name}")
-                    executor.shutdown(wait=False, cancel_futures=True)
-                    raise
-                except Exception as e:
-                    tqdm.write(f"\n❌ ERROR in {runner_name} on {task_name}: {type(e).__name__}: {e}")
-                    run_result = RunResult(
-                        response="",
-                        total_tokens=0,
-                        input_tokens=0,
-                        output_tokens=0,
-                        time_seconds=0.0,
-                        iterations=0,
-                        error=str(e),
-                    )
-                    correct = False
-                    partial_score = 0.0
-
-                # Calculate cost
-                cost = calculate_cost(model, run_result.input_tokens, run_result.output_tokens)
-
-                # Create result
-                eval_result = EvalResult(
+            cost = calculate_cost(model, run_result.input_tokens, run_result.output_tokens)
+            results.append(
+                EvalResult(
                     task_name=task_name,
                     task_instance_seed=seed,
-                    runner_name=runner_name,
+                    runner_name=rname,
                     model=model,
                     correct=correct,
                     partial_score=partial_score,
@@ -531,17 +595,77 @@ def _run_task_evaluations(
                     metadata=instance.metadata or {},
                     cost_usd=cost,
                 )
-                results.append(eval_result)
+            )
+            if verbose:
+                status = "✓" if correct else "✗"
+                err = f" | ⚠️ {run_result.error}" if run_result.error else ""
+                tqdm.write(
+                    f"    {rname}: {status} | "
+                    f"{run_result.input_tokens:,}+{run_result.output_tokens:,} tokens | "
+                    f"{run_result.time_seconds:.1f}s | {run_result.iterations} iters{err}"
+                )
+    return results
 
-                if verbose:
-                    status = "✓" if correct else "✗"
-                    error_info = f" | ⚠️ {run_result.error}" if run_result.error else ""
-                    tqdm.write(
-                        f"    {runner_name}: {status} | "
-                        f"{run_result.input_tokens:,}+{run_result.output_tokens:,} tokens | "
-                        f"{run_result.time_seconds:.1f}s | "
-                        f"{run_result.iterations} iters{error_info}"
-                    )
+
+def _run_task_evaluations(
+    task_name: str,
+    task_kwargs: dict,
+    runners: dict,
+    model: str,
+    runs: int,
+    verbose: bool,
+    max_parallel: int = 3,
+    task_parallel: int = 4,
+) -> list[EvalResult]:
+    """Run evaluations for a single task: multiple instances in parallel, runners per instance in parallel."""
+    results = []
+
+    base_task_name = _get_base_task_name(task_name)
+    try:
+        if task_name.startswith("official_"):
+            task = get_task(base_task_name, **task_kwargs)
+            generate_kwargs = {}
+        else:
+            task = get_task(base_task_name)
+            generate_kwargs = task_kwargs
+    except ValueError:
+        log.warning(f"Skipping unknown task: {base_task_name}")
+        return []
+
+    workers = min(task_parallel, runs)
+    if verbose:
+        log.info(f"\n{'=' * 60}")
+        log.info(f"TASK: {task_name.upper()} (task_parallel: {workers}, runner_parallel: {min(len(runners), max_parallel)})")
+        log.info(f"{'=' * 60}")
+
+    run_pbar = tqdm(total=runs, desc=f"{task_name}", leave=False, disable=not verbose)
+    gc.collect()
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(
+                _run_one_instance,
+                run_idx,
+                task_name,
+                task,
+                generate_kwargs,
+                runners,
+                model,
+                max_parallel,
+                verbose,
+            ): run_idx
+            for run_idx in range(runs)
+        }
+        for future in as_completed(futures):
+            run_idx = futures[future]
+            try:
+                results.extend(future.result())
+            except KeyboardInterrupt:
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
+            except Exception as e:
+                tqdm.write(f"\n❌ ERROR on {task_name} run_idx={run_idx}: {type(e).__name__}: {e}")
+            run_pbar.update(1)
 
     return results
 
@@ -563,14 +687,14 @@ def print_summary(results: list[EvalResult]):
     print("\n" + "-" * 90)
     if has_cost:
         print(
-            f"{'Runner':<15} {'Accuracy':>10} {'In+Out Tokens':>18} {'Avg Time':>10} {'Total Cost':>12} {'Token Eff':>10}"
+            f"{'Runner':<15} {'Accuracy':>10} {'In+Out Tokens':>18} {'Avg Time':>10} {'Total Cost':>12} {'Cost Eff':>10}"
         )
     else:
-        print(f"{'Runner':<15} {'Accuracy':>10} {'In+Out Tokens':>18} {'Avg Time':>10} {'Token Eff':>12}")
+        print(f"{'Runner':<15} {'Accuracy':>10} {'In+Out Tokens':>18} {'Avg Time':>10} {'Cost Eff':>12}")
     print("-" * 90)
 
     for runner, data in stats.get("by_runner", {}).items():
-        eff = data.get("token_efficiency_vs_vanilla", 1.0)
+        eff = data.get("cost_efficiency_vs_vanilla", 1.0)
         eff_str = f"{eff:.2f}x" if eff != 1.0 else "-"
         cost = data.get("total_cost_usd")
         cost_str = f"${cost:.6f}" if cost is not None else "N/A"
@@ -697,6 +821,15 @@ def main():
     elif "paper" in tasks:
         # Core tasks from the RLM paper (Table 1)
         tasks = ["sniah", "oolong", "pairs", "codeqa", "browsecomp"]
+    elif "official" in tasks:
+        tasks = [
+            "official_sniah",
+            "official_oolong",
+            "official_codeqa",
+            "official_longbench_v2",
+            "official_repoqa",
+            "official_browsecomp",
+        ]
 
     # Parse runners
     runners = [r.strip() for r in args.runners.split(",")]
@@ -772,7 +905,14 @@ def main():
             verbose=verbose,
             results_accumulator=results,  # Pass mutable list
             max_parallel=args.parallel,
+            task_parallel=args.task_parallel,
             log_dir=args.log_dir,
+            official_data_dir=args.official_data_dir,
+            official_split=args.official_split,
+            official_max_samples=args.official_max_samples,
+            official_oolong_max_context_chars=args.official_oolong_max_context_chars,
+            official_oolong_max_context_tokens=args.official_oolong_max_context_tokens,
+            browsecomp_max_docs=args.browsecomp_max_docs,
         )
     except KeyboardInterrupt:
         log.warning("\n⚠️  Evaluation interrupted by user")

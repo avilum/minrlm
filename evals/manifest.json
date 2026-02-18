@@ -1,0 +1,67 @@
+{
+  "datasets": [
+    {
+      "id": "ruler_sniah",
+      "task": "S-NIAH",
+      "source": "github",
+      "repo": "https://github.com/NVIDIA/RULER",
+      "hf_mirror": "tonychenxyz/ruler-full",
+      "license": "see repo",
+      "notes": "Official RULER scripts generate S-NIAH data. HF mirror is community-managed."
+    },
+    {
+      "id": "oolong",
+      "task": "OOLONG",
+      "source": "hf",
+      "repo": "oolongbench/oolong-synth",
+      "license": "see dataset card"
+    },
+    {
+      "id": "oolong_pairs",
+      "task": "OOLONG-Pairs",
+      "source": "paper",
+      "path": "evals/oolong_pairs/queries.jsonl",
+      "license": "CC BY 4.0",
+      "notes": "Queries from Appendix E.1 in the RLM paper. Use with OOLONG contexts."
+    },
+    {
+      "id": "browsecomp_plus",
+      "task": "BrowseComp-Plus",
+      "source": "hf",
+      "repo": "Tevatron/browsecomp-plus",
+      "license": "see dataset card",
+      "notes": "Obfuscated dataset; deobfuscation required."
+    },
+    {
+      "id": "browsecomp_plus_corpus",
+      "task": "BrowseComp-Plus corpus",
+      "source": "hf",
+      "repo": "Tevatron/browsecomp-plus-corpus",
+      "license": "see dataset card"
+    },
+    {
+      "id": "longbench_v2_codeqa",
+      "task": "CodeQA",
+      "source": "hf",
+      "repo": "zai-org/LongBench-v2",
+      "license": "Apache-2.0",
+      "notes": "Filter to the code repository understanding subset per dataset card."
+    },
+    {
+      "id": "longbench_v2",
+      "task": "LongBench-v2",
+      "source": "hf",
+      "repo": "zai-org/LongBench-v2",
+      "license": "Apache-2.0",
+      "notes": "Full LongBench-v2 benchmark across domains."
+    },
+    {
+      "id": "repoqa",
+      "task": "RepoQA",
+      "source": "github",
+      "repo": "https://github.com/evalplus/repoqa_release",
+      "license": "Apache-2.0",
+      "notes": "Function retrieval from code repositories."
+    }
+  ]
+}
