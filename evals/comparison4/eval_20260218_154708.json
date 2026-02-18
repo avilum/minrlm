@@ -1,0 +1,5462 @@
+[
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: negative is more common than positive",
+    "expected": "more common than",
+    "total_tokens": 6294,
+    "input_tokens": 4170,
+    "output_tokens": 2124,
+    "time_seconds": 20.812307834625244,
+    "iterations": 2,
+    "error": null,
+    "context_size": 11508,
+    "timestamp": "2026-02-18T15:21:51.443980",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 4096,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 20008
+    },
+    "cost_usd": 0.0001325
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 142,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: negative is more common than positive",
+    "expected": "more common than",
+    "total_tokens": 5376,
+    "input_tokens": 2735,
+    "output_tokens": 2641,
+    "time_seconds": 21.385143995285034,
+    "iterations": 1,
+    "error": null,
+    "context_size": 11508,
+    "timestamp": "2026-02-18T15:21:52.014657",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 4096,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 20008
+    },
+    "cost_usd": 0.00014955
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 142,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "final_ans",
+    "expected": "more common than",
+    "total_tokens": 10457,
+    "input_tokens": 4615,
+    "output_tokens": 5842,
+    "time_seconds": 47.445960998535156,
+    "iterations": 1,
+    "error": null,
+    "context_size": 11508,
+    "timestamp": "2026-02-18T15:22:18.690838",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 4096,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 20008
+    },
+    "cost_usd": 0.0003213
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.31640625,
+    "response": "14",
+    "expected": "10",
+    "total_tokens": 5689,
+    "input_tokens": 4181,
+    "output_tokens": 1508,
+    "time_seconds": 23.877645015716553,
+    "iterations": 2,
+    "error": null,
+    "context_size": 44184,
+    "timestamp": "2026-02-18T15:21:54.508143",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 16384,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 80013
+    },
+    "cost_usd": 0.00010175
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 342,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.2373046875,
+    "response": "Answer: 5",
+    "expected": "10",
+    "total_tokens": 22535,
+    "input_tokens": 12280,
+    "output_tokens": 10255,
+    "time_seconds": 91.55541396141052,
+    "iterations": 1,
+    "error": null,
+    "context_size": 44184,
+    "timestamp": "2026-02-18T15:23:01.866335",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 16384,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 80013
+    },
+    "cost_usd": 0.00058995
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 342,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "final_text",
+    "expected": "10",
+    "total_tokens": 36553,
+    "input_tokens": 16297,
+    "output_tokens": 20256,
+    "time_seconds": 92.41430807113647,
+    "iterations": 1,
+    "error": null,
+    "context_size": 44184,
+    "timestamp": "2026-02-18T15:23:03.792763",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 16384,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 80013
+    },
+    "cost_usd": 0.0011147
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: informal",
+    "expected": "informal",
+    "total_tokens": 2736,
+    "input_tokens": 1824,
+    "output_tokens": 912,
+    "time_seconds": 14.568843126296997,
+    "iterations": 1,
+    "error": null,
+    "context_size": 4923,
+    "timestamp": "2026-02-18T15:22:33.263507",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 2048,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 60003
+    },
+    "cost_usd": 5.7e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 442,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: informal",
+    "expected": "informal",
+    "total_tokens": 4094,
+    "input_tokens": 1330,
+    "output_tokens": 2764,
+    "time_seconds": 23.907076835632324,
+    "iterations": 1,
+    "error": null,
+    "context_size": 4923,
+    "timestamp": "2026-02-18T15:22:42.602176",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 2048,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 60003
+    },
+    "cost_usd": 0.00014675
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 442,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "Label: formal",
+    "expected": "informal",
+    "total_tokens": 11859,
+    "input_tokens": 6285,
+    "output_tokens": 5574,
+    "time_seconds": 51.963423013687134,
+    "iterations": 1,
+    "error": null,
+    "context_size": 4923,
+    "timestamp": "2026-02-18T15:23:11.461106",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 2048,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 60003
+    },
+    "cost_usd": 0.0003185
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 642,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 2.3837831494251845e-05,
+    "response": "Answer: 3",
+    "expected": "40",
+    "total_tokens": 2676,
+    "input_tokens": 1802,
+    "output_tokens": 874,
+    "time_seconds": 9.676365852355957,
+    "iterations": 1,
+    "error": null,
+    "context_size": 112257,
+    "timestamp": "2026-02-18T15:23:21.143018",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 20017
+    },
+    "cost_usd": 5.53e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 642,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.010022595757618546,
+    "response": "Answer: 56",
+    "expected": "40",
+    "total_tokens": 55148,
+    "input_tokens": 30104,
+    "output_tokens": 25044,
+    "time_seconds": 78.77523612976074,
+    "iterations": 1,
+    "error": null,
+    "context_size": 112257,
+    "timestamp": "2026-02-18T15:24:31.118177",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 20017
+    },
+    "cost_usd": 0.00144055
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 642,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.75,
+    "response": "Answer: 41",
+    "expected": "40",
+    "total_tokens": 34508,
+    "input_tokens": 25278,
+    "output_tokens": 9230,
+    "time_seconds": 87.48529195785522,
+    "iterations": 1,
+    "error": null,
+    "context_size": 112257,
+    "timestamp": "2026-02-18T15:24:39.128489",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 20017
+    },
+    "cost_usd": 0.00062005
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 742,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: formal",
+    "expected": "formal",
+    "total_tokens": 2291,
+    "input_tokens": 1809,
+    "output_tokens": 482,
+    "time_seconds": 4.353302955627441,
+    "iterations": 1,
+    "error": null,
+    "context_size": 21456,
+    "timestamp": "2026-02-18T15:24:43.485611",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 8192,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 60009
+    },
+    "cost_usd": 3.575e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 742,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: formal",
+    "expected": "formal",
+    "total_tokens": 14093,
+    "input_tokens": 5695,
+    "output_tokens": 8398,
+    "time_seconds": 64.84493207931519,
+    "iterations": 1,
+    "error": null,
+    "context_size": 21456,
+    "timestamp": "2026-02-18T15:25:44.016319",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 8192,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 60009
+    },
+    "cost_usd": 0.00045605
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 742,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: formal",
+    "expected": "formal",
+    "total_tokens": 14839,
+    "input_tokens": 8693,
+    "output_tokens": 6146,
+    "time_seconds": 68.99716997146606,
+    "iterations": 1,
+    "error": null,
+    "context_size": 21456,
+    "timestamp": "2026-02-18T15:25:49.026395",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 8192,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 60009
+    },
+    "cost_usd": 0.00036195
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 242,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "I can\u2019t determine that from the data provided. The lines show only the claims (instances) with their user IDs, but there are no True/False labels attached to each instance. If you supply the corresponding labels for every instance (e.g., a list of which ones are True), I can compute exactly which user has the most True instances and output: \"User: [X]\".",
+    "expected": "42109",
+    "total_tokens": 196454,
+    "input_tokens": 195278,
+    "output_tokens": 1176,
+    "time_seconds": 19.721867084503174,
+    "iterations": 1,
+    "error": null,
+    "context_size": 765658,
+    "timestamp": "2026-02-18T15:21:58.888717",
+    "metadata": {
+      "dataset": "negation",
+      "context_len": 262144,
+      "answer_type": "ANSWER_TYPE.USER",
+      "context_window_id": 40025
+    },
+    "cost_usd": 0.00127935
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "User: []",
+    "expected": "42109",
+    "total_tokens": 6664,
+    "input_tokens": 4919,
+    "output_tokens": 1745,
+    "time_seconds": 39.53645396232605,
+    "iterations": 2,
+    "error": null,
+    "context_size": 765658,
+    "timestamp": "2026-02-18T15:22:09.757953",
+    "metadata": {
+      "dataset": "negation",
+      "context_len": 262144,
+      "answer_type": "ANSWER_TYPE.USER",
+      "context_window_id": 40025
+    },
+    "cost_usd": 0.0001184
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 242,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "42109",
+    "total_tokens": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "time_seconds": 300,
+    "iterations": 1,
+    "error": "Timeout after 300s",
+    "context_size": 765658,
+    "timestamp": "2026-02-18T15:26:30.654110",
+    "metadata": {
+      "dataset": "negation",
+      "context_len": 262144,
+      "answer_type": "ANSWER_TYPE.USER",
+      "context_window_id": 40025
+    },
+    "cost_usd": 0.0
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: 3",
+    "expected": "3",
+    "total_tokens": 5726,
+    "input_tokens": 3960,
+    "output_tokens": 1766,
+    "time_seconds": 20.149038076400757,
+    "iterations": 2,
+    "error": null,
+    "context_size": 66628,
+    "timestamp": "2026-02-18T15:21:50.778933",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 16384,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 20013
+    },
+    "cost_usd": 0.00011355
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 42,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: 3",
+    "expected": "3",
+    "total_tokens": 19567,
+    "input_tokens": 15009,
+    "output_tokens": 4558,
+    "time_seconds": 39.12743782997131,
+    "iterations": 1,
+    "error": null,
+    "context_size": 66628,
+    "timestamp": "2026-02-18T15:22:09.805686",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 16384,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 20013
+    },
+    "cost_usd": 0.00032225
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 42,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "3",
+    "total_tokens": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "time_seconds": 300,
+    "iterations": 1,
+    "error": "Timeout after 300s",
+    "context_size": 66628,
+    "timestamp": "2026-02-18T15:26:30.653504",
+    "metadata": {
+      "dataset": "imdb",
+      "context_len": 16384,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 20013
+    },
+    "cost_usd": 0.0
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 542,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.75,
+    "response": "6",
+    "expected": "5",
+    "total_tokens": 2463,
+    "input_tokens": 1821,
+    "output_tokens": 642,
+    "time_seconds": 13.519438028335571,
+    "iterations": 1,
+    "error": null,
+    "context_size": 89495,
+    "timestamp": "2026-02-18T15:23:17.316717",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 60017
+    },
+    "cost_usd": 4.38e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 542,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.75,
+    "response": "Answer: 4",
+    "expected": "5",
+    "total_tokens": 26736,
+    "input_tokens": 23650,
+    "output_tokens": 3086,
+    "time_seconds": 34.734187841415405,
+    "iterations": 1,
+    "error": null,
+    "context_size": 89495,
+    "timestamp": "2026-02-18T15:23:38.712843",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 60017
+    },
+    "cost_usd": 0.00030265
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 542,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "FINAL(\"No blocks containing user_id 59325 with label 'formal' were found in the provided context; therefore, there is no data available to answer the query from this context.\")",
+    "expected": "5",
+    "total_tokens": 82117,
+    "input_tokens": 53000,
+    "output_tokens": 29117,
+    "time_seconds": 261.33713698387146,
+    "iterations": 1,
+    "error": null,
+    "context_size": 89495,
+    "timestamp": "2026-02-18T15:27:26.741026",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 60017
+    },
+    "cost_usd": 0.00178725
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 942,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: 1",
+    "expected": "1",
+    "total_tokens": 3546,
+    "input_tokens": 2445,
+    "output_tokens": 1101,
+    "time_seconds": 10.103806972503662,
+    "iterations": 1,
+    "error": null,
+    "context_size": 8510,
+    "timestamp": "2026-02-18T15:26:40.765235",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 4096,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 60008
+    },
+    "cost_usd": 7.05e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 942,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.75,
+    "response": "Answer: 0",
+    "expected": "1",
+    "total_tokens": 2436,
+    "input_tokens": 1823,
+    "output_tokens": 613,
+    "time_seconds": 10.458539962768555,
+    "iterations": 1,
+    "error": null,
+    "context_size": 8510,
+    "timestamp": "2026-02-18T15:26:41.118745",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 4096,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 60008
+    },
+    "cost_usd": 4.225e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 942,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: 1",
+    "expected": "1",
+    "total_tokens": 16697,
+    "input_tokens": 9234,
+    "output_tokens": 7463,
+    "time_seconds": 77.41235828399658,
+    "iterations": 1,
+    "error": null,
+    "context_size": 8510,
+    "timestamp": "2026-02-18T15:27:48.965372",
+    "metadata": {
+      "dataset": "formality",
+      "context_len": 4096,
+      "answer_type": "ANSWER_TYPE.NUMERIC",
+      "context_window_id": 60008
+    },
+    "cost_usd": 0.00043135
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 842,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: negative is more common than positive",
+    "expected": "more common than",
+    "total_tokens": 5644,
+    "input_tokens": 4082,
+    "output_tokens": 1562,
+    "time_seconds": 23.829553842544556,
+    "iterations": 2,
+    "error": null,
+    "context_size": 84769,
+    "timestamp": "2026-02-18T15:26:12.862222",
+    "metadata": {
+      "dataset": "app_reviews",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 90016
+    },
+    "cost_usd": 0.00010395
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 842,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: negative is more common than positive",
+    "expected": "more common than",
+    "total_tokens": 28063,
+    "input_tokens": 23950,
+    "output_tokens": 4113,
+    "time_seconds": 43.8130989074707,
+    "iterations": 1,
+    "error": null,
+    "context_size": 84769,
+    "timestamp": "2026-02-18T15:26:32.983780",
+    "metadata": {
+      "dataset": "app_reviews",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 90016
+    },
+    "cost_usd": 0.00035575
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 842,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "more common than",
+    "total_tokens": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "time_seconds": 300,
+    "iterations": 1,
+    "error": "Timeout after 300s",
+    "context_size": 84769,
+    "timestamp": "2026-02-18T15:30:49.047916",
+    "metadata": {
+      "dataset": "app_reviews",
+      "context_len": 32768,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 90016
+    },
+    "cost_usd": 0.0
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 142,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "func SeemsHTTPURL(arg string) bool {\n\tu, err := url.Parse(arg)\n\tif err != nil {\n\t\treturn false\n\t}\n\tif u.Scheme != \"http\" && u.Scheme != \"https\" {\n\t\treturn false\n\t}\n\treturn true\n}",
+    "expected": "SeemsHTTPURL||func SeemsHTTPURL(arg string) bool {\n\tu, err := url.Parse(arg)\n\tif err != nil {\n\t\treturn false\n\t}\n\tif u.Scheme != \"http\" && u.Scheme != \"https\" {\n\t\treturn false\n\t}\n\treturn true\n}",
+    "total_tokens": 932,
+    "input_tokens": 548,
+    "output_tokens": 384,
+    "time_seconds": 4.363754034042358,
+    "iterations": 1,
+    "error": null,
+    "context_size": 1353,
+    "timestamp": "2026-02-18T15:30:54.066810",
+    "metadata": {
+      "repo": "lima-vm/lima",
+      "language": "go",
+      "id": "SeemsHTTPURL"
+    },
+    "cost_usd": 2.265e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "File: cmd/limactl/guessarg/guessarg.go\n\npackage guessarg\n\nimport (\n\t\"fmt\"\n\t\"net/url\"\n\t\"path\"\n\t\"path/filepath\"\n\t\"strings\"\n\n\t\"github.com/containerd/containerd/identifiers\"\n)\n\nfunc SeemsTemplateURL(arg string) (bool, *url.URL) {\n\tu, err := url.Parse(arg)\n\tif err != nil {\n\t\treturn false, u\n\t}\n\treturn u.Scheme == \"template\", u\n}\n\nfunc SeemsHTTPURL(arg string) bool {\n\tu, err := url.Parse(arg)\n\tif err != nil {\n\t\treturn false\n\t}\n\tif u.Scheme != \"http\" && u.Scheme != \"https\" {\n\t\treturn false\n\t}\n\treturn true\n}\n\nfunc SeemsFileURL(arg string) bool {\n\tu, err := url.Parse(arg)\n\tif err != nil {\n\t\treturn false\n\t}\n\treturn u.Scheme == \"file\"\n}\n\nfunc SeemsYAMLPath(arg string) bool {\n\tif strings.Contains(arg, \"/\") {\n\t\treturn true\n\t}\n\tlower := strings.ToLower(arg)\n\treturn strings.HasSuffix(lower, \".yml\") || strings.HasSuffix(lower, \".yaml\")\n}\n\nfunc InstName",
+    "expected": "SeemsHTTPURL||func SeemsHTTPURL(arg string) bool {\n\tu, err := url.Parse(arg)\n\tif err != nil {\n\t\treturn false\n\t}\n\tif u.Scheme != \"http\" && u.Scheme != \"https\" {\n\t\treturn false\n\t}\n\treturn true\n}",
+    "total_tokens": 5603,
+    "input_tokens": 4274,
+    "output_tokens": 1329,
+    "time_seconds": 17.457221269607544,
+    "iterations": 2,
+    "error": null,
+    "context_size": 1353,
+    "timestamp": "2026-02-18T15:31:07.171240",
+    "metadata": {
+      "repo": "lima-vm/lima",
+      "language": "go",
+      "id": "SeemsHTTPURL"
+    },
+    "cost_usd": 9.355e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 142,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "def is_http_url(url: str) -> bool:\n    try:\n        from urllib.parse import urlparse\n        if not isinstance(url, str):\n            return False\n        parsed = urlparse(url)\n        return parsed.scheme in (\"http\", \"https\")\n    except Exception:\n        return False",
+    "expected": "SeemsHTTPURL||func SeemsHTTPURL(arg string) bool {\n\tu, err := url.Parse(arg)\n\tif err != nil {\n\t\treturn false\n\t}\n\tif u.Scheme != \"http\" && u.Scheme != \"https\" {\n\t\treturn false\n\t}\n\treturn true\n}",
+    "total_tokens": 16291,
+    "input_tokens": 8968,
+    "output_tokens": 7323,
+    "time_seconds": 70.57181906700134,
+    "iterations": 1,
+    "error": null,
+    "context_size": 1353,
+    "timestamp": "2026-02-18T15:32:01.814523",
+    "metadata": {
+      "repo": "lima-vm/lima",
+      "language": "go",
+      "id": "SeemsHTTPURL"
+    },
+    "cost_usd": 0.00042245
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 242,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "type Value = number | string;\nfunction processValue(value: Value): string {\n  /** Convert a value to a string and add single quotes if it is a string. */\n  if (typeof value === \"string\") {\n    return `'${value}'`;\n  } else {\n    return String(value);\n  }\n}",
+    "expected": "processValue||type Value = number | string;\nfunction processValue(value: Value): string {\n  /** Convert a value to a string and add single quotes if it is a string. */\n  if (typeof value === \"string\") {\n    return `'${value}'`;\n  } else {\n    return String(value);\n  }\n}",
+    "total_tokens": 2044,
+    "input_tokens": 1395,
+    "output_tokens": 649,
+    "time_seconds": 7.81455397605896,
+    "iterations": 1,
+    "error": null,
+    "context_size": 5230,
+    "timestamp": "2026-02-18T15:30:57.703222",
+    "metadata": {
+      "repo": "langchain-ai/langchainjs",
+      "language": "typescript",
+      "id": "processValue"
+    },
+    "cost_usd": 4.155e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "torStructuredQueryResult;\n// eslint-disable-next-line @typescript-eslint/ban-types\nexport type VectaraOperationResult = String;\n// eslint-disable-next-line @typescript-eslint/ban-types\nexport type VectaraComparisonResult = String;\nexport type VectaraVisitorStructuredQueryResult = {\n  filter?: { filter?: VectaraOperationResult | VectaraComparisonResult };\n};\n\ntype Value = number | string;\nfunction processValue(value: Value): string {\n  /** Convert a value to a string and add single quotes if it is a string. */\n  if (typeof value === \"string\") {\n    return `'${value}'`;\n  } else {\n    return String(value);\n  }\n}\n\nexport class VectaraTranslator<\n  T extends VectaraStore\n> extends BaseTranslator<T> {\n  declare VisitOperationOutput: VectaraOperationResult;\n\n  declare VisitComparisonOutput: VectaraComparisonResult;\n\n  allowedOperators: Operator[] = [Operators.and, Operators.or];\n\n  allowedComparators: Comparato",
+    "expected": "processValue||type Value = number | string;\nfunction processValue(value: Value): string {\n  /** Convert a value to a string and add single quotes if it is a string. */\n  if (typeof value === \"string\") {\n    return `'${value}'`;\n  } else {\n    return String(value);\n  }\n}",
+    "total_tokens": 5147,
+    "input_tokens": 4181,
+    "output_tokens": 966,
+    "time_seconds": 14.476300954818726,
+    "iterations": 2,
+    "error": null,
+    "context_size": 5230,
+    "timestamp": "2026-02-18T15:31:04.389844",
+    "metadata": {
+      "repo": "langchain-ai/langchainjs",
+      "language": "typescript",
+      "id": "processValue"
+    },
+    "cost_usd": 7.495e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 242,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "def value_to_query_string(value):\n    \"\"\"\n    Converts a value to a string representation for use in queries.\n    - If the value is a string, enclose it in single quotes.\n    - If the value is a number, convert to string without quotes.\n    \"\"\"\n    if isinstance(value, str):\n        return f\"'{value}'\"\n    else:\n        return str(value)",
+    "expected": "processValue||type Value = number | string;\nfunction processValue(value: Value): string {\n  /** Convert a value to a string and add single quotes if it is a string. */\n  if (typeof value === \"string\") {\n    return `'${value}'`;\n  } else {\n    return String(value);\n  }\n}",
+    "total_tokens": 17883,
+    "input_tokens": 9120,
+    "output_tokens": 8763,
+    "time_seconds": 79.10025119781494,
+    "iterations": 1,
+    "error": null,
+    "context_size": 5230,
+    "timestamp": "2026-02-18T15:32:10.327013",
+    "metadata": {
+      "repo": "langchain-ai/langchainjs",
+      "language": "typescript",
+      "id": "processValue"
+    },
+    "cost_usd": 0.0004954
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 342,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "class ServerException : public Error {\npublic:\n    ServerException(std::unique_ptr<Exception> e)\n        : Error(std::string())\n        , exception_(std::move(e))\n    {\n    }\n\n    int GetCode() const {\n        return exception_->code;\n    }\n\n    const Exception& GetException() const {\n        return *exception_;\n    }\n\n    const char* what() const noexcept override {\n        return exception_->display_text.c_str();\n    }\n\nprivate:\n    std::unique_ptr<Exception> exception_;\n};",
+    "expected": "ServerException||public:\n    ServerException(std::unique_ptr<Exception> e)\n        : Error(std::string())\n        , exception_(std::move(e))\n    {\n    }",
+    "total_tokens": 1345,
+    "input_tokens": 462,
+    "output_tokens": 883,
+    "time_seconds": 8.859848976135254,
+    "iterations": 1,
+    "error": null,
+    "context_size": 1370,
+    "timestamp": "2026-02-18T15:30:59.091370",
+    "metadata": {
+      "repo": "ClickHouse/clickhouse-cpp",
+      "language": "cpp",
+      "id": "ServerException"
+    },
+    "cost_usd": 4.735e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "using Error::Error;\n};\n\nclass UnimplementedError : public Error {\n    using Error::Error;\n};\n\n// Internal validation error.\nclass AssertionError : public Error {\n    using Error::Error;\n};\n\nclass OpenSSLError : public Error {\n    using Error::Error;\n};\n\nclass LZ4Error : public Error {\n    using Error::Error;\n};\n\n// Exception received from server.\nclass ServerException : public Error {\npublic:\n    ServerException(std::unique_ptr<Exception> e)\n        : Error(std::string())\n        , exception_(std::move(e))\n    {\n    }\n\n    int GetCode() const {\n        return exception_->code;\n    }\n\n    const Exception& GetException() const {\n        return *exception_;\n    }\n\n    const char* what() const noexcept override {\n        return exception_->display_text.c_str();\n    }\n\nprivate:\n    std::unique_ptr<Exception> exception_;\n};\nusing ServerError = ServerException;\n\n}",
+    "expected": "ServerException||public:\n    ServerException(std::unique_ptr<Exception> e)\n        : Error(std::string())\n        , exception_(std::move(e))\n    {\n    }",
+    "total_tokens": 5728,
+    "input_tokens": 4466,
+    "output_tokens": 1262,
+    "time_seconds": 17.497859954833984,
+    "iterations": 2,
+    "error": null,
+    "context_size": 1370,
+    "timestamp": "2026-02-18T15:31:07.751359",
+    "metadata": {
+      "repo": "ClickHouse/clickhouse-cpp",
+      "language": "cpp",
+      "id": "ServerException"
+    },
+    "cost_usd": 9.155e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 342,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "final_answer_code",
+    "expected": "ServerException||public:\n    ServerException(std::unique_ptr<Exception> e)\n        : Error(std::string())\n        , exception_(std::move(e))\n    {\n    }",
+    "total_tokens": 18958,
+    "input_tokens": 9056,
+    "output_tokens": 9902,
+    "time_seconds": 90.8999400138855,
+    "iterations": 1,
+    "error": null,
+    "context_size": 1370,
+    "timestamp": "2026-02-18T15:32:22.145924",
+    "metadata": {
+      "repo": "ClickHouse/clickhouse-cpp",
+      "language": "cpp",
+      "id": "ServerException"
+    },
+    "cost_usd": 0.0005522
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 42,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "    /**\n     * @brief Prepares for receiving data.\n     *\n     * Note that if the socket has not previously been bound with `bind()`, it\n     * is bound to `0.0.0.0` (the _all interfaces_ IPv4 address) and a random\n     * port number.\n     *\n     * An UDP data event will be emitted when the handle receives data.\n     *\n     * @return Underlying return value.\n     */\n    int recv();",
+    "expected": "recv||template<auto Alloc>\n    int recv() {\n        return uv_udp_recv_start(raw(), &details::common_alloc_callback<udp_handle, Alloc>, &recv_callback);\n    }",
+    "total_tokens": 7900,
+    "input_tokens": 4845,
+    "output_tokens": 3055,
+    "time_seconds": 29.202510118484497,
+    "iterations": 1,
+    "error": null,
+    "context_size": 18626,
+    "timestamp": "2026-02-18T15:31:19.479003",
+    "metadata": {
+      "repo": "skypjack/uvw",
+      "language": "cpp",
+      "id": "recv"
+    },
+    "cost_usd": 0.0001835
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "Max iterations reached.",
+    "expected": "recv||template<auto Alloc>\n    int recv() {\n        return uv_udp_recv_start(raw(), &details::common_alloc_callback<udp_handle, Alloc>, &recv_callback);\n    }",
+    "total_tokens": 40965,
+    "input_tokens": 35197,
+    "output_tokens": 5768,
+    "time_seconds": 87.28617811203003,
+    "iterations": 10,
+    "error": null,
+    "context_size": 18626,
+    "timestamp": "2026-02-18T15:32:17.841173",
+    "metadata": {
+      "repo": "skypjack/uvw",
+      "language": "cpp",
+      "id": "recv"
+    },
+    "cost_usd": 0.0005084
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 42,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "int udp_handle::recv() {\\n    return uv_udp_recv_start(raw(), &details::common_alloc_callback<udp_handle, details::default_alloc>, &recv_callback);\\n}",
+    "expected": "recv||template<auto Alloc>\n    int recv() {\n        return uv_udp_recv_start(raw(), &details::common_alloc_callback<udp_handle, Alloc>, &recv_callback);\n    }",
+    "total_tokens": 20120,
+    "input_tokens": 10401,
+    "output_tokens": 9719,
+    "time_seconds": 92.82069492340088,
+    "iterations": 1,
+    "error": null,
+    "context_size": 18626,
+    "timestamp": "2026-02-18T15:32:24.082165",
+    "metadata": {
+      "repo": "skypjack/uvw",
+      "language": "cpp",
+      "id": "recv"
+    },
+    "cost_usd": 0.00055145
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 742,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "pub fn uninstall_one(\n    root: &Filesystem,\n    spec: &str,\n    bins: &[String],\n    gctx: &GlobalContext,\n) -> CargoResult<()> {\n    let tracker = InstallTracker::load(gctx, root)?;\n    let all_pkgs = tracker.all_installed_bins().map(|(pkg_id, _set)| *pkg_id);\n    let pkgid = PackageIdSpec::query_str(spec, all_pkgs)?;\n    uninstall_pkgid(root, tracker, pkgid, bins, gctx)\n}",
+    "expected": "uninstall_one||pub fn uninstall_one(\n    root: &Filesystem,\n    spec: &str,\n    bins: &[String],\n    gctx: &GlobalContext,\n) -> CargoResult<()> {\n    let tracker = InstallTracker::load(gctx, root)?;\n    let all_pkgs = tracker.all_installed_bins().map(|(pkg_id, _set)| *pkg_id);\n    let pkgid = PackageIdSpec::query_str(spec, all_pkgs)?;\n    uninstall_pkgid(root, tracker, pkgid, bins, gctx)\n}",
+    "total_tokens": 1982,
+    "input_tokens": 1224,
+    "output_tokens": 758,
+    "time_seconds": 7.646270036697388,
+    "iterations": 1,
+    "error": null,
+    "context_size": 4321,
+    "timestamp": "2026-02-18T15:32:31.730853",
+    "metadata": {
+      "repo": "rust-lang/cargo",
+      "language": "rust",
+      "id": "uninstall_one"
+    },
+    "cost_usd": 4.605e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 742,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "File: src/cargo/ops/cargo_uninstall.rs\n\nuse crate::core::PackageId;\nuse crate::core::{PackageIdSpec, PackageIdSpecQuery, SourceId};\nuse crate::ops::common_for_install_and_uninstall::*;\nuse crate::sources::PathSource;\nuse crate::util::errors::CargoResult;\nuse crate::util::Filesystem;\nuse crate::util::GlobalContext;\nuse anyhow::bail;\nuse std::collections::BTreeSet;\nuse std::env;\n\npub fn uninstall(\n    root: Option<&str>,\n    specs: Vec<&str>,\n    bins: &[String],\n    gctx: &GlobalContext,\n) -> CargoResult<()> {\n    if specs.len() > 1 && !bins.is_empty() {\n        bail!(\"A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.\");\n    }\n\n    let root = resolve_root(root, gctx)?;\n    let scheduled_error = if specs.len() == 1 {\n        uninstall_one(&root, specs[0], bins, gctx)?;\n        false\n    } else if specs.is_empty() {",
+    "expected": "uninstall_one||pub fn uninstall_one(\n    root: &Filesystem,\n    spec: &str,\n    bins: &[String],\n    gctx: &GlobalContext,\n) -> CargoResult<()> {\n    let tracker = InstallTracker::load(gctx, root)?;\n    let all_pkgs = tracker.all_installed_bins().map(|(pkg_id, _set)| *pkg_id);\n    let pkgid = PackageIdSpec::query_str(spec, all_pkgs)?;\n    uninstall_pkgid(root, tracker, pkgid, bins, gctx)\n}",
+    "total_tokens": 6029,
+    "input_tokens": 4653,
+    "output_tokens": 1376,
+    "time_seconds": 16.04842710494995,
+    "iterations": 2,
+    "error": null,
+    "context_size": 4321,
+    "timestamp": "2026-02-18T15:32:40.143702",
+    "metadata": {
+      "repo": "rust-lang/cargo",
+      "language": "rust",
+      "id": "uninstall_one"
+    },
+    "cost_usd": 9.79e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 742,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "pub fn uninstall_one(\n    root: &Filesystem,\n    spec: &str,\n    bins: &[String],\n    gctx: &GlobalContext,\n) -> CargoResult<()> {\n    let tracker = InstallTracker::load(gctx, root)?;\n    let all_pkgs = tracker.all_installed_bins().map(|(pkg_id, _set)| *pkg_id);\n    let pkgid = PackageIdSpec::query_str(spec, all_pkgs)?;\n    uninstall_pkgid(root, tracker, pkgid, bins, gctx)\n}",
+    "expected": "uninstall_one||pub fn uninstall_one(\n    root: &Filesystem,\n    spec: &str,\n    bins: &[String],\n    gctx: &GlobalContext,\n) -> CargoResult<()> {\n    let tracker = InstallTracker::load(gctx, root)?;\n    let all_pkgs = tracker.all_installed_bins().map(|(pkg_id, _set)| *pkg_id);\n    let pkgid = PackageIdSpec::query_str(spec, all_pkgs)?;\n    uninstall_pkgid(root, tracker, pkgid, bins, gctx)\n}",
+    "total_tokens": 11511,
+    "input_tokens": 6648,
+    "output_tokens": 4863,
+    "time_seconds": 51.56212401390076,
+    "iterations": 1,
+    "error": null,
+    "context_size": 4321,
+    "timestamp": "2026-02-18T15:33:16.290153",
+    "metadata": {
+      "repo": "rust-lang/cargo",
+      "language": "rust",
+      "id": "uninstall_one"
+    },
+    "cost_usd": 0.00028515
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 542,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "fn set_term_uniforms(&self, props: &SizeInfo) {\n    unsafe {\n        gl::Uniform2f(self.u_cell_dim, props.cell_width(), props.cell_height());\n    }\n}",
+    "expected": "set_term_uniforms||fn set_term_uniforms(&self, props: &SizeInfo) {\n        unsafe {\n            gl::Uniform2f(self.u_cell_dim, props.cell_width(), props.cell_height());\n        }\n    }",
+    "total_tokens": 3416,
+    "input_tokens": 3111,
+    "output_tokens": 305,
+    "time_seconds": 4.956173896789551,
+    "iterations": 1,
+    "error": null,
+    "context_size": 12200,
+    "timestamp": "2026-02-18T15:32:15.289883",
+    "metadata": {
+      "repo": "alacritty/alacritty",
+      "language": "rust",
+      "id": "set_term_uniforms"
+    },
+    "cost_usd": 3.51e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 542,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "fn set_term_uniforms(&self, props: &SizeInfo) {\n    gl::Uniform2f(self.u_cell_dim, props.cell_width(), props.cell_height());\n}",
+    "expected": "set_term_uniforms||fn set_term_uniforms(&self, props: &SizeInfo) {\n        unsafe {\n            gl::Uniform2f(self.u_cell_dim, props.cell_width(), props.cell_height());\n        }\n    }",
+    "total_tokens": 10252,
+    "input_tokens": 6366,
+    "output_tokens": 3886,
+    "time_seconds": 42.39870023727417,
+    "iterations": 1,
+    "error": null,
+    "context_size": 12200,
+    "timestamp": "2026-02-18T15:32:53.315359",
+    "metadata": {
+      "repo": "alacritty/alacritty",
+      "language": "rust",
+      "id": "set_term_uniforms"
+    },
+    "cost_usd": 0.00023465
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 542,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "set_term_uniforms||fn set_term_uniforms(&self, props: &SizeInfo) {\n        unsafe {\n            gl::Uniform2f(self.u_cell_dim, props.cell_width(), props.cell_height());\n        }\n    }",
+    "total_tokens": 42199,
+    "input_tokens": 35845,
+    "output_tokens": 6354,
+    "time_seconds": 96.71285915374756,
+    "iterations": 10,
+    "error": null,
+    "context_size": 12200,
+    "timestamp": "2026-02-18T15:33:47.343820",
+    "metadata": {
+      "repo": "alacritty/alacritty",
+      "language": "rust",
+      "id": "set_term_uniforms"
+    },
+    "cost_usd": 0.00054205
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 642,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "private void hits() {\n    AtomicInteger count = hits.get(this);\n    if (count == null) {\n        count = new AtomicInteger(0);\n        hits.put(this, count);\n    }\n    count.getAndIncrement();\n}",
+    "expected": "hits||private void hits() {\n        AtomicInteger count = hits.get(this);\n        if (count == null) {\n            count = new AtomicInteger(0);\n            hits.put(this, count);\n        }\n        count.getAndIncrement();\n    }",
+    "total_tokens": 1070,
+    "input_tokens": 694,
+    "output_tokens": 376,
+    "time_seconds": 4.170982360839844,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2662,
+    "timestamp": "2026-02-18T15:32:26.318359",
+    "metadata": {
+      "repo": "microsoft/gctoolkit",
+      "language": "java",
+      "id": "hits"
+    },
+    "cost_usd": 2.32e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 642,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "* TODO #155 This painful pattern of returning a null which gets checked by\n     * the caller could be replaced by use of Optional\n     *\n     * @param trace The trace to match against the pattern\n     * @return A trace with a valid matcher or null\n     */\n    public SafepointTrace parse(String trace) {\n        Matcher matcher = pattern.matcher(trace);\n        if (matcher.find()) {\n            hits();\n            return new SafepointTrace(matcher);\n        } else {\n            misses();\n            return null;\n        }\n    }\n\n    private void hits() {\n        AtomicInteger count = hits.get(this);\n        if (count == null) {\n            count = new AtomicInteger(0);\n            hits.put(this, count);\n        }\n        count.getAndIncrement();\n    }\n\n    private void misses() {\n        AtomicInteger count = misses.get(this);\n        if (count == null) {\n            count = new AtomicInteg",
+    "expected": "hits||private void hits() {\n        AtomicInteger count = hits.get(this);\n        if (count == null) {\n            count = new AtomicInteger(0);\n            hits.put(this, count);\n        }\n        count.getAndIncrement();\n    }",
+    "total_tokens": 5677,
+    "input_tokens": 4287,
+    "output_tokens": 1390,
+    "time_seconds": 17.7368221282959,
+    "iterations": 2,
+    "error": null,
+    "context_size": 2662,
+    "timestamp": "2026-02-18T15:32:39.894868",
+    "metadata": {
+      "repo": "microsoft/gctoolkit",
+      "language": "java",
+      "id": "hits"
+    },
+    "cost_usd": 9.685e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 642,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "\"\"private final ConcurrentMap<Object, AtomicLong> successfulMatchCounts = new ConcurrentHashMap<>();\n\npublic void incrementSuccessfulMatchForCurrentInstance() {\n    Object currentKey = this;\n    AtomicLong counter = successfulMatchCounts.computeIfAbsent(currentKey, k -> new AtomicLong(0L));\n    counter.incrementAndGet();\n}\n\"\"",
+    "expected": "hits||private void hits() {\n        AtomicInteger count = hits.get(this);\n        if (count == null) {\n            count = new AtomicInteger(0);\n            hits.put(this, count);\n        }\n        count.getAndIncrement();\n    }",
+    "total_tokens": 31287,
+    "input_tokens": 18726,
+    "output_tokens": 12561,
+    "time_seconds": 125.66755604743958,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2662,
+    "timestamp": "2026-02-18T15:34:28.704654",
+    "metadata": {
+      "repo": "microsoft/gctoolkit",
+      "language": "java",
+      "id": "hits"
+    },
+    "cost_usd": 0.0007455
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "File: src/queries/analytics/getWebsiteStats.ts\n\nimport clickhouse from 'lib/clickhouse';\nimport { EVENT_TYPE } from 'lib/constants';\nimport { CLICKHOUSE, PRISMA, runQuery } from 'lib/db';\nimport prisma from 'lib/prisma';\nimport { QueryFilters } from 'lib/types';\n\nexport async function getWebsiteStats(\n  ...args: [websiteId: string, filters: QueryFilters]\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  return runQuery({\n    [PRISMA]: () => relationalQuery(...args),\n    [CLICKHOUSE]: () => clickhouseQuery(...args),\n  });\n}\n\nasync function relationalQuery(\n  websiteId: string,\n  filters: QueryFilters,\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  const { getTimes",
+    "expected": "getWebsiteStats||export async function getWebsiteStats(\n  ...args: [websiteId: string, filters: QueryFilters]\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  return runQuery({\n    [PRISMA]: () => relationalQuery(...args),\n    [CLICKHOUSE]: () => clickhouseQuery(...args),\n  });\n}",
+    "total_tokens": 6157,
+    "input_tokens": 4523,
+    "output_tokens": 1634,
+    "time_seconds": 19.928518772125244,
+    "iterations": 2,
+    "error": null,
+    "context_size": 3223,
+    "timestamp": "2026-02-18T15:32:21.757595",
+    "metadata": {
+      "repo": "umami-software/umami",
+      "language": "typescript",
+      "id": "getWebsiteStats"
+    },
+    "cost_usd": 0.0001103
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 442,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "```ts\nimport clickhouse from 'lib/clickhouse';\nimport { EVENT_TYPE } from 'lib/constants';\nimport { CLICKHOUSE, PRISMA, runQuery } from 'lib/db';\nimport prisma from 'lib/prisma';\nimport { QueryFilters } from 'lib/types';\n\nexport async function getWebsiteStats(\n  ...args: [websiteId: string, filters: QueryFilters]\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  return runQuery({\n    [PRISMA]: () => relationalQuery(...args),\n    [CLICKHOUSE]: () => clickhouseQuery(...args),\n  });\n}\n\nasync function relationalQuery(\n  websiteId: string,\n  filters: QueryFilters,\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  const { getTimestampDiffQuery, parseFilters, rawQuery } = prisma;\n  const { filterQuery, joinSession, params } = await parseFilters(websiteId, {\n    ...filters,\n    eventType: EVENT_TYPE.pageView,\n  });\n\n  return rawQuery(\n    `\n    select\n      sum(t.c) as \"pageviews\",\n      count(distinct t.session_id) as \"visitors\",\n      count(distinct t.visit_id) as \"visits\",\n      sum(case when t.c = 1 then 1 else 0 end) as \"bounces\",\n      sum(${getTimestampDiffQuery('t.min_time', 't.max_time')}) as \"totaltime\"\n    from (\n      select\n        website_event.session_id,\n        website_event.visit_id,\n        count(*) as \"c\",\n        min(website_event.created_at) as \"min_time\",\n        max(website_event.created_at) as \"max_time\"\n      from website_event\n      join website \n        on website_event.website_id = website.website_id\n        ${joinSession}\n      where website.website_id = {{websiteId::uuid}}\n        and website_event.created_at between {{startDate}} and {{endDate}}\n        and event_type = {{eventType}}\n        ${filterQuery}\n      group by 1, 2\n    ) as t\n    `,\n    params,\n  );\n}\n\nasync function clickhouseQuery(\n  websiteId: string,\n  filters: QueryFilters,\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  const { rawQuery, parseFilters } = clickhouse;\n  const { filterQuery, params } = await parseFilters(websiteId, {\n    ...filters,\n    eventType: EVENT_TYPE.pageView,\n  });\n\n  return rawQuery(\n    `\n    select \n      sum(t.c) as \"pageviews\",\n      count(distinct t.session_id) as \"visitors\",\n      count(distinct t.visit_id) as \"visits\",\n      sum(if(t.c = 1, 1, 0)) as \"bounces\",\n      sum(max_time-min_time) as \"totaltime\"\n    from (\n      select\n        session_id,\n        visit_id,\n        count(*) c,\n        min(created_at) min_time,\n        max(created_at) max_time\n      from website_event\n      where website_id = {websiteId:UUID}\n        and created_at between {startDate:DateTime64} and {endDate:DateTime64}\n        and event_type = {eventType:UInt32}\n        ${filterQuery}\n      group by session_id, visit_id\n    ) as t;\n    `,\n    params,\n  ).then(result => {\n    return Object.values(result).map(n => {\n      return {\n        pageviews: Number(n.pageviews),\n        visitors: Number(n.visitors),\n        visits: Number(n.visits),\n        bounces: Number(n.bounces),\n        totaltime: Number(n.totaltime),\n      };\n    });\n  });\n}\n```",
+    "expected": "getWebsiteStats||export async function getWebsiteStats(\n  ...args: [websiteId: string, filters: QueryFilters]\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  return runQuery({\n    [PRISMA]: () => relationalQuery(...args),\n    [CLICKHOUSE]: () => clickhouseQuery(...args),\n  });\n}",
+    "total_tokens": 3141,
+    "input_tokens": 1024,
+    "output_tokens": 2117,
+    "time_seconds": 24.391332864761353,
+    "iterations": 1,
+    "error": null,
+    "context_size": 3223,
+    "timestamp": "2026-02-18T15:32:26.210311",
+    "metadata": {
+      "repo": "umami-software/umami",
+      "language": "typescript",
+      "id": "getWebsiteStats"
+    },
+    "cost_usd": 0.0001124
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 442,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "```ts\n// Code snippet: function to gather and return website statistics (pageviews, visitors, visits, bounces, totaltime)\n// This implements the described behavior: selects between relational (PRISMA) and ClickHouse backends,\n// runs a query that filters by date range and other criteria, and returns structured metrics.\n\nexport type WebsiteStats = {\n  pageviews: number;\n  visitors: number;\n  visits: number;\n  bounces: number;\n  totaltime: number;\n};\n\nexport async function getWebsiteStats(\n  ...args: [websiteId: string, filters: QueryFilters]\n): Promise<WebsiteStats[]> {\n  // Delegates to environment-specific queries\n  return runQuery({\n    [PRISMA]: () => relationalQuery(...args),\n    [CLICKHOUSE]: () => clickhouseQuery(...args),\n  });\n}\n\n/**\n * Relational (PRISMA) implementation\n */\nasync function relationalQuery(\n  websiteId: string,\n  filters: QueryFilters\n): Promise<WebsiteStats[]> {\n  // Expect filters to include at least: startDate, endDate, eventType\n  const { startDate, endDate, eventType, ...rest } = filters;\n\n  // Build extra filter conditions from remaining keys, e.g. { country: 'US', device: 'mobile' }\n  const extraFilters = Object.entries(rest)\n    .map(([k, v]) => {\n      const val = typeof v === 'string' ? `'${v}'` : v;\n      return `AND ${k} = ${val}`;\n    })\n    .join(' ');\n\n  // Inner aggregation per session/visit\n  // c = count of events in the session/visit\n  // min_time / max_time = window of activity\n  // We then compute:\n  // - pageviews: sum of c\n  // - visitors: sum of distinct visitors (approximated via count distinct user_id per session/visit)\n  // - visits: count of distinct visit_id\n  // - bounces: count of sessions with exactly 1 event (c = 1)\n  // - totaltime: sum(max_time - min_time)\n  const sql = `\n    SELECT\n      SUM(t.c) AS pageviews,\n      SUM(t.visitors) AS visitors,\n      SUM(t.visits) AS visits,\n      SUM(CASE WHEN t.c = 1 THEN 1 ELSE 0 END) AS bounces,\n      SUM(t.totaltime) AS totaltime\n    FROM (\n      SELECT\n        session_id,\n        visit_id,\n        COUNT(*) AS c,\n        COUNT(DISTINCT user_id) AS visitors,\n        COUNT(DISTINCT visit_id) AS visits,\n        MIN(created_at) AS min_time,\n        MAX(created_at) AS max_time,\n        TIMESTAMP_DIFF(MAX(created_at), MIN(created_at), SECOND) AS totaltime\n      FROM website_event\n      WHERE website_id = '${websiteId}'\n        AND created_at BETWEEN '${startDate}' AND '${endDate}'\n        AND event_type = ${eventType}\n        ${extraFilters}\n      GROUP BY session_id, visit_id\n    ) AS t;\n  `;\n\n  const result = await prisma.$queryRaw<{\n    pageviews: string | number;\n    visitors: string | number;\n    visits: string | number;\n    bounces: string | number;\n    totaltime: string | number;\n  }>(sql);\n\n  // Normalize to numbers and return as WebsiteStats[]\n  return (Array.isArray(result) ? result : [result]).map(n => ({\n    pageviews: Number(n.pageviews),\n    visitors: Number(n.visitors),\n    visits: Number(n.visits),\n    bounces: Number(n.bounces),\n    totaltime: Number(n.totaltime),\n  }));\n}\n\n/**\n * ClickHouse implementation\n * Note: adjust to your actual ClickHouse client/query API. This is a parallel structure to relationalQuery\n */\nasync function clickhouseQuery(\n  websiteId: string,\n  filters: QueryFilters\n): Promise<WebsiteStats[]> {\n  const { startDate, endDate, eventType, ...rest } = filters;\n  const extraFilters = Object.entries(rest)\n    .map(([k, v]) => `${k} = ${typeof v === 'string' ? `'${v}'` : v}`)\n    .join(' AND ');\n\n  // Note: ClickHouse syntax may differ; adapt field names accordingly.\n  const sql = `\n    SELECT\n      SUM(pageviews) AS pageviews,\n      SUM(visitors) AS visitors,\n      SUM(visits) AS visits,\n      SUM(bounces) AS bounces,\n      SUM(totaltime) AS totaltime\n    FROM (\n      SELECT\n        session_id,\n        visit_id,\n        COUNT(*) AS c,\n        COUNT(DISTINCT user_id) AS visitors,\n        COUNT(DISTINCT visit_id) AS visits,\n        MIN(created_at) AS min_time,\n        MAX(created_at) AS max_time,\n        max_time - min_time AS totaltime\n      FROM website_event\n      WHERE website_id = '${websiteId}'\n        AND created_at BETWEEN '${startDate}' AND '${endDate}'\n        AND event_type = ${eventType}\n        ${extraFilters ? 'AND ' + extraFilters : ''}\n      GROUP BY session_id, visit_id\n    ) AS t;\n  `;\n\n  // Execute using your ClickHouse client\n  const rows = await clickhouseClient.query(sql);\n\n  return (Array.isArray(rows) ? rows : [rows]).map((r: any) => ({\n    pageviews: Number(r.pageviews),\n    visitors: Number(r.visitors),\n    visits: Number(r.visits),\n    bounces: Number(r.bounces),\n    totaltime: Number(r.totaltime),\n  }));\n}\n```",
+    "expected": "getWebsiteStats||export async function getWebsiteStats(\n  ...args: [websiteId: string, filters: QueryFilters]\n): Promise<\n  { pageviews: number; visitors: number; visits: number; bounces: number; totaltime: number }[]\n> {\n  return runQuery({\n    [PRISMA]: () => relationalQuery(...args),\n    [CLICKHOUSE]: () => clickhouseQuery(...args),\n  });\n}",
+    "total_tokens": 20187,
+    "input_tokens": 4607,
+    "output_tokens": 15580,
+    "time_seconds": 151.28221487998962,
+    "iterations": 1,
+    "error": null,
+    "context_size": 3223,
+    "timestamp": "2026-02-18T15:34:34.023759",
+    "metadata": {
+      "repo": "umami-software/umami",
+      "language": "typescript",
+      "id": "getWebsiteStats"
+    },
+    "cost_usd": 0.00080805
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 842,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "TRUE_VALUES = {\"true\", \"1\"}\nFALSE_VALUES = {\"false\", \"0\"}\n\n\ndef boolean(value: str | bool | int) -> bool:\n    if isinstance(value, bool):\n        return value\n    elif isinstance(value, int):\n        return bool(value)\n    elif not isinstance(value, str):\n        raise TypeError(f\"Expected str or bool, got {type(value).__name__}\")\n\n    if value.lower() in TRUE_VALUES:\n        return True\n    elif value.lower() in FALSE_VALUES:\n        return False\n    else:\n        raise ValueError(\n            f\"Invalid boolean value {value!r} - expected \"\n            f\"one of {list(TRUE_VALUES | FALSE_VALUES)}\"\n        )",
+    "expected": "boolean||def boolean(value: str | bool | int) -> bool:\n    if isinstance(value, bool):\n        return value\n    elif isinstance(value, int):\n        return bool(value)\n    elif not isinstance(value, str):\n        raise TypeError(f\"Expected str or bool, got {type(value).__name__}\")\n\n    if value.lower() in TRUE_VALUES:\n        return True\n    elif value.lower() in FALSE_VALUES:\n        return False\n    else:\n        raise ValueError(\n            f\"Invalid boolean value {value!r} - expected \"\n            f\"one of {list(TRUE_VALUES | FALSE_VALUES)}\"\n        )",
+    "total_tokens": 1784,
+    "input_tokens": 861,
+    "output_tokens": 923,
+    "time_seconds": 9.215651035308838,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2781,
+    "timestamp": "2026-02-18T15:33:25.507886",
+    "metadata": {
+      "repo": "reactive-python/reactpy",
+      "language": "python",
+      "id": "boolean"
+    },
+    "cost_usd": 5.18e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 842,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "le: src/py/reactpy/reactpy/config.py\n\n\"\"\"\nReactPy provides a series of configuration options that can be set using environment\nvariables or, for those which allow it, a programmatic interface.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom pathlib import Path\nfrom tempfile import TemporaryDirectory\n\nfrom reactpy._option import Option\n\nTRUE_VALUES = {\"true\", \"1\"}\nFALSE_VALUES = {\"false\", \"0\"}\n\n\ndef boolean(value: str | bool | int) -> bool:\n    if isinstance(value, bool):\n        return value\n    elif isinstance(value, int):\n        return bool(value)\n    elif not isinstance(value, str):\n        raise TypeError(f\"Expected str or bool, got {type(value).__name__}\")\n\n    if value.lower() in TRUE_VALUES:\n        return True\n    elif value.lower() in FALSE_VALUES:\n        return False\n    else:\n        raise ValueError(\n            f\"Invalid boolean value {value!r} - expected \"\n            f\"one of {list(TRU",
+    "expected": "boolean||def boolean(value: str | bool | int) -> bool:\n    if isinstance(value, bool):\n        return value\n    elif isinstance(value, int):\n        return bool(value)\n    elif not isinstance(value, str):\n        raise TypeError(f\"Expected str or bool, got {type(value).__name__}\")\n\n    if value.lower() in TRUE_VALUES:\n        return True\n    elif value.lower() in FALSE_VALUES:\n        return False\n    else:\n        raise ValueError(\n            f\"Invalid boolean value {value!r} - expected \"\n            f\"one of {list(TRUE_VALUES | FALSE_VALUES)}\"\n        )",
+    "total_tokens": 5761,
+    "input_tokens": 4437,
+    "output_tokens": 1324,
+    "time_seconds": 16.82240104675293,
+    "iterations": 2,
+    "error": null,
+    "context_size": 2781,
+    "timestamp": "2026-02-18T15:33:33.125474",
+    "metadata": {
+      "repo": "reactive-python/reactpy",
+      "language": "python",
+      "id": "boolean"
+    },
+    "cost_usd": 9.415e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 842,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "def to_bool(value):\n    \"\"\"Convert input (bool, int, str) to boolean value.\n    - If value is bool, return it directly.\n    - If value is int, non-zero => True, zero => False.\n    - If value is str, convert to lowercase and check against predefined sets.\n      - If it matches a true value, return True.\n      - If it matches a false value, return False.\n      - If it matches neither, raise ValueError.\n    - For any other type, raise TypeError.\n    \"\"\"\n    if isinstance(value, bool):\n        return value\n    if isinstance(value, int):\n        return value != 0\n    if isinstance(value, str):\n        s = value.strip().lower()\n        TRUE_VALUES = {\"true\", \"t\", \"yes\", \"y\", \"1\", \"on\", \"yeah\", \"yep\"}\n        FALSE_VALUES = {\"false\", \"f\", \"no\", \"n\", \"0\", \"off\", \"nope\"}\n        if s in TRUE_VALUES:\n            return True\n        if s in FALSE_VALUES:\n            return False\n        raise ValueError(f\"Cannot convert string to boolean: {value!r}\")\n    raise TypeError(f\"Unsupported type: {type(value).__name__}\")",
+    "expected": "boolean||def boolean(value: str | bool | int) -> bool:\n    if isinstance(value, bool):\n        return value\n    elif isinstance(value, int):\n        return bool(value)\n    elif not isinstance(value, str):\n        raise TypeError(f\"Expected str or bool, got {type(value).__name__}\")\n\n    if value.lower() in TRUE_VALUES:\n        return True\n    elif value.lower() in FALSE_VALUES:\n        return False\n    else:\n        raise ValueError(\n            f\"Invalid boolean value {value!r} - expected \"\n            f\"one of {list(TRUE_VALUES | FALSE_VALUES)}\"\n        )",
+    "total_tokens": 20742,
+    "input_tokens": 11346,
+    "output_tokens": 9396,
+    "time_seconds": 98.59884691238403,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2781,
+    "timestamp": "2026-02-18T15:34:55.738388",
+    "metadata": {
+      "repo": "reactive-python/reactpy",
+      "language": "python",
+      "id": "boolean"
+    },
+    "cost_usd": 0.00054095
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 942,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "or.\n///\n/// *Note*: If the parser passed to `many1` accepts empty inputs\n/// (like `alpha0` or `digit0`), `many1` will return an error,\n/// to prevent going into an infinite loop.\n///\n/// ```rust\n/// # use nom::{Err, error::{Error, ErrorKind}, Needed, IResult, Parser};\n/// use nom::multi::fold_many1;\n/// use nom::bytes::complete::tag;\n///\n/// fn parser(s: &str) -> IResult<&str, Vec<&str>> {\n///   fold_many1(\n///     tag(\"abc\"),\n///     Vec::new,\n///     |mut acc: Vec<_>, item| {\n///       acc.push(item);\n///       acc\n///     }\n///   ).parse(s)\n/// }\n///\n/// assert_eq!(parser(\"abcabc\"), Ok((\"\", vec![\"abc\", \"abc\"])));\n/// assert_eq!(parser(\"abc123\"), Ok((\"123\", vec![\"abc\"])));\n/// assert_eq!(parser(\"123123\"), Err(Err::Error(Error::new(\"123123\", ErrorKind::Many1))));\n/// assert_eq!(parser(\"\"), Err(Err::Error(Error::new(\"\", ErrorKind::Many1))));\n/// ```\npub fn fold_many1<I, E, F, G, H, R>(\n  parser: F",
+    "expected": "fold_many1||/// ```\npub fn fold_many1<I, E, F, G, H, R>(\n  parser: F,\n  init: H,\n  g: G,\n) -> impl Parser<I, Output = R, Error = E>\nwhere\n  I: Clone + InputLength,\n  F: Parser<I, Error = E>,\n  G: FnMut(R, <F as Parser<I>>::Output) -> R,\n  H: FnMut() -> R,\n  E: ParseError<I>,\n{\n  FoldMany1 {\n    parser,\n    g,\n    init,\n    r: PhantomData,\n  }\n}",
+    "total_tokens": 5515,
+    "input_tokens": 4577,
+    "output_tokens": 938,
+    "time_seconds": 12.67560887336731,
+    "iterations": 2,
+    "error": null,
+    "context_size": 53775,
+    "timestamp": "2026-02-18T15:34:00.032934",
+    "metadata": {
+      "repo": "rust-bakery/nom",
+      "language": "rust",
+      "id": "fold_many1"
+    },
+    "cost_usd": 7.585e-05
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 942,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "pub fn fold<I, E, F, G, H, J, R>(\n  range: J,\n  parser: F,\n  init: H,\n  fold: G,\n) -> impl Parser<I, Output = R, Error = E>\nwhere\n  I: Clone + InputLength,\n  F: Parser<I, Error = E>,\n  G: FnMut(R, <F as Parser<I>>::Output) -> R,\n  H: FnMut() -> R,\n  E: ParseError<I>,\n  J: NomRange<usize>,\n{\n  Fold {\n    parser,\n    init,\n    fold,\n    range,\n  }\n}\n\n/// Parser implementation for the [fold] combinator\npub struct Fold<F, G, H, Range> {\n  parser: F,\n  init: H,\n  fold: G,\n  range: Range,\n}\n\nimpl<I, F, G, H, Range, Res> Parser<I> for Fold<F, G, H, Range>\nwhere\n  I: Clone + InputLength,\n  F: Parser<I>,\n  G: FnMut(Res, <F as Parser<I>>::Output) -> Res,\n  H: FnMut() -> Res,\n  Range: NomRange<usize>,\n{\n  type Output = Res;\n  type Error = <F as Parser<I>>::Error;\n\n  fn process<OM: OutputMode>(\n    &mut self,\n    mut input: I,\n  ) -> crate::PResult<OM, I, Self::Output, Self::Error> {\n    if self.range.is_inverted() {\n      return Err(Err::Failure(<F as Parser<I>>::Error::from_error_kind(\n        input,\n        ErrorKind::Fold,\n      )));\n    }\n\n    let mut acc = OM::Output::bind(|| (self.init)());\n\n    for count in self.range.saturating_iter() {\n      let len = input.input_len();\n      match self.parser.process::<OM>(input.clone()) {\n        Ok((tail, value)) => {\n          // infinite loop check: the parser must always consume\n          if tail.input_len() == len {\n            return Err(Err::Error(OM::Error::bind(|| {\n              <F as Parser<I>>::Error::from_error_kind(tail, ErrorKind::Fold)\n            })));\n          }\n\n          acc = OM::Output::combine(acc, value, |acc, value| (self.fold)(acc, value));\n          input = tail;\n        }\n        Err(Err::Error(err)) => {\n          if !self.range.contains(&count) {\n            return Err(Err::Error(OM::Error::map(err, |err| {\n              <F as Parser<I>>::Error::append(input, ErrorKind::Fold, err)\n            })));\n          } else {\n            break;\n          }\n        }\n        Err(e) => return Err(e),\n      }\n    }\n\n    Ok((input, acc))\n  }\n}",
+    "expected": "fold_many1||/// ```\npub fn fold_many1<I, E, F, G, H, R>(\n  parser: F,\n  init: H,\n  g: G,\n) -> impl Parser<I, Output = R, Error = E>\nwhere\n  I: Clone + InputLength,\n  F: Parser<I, Error = E>,\n  G: FnMut(R, <F as Parser<I>>::Output) -> R,\n  H: FnMut() -> R,\n  E: ParseError<I>,\n{\n  FoldMany1 {\n    parser,\n    g,\n    init,\n    r: PhantomData,\n  }\n}",
+    "total_tokens": 19032,
+    "input_tokens": 15671,
+    "output_tokens": 3361,
+    "time_seconds": 35.622945070266724,
+    "iterations": 1,
+    "error": null,
+    "context_size": 53775,
+    "timestamp": "2026-02-18T15:34:23.049173",
+    "metadata": {
+      "repo": "rust-bakery/nom",
+      "language": "rust",
+      "id": "fold_many1"
+    },
+    "cost_usd": 0.0002664
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 942,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "def accumulate_parse(parser, initializer, combiner, input_data):\n    \"\"\"\n    Repeatedly apply a parser to input_data and accumulate results.\n\n    - parser(input) -> (ok: bool, value, rest)\n      ok indicates a successful parse; value is the parsed item; rest is the remaining input.\n\n    - initializer() -> accumulator\n      Provides the initial accumulator value.\n\n    - combiner(acc, value) -> new_acc\n      Combines the current accumulator with the parsed value.\n\n    - input_data: initial input (string or sequence)\n\n    Returns the final accumulator after zero or more successful parses.\n    Raises:\n      - ValueError if the first parse attempt fails (no successful parses)\n      - RuntimeError if the parser consumes zero input (to avoid infinite loops)\n    \"\"\"\n    acc = initializer()\n    remaining = input_data\n    seen_any = False\n\n    while True:\n        ok, value, rest = parser(remaining)\n        if not ok:\n            break\n        # Detect zero-consumption to avoid infinite loops\n        if rest is None or rest == remaining:\n            raise RuntimeError(\"Parser accepted empty input; potential infinite loop.\")\n        acc = combiner(acc, value)\n        remaining = rest\n        seen_any = True\n\n    if not seen_any:\n        raise ValueError(\"First parse attempt failed; no successful parses.\")\n    return acc",
+    "expected": "fold_many1||/// ```\npub fn fold_many1<I, E, F, G, H, R>(\n  parser: F,\n  init: H,\n  g: G,\n) -> impl Parser<I, Output = R, Error = E>\nwhere\n  I: Clone + InputLength,\n  F: Parser<I, Error = E>,\n  G: FnMut(R, <F as Parser<I>>::Output) -> R,\n  H: FnMut() -> R,\n  E: ParseError<I>,\n{\n  FoldMany1 {\n    parser,\n    g,\n    init,\n    r: PhantomData,\n  }\n}",
+    "total_tokens": 12274,
+    "input_tokens": 4800,
+    "output_tokens": 7474,
+    "time_seconds": 80.02031373977661,
+    "iterations": 1,
+    "error": null,
+    "context_size": 53775,
+    "timestamp": "2026-02-18T15:35:08.206405",
+    "metadata": {
+      "repo": "rust-bakery/nom",
+      "language": "rust",
+      "id": "fold_many1"
+    },
+    "cost_usd": 0.000404
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "A",
+    "expected": "C",
+    "total_tokens": 3194,
+    "input_tokens": 2226,
+    "output_tokens": 968,
+    "time_seconds": 8.211771965026855,
+    "iterations": 1,
+    "error": null,
+    "context_size": 193423,
+    "timestamp": "2026-02-18T15:35:16.839696",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 6.235e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 42,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "C",
+    "expected": "C",
+    "total_tokens": 48136,
+    "input_tokens": 46717,
+    "output_tokens": 1419,
+    "time_seconds": 14.463372707366943,
+    "iterations": 1,
+    "error": null,
+    "context_size": 193423,
+    "timestamp": "2026-02-18T15:35:23.587675",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0003632
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 42,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "C",
+    "expected": "C",
+    "total_tokens": 14277,
+    "input_tokens": 10433,
+    "output_tokens": 3844,
+    "time_seconds": 32.403358936309814,
+    "iterations": 1,
+    "error": null,
+    "context_size": 193423,
+    "timestamp": "2026-02-18T15:35:41.827877",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00025765
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "D",
+    "total_tokens": 2495,
+    "input_tokens": 2061,
+    "output_tokens": 434,
+    "time_seconds": 5.3436598777771,
+    "iterations": 1,
+    "error": null,
+    "context_size": 369293,
+    "timestamp": "2026-02-18T15:35:13.970148",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 3.49e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 142,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "D",
+    "total_tokens": 99852,
+    "input_tokens": 97154,
+    "output_tokens": 2698,
+    "time_seconds": 31.94410800933838,
+    "iterations": 1,
+    "error": null,
+    "context_size": 369293,
+    "timestamp": "2026-02-18T15:35:42.671594",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00074245
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 142,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "D",
+    "total_tokens": 8402,
+    "input_tokens": 4750,
+    "output_tokens": 3652,
+    "time_seconds": 33.90727710723877,
+    "iterations": 1,
+    "error": null,
+    "context_size": 369293,
+    "timestamp": "2026-02-18T15:35:43.372372",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00021255
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "C",
+    "total_tokens": 2656,
+    "input_tokens": 2226,
+    "output_tokens": 430,
+    "time_seconds": 5.283525705337524,
+    "iterations": 1,
+    "error": null,
+    "context_size": 193423,
+    "timestamp": "2026-02-18T15:35:13.910502",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 3.595e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 342,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "C",
+    "expected": "C",
+    "total_tokens": 49160,
+    "input_tokens": 46717,
+    "output_tokens": 2443,
+    "time_seconds": 20.384209871292114,
+    "iterations": 1,
+    "error": null,
+    "context_size": 193423,
+    "timestamp": "2026-02-18T15:35:29.514574",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0004144
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 342,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "D",
+    "expected": "C",
+    "total_tokens": 23630,
+    "input_tokens": 17244,
+    "output_tokens": 6386,
+    "time_seconds": 62.014923095703125,
+    "iterations": 1,
+    "error": null,
+    "context_size": 193423,
+    "timestamp": "2026-02-18T15:36:11.529216",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0004274
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "B",
+    "expected": "B",
+    "total_tokens": 2575,
+    "input_tokens": 1901,
+    "output_tokens": 674,
+    "time_seconds": 6.786561012268066,
+    "iterations": 1,
+    "error": null,
+    "context_size": 634754,
+    "timestamp": "2026-02-18T15:35:48.621371",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 4.59e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 442,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "C",
+    "expected": "B",
+    "total_tokens": 160235,
+    "input_tokens": 158944,
+    "output_tokens": 1291,
+    "time_seconds": 17.802438974380493,
+    "iterations": 1,
+    "error": null,
+    "context_size": 634754,
+    "timestamp": "2026-02-18T15:36:05.182480",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0010582
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 442,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "'B'",
+    "expected": "B",
+    "total_tokens": 11622,
+    "input_tokens": 6960,
+    "output_tokens": 4662,
+    "time_seconds": 39.89419984817505,
+    "iterations": 1,
+    "error": null,
+    "context_size": 634754,
+    "timestamp": "2026-02-18T15:36:22.453046",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0002771
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 642,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "D",
+    "expected": "B",
+    "total_tokens": 5300,
+    "input_tokens": 4224,
+    "output_tokens": 1076,
+    "time_seconds": 14.76297926902771,
+    "iterations": 2,
+    "error": null,
+    "context_size": 344992,
+    "timestamp": "2026-02-18T15:36:26.305009",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 8.04e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 642,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "D",
+    "expected": "B",
+    "total_tokens": 94970,
+    "input_tokens": 93041,
+    "output_tokens": 1929,
+    "time_seconds": 17.987323999404907,
+    "iterations": 1,
+    "error": null,
+    "context_size": 344992,
+    "timestamp": "2026-02-18T15:36:31.446263",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00067835
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 642,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "D",
+    "expected": "B",
+    "total_tokens": 11607,
+    "input_tokens": 7754,
+    "output_tokens": 3853,
+    "time_seconds": 38.89439797401428,
+    "iterations": 1,
+    "error": null,
+    "context_size": 344992,
+    "timestamp": "2026-02-18T15:36:51.274574",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0002413
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 742,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "A",
+    "expected": "C",
+    "total_tokens": 100156,
+    "input_tokens": 99506,
+    "output_tokens": 650,
+    "time_seconds": 8.525414943695068,
+    "iterations": 1,
+    "error": null,
+    "context_size": 425025,
+    "timestamp": "2026-02-18T15:36:33.145747",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00065475
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 742,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "A",
+    "expected": "C",
+    "total_tokens": 4981,
+    "input_tokens": 3968,
+    "output_tokens": 1013,
+    "time_seconds": 20.822566986083984,
+    "iterations": 2,
+    "error": null,
+    "context_size": 425025,
+    "timestamp": "2026-02-18T15:36:43.285990",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 7.56e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 742,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "C",
+    "expected": "C",
+    "total_tokens": 111481,
+    "input_tokens": 100652,
+    "output_tokens": 10829,
+    "time_seconds": 98.60855340957642,
+    "iterations": 1,
+    "error": null,
+    "context_size": 425025,
+    "timestamp": "2026-02-18T15:38:03.891925",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0011707
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "D",
+    "total_tokens": 3087,
+    "input_tokens": 2054,
+    "output_tokens": 1033,
+    "time_seconds": 10.455461263656616,
+    "iterations": 1,
+    "error": null,
+    "context_size": 108019,
+    "timestamp": "2026-02-18T15:35:19.078422",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 6.49e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 242,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "D",
+    "expected": "D",
+    "total_tokens": 30523,
+    "input_tokens": 23984,
+    "output_tokens": 6539,
+    "time_seconds": 60.53001093864441,
+    "iterations": 1,
+    "error": null,
+    "context_size": 108019,
+    "timestamp": "2026-02-18T15:36:09.308887",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0004771
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 242,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "D",
+    "expected": "D",
+    "total_tokens": 38152,
+    "input_tokens": 18813,
+    "output_tokens": 19339,
+    "time_seconds": 180.98285794258118,
+    "iterations": 1,
+    "error": null,
+    "context_size": 108019,
+    "timestamp": "2026-02-18T15:38:10.584274",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0010848
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 842,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "D",
+    "expected": "D",
+    "total_tokens": 2721,
+    "input_tokens": 2166,
+    "output_tokens": 555,
+    "time_seconds": 6.573927879333496,
+    "iterations": 1,
+    "error": null,
+    "context_size": 129805,
+    "timestamp": "2026-02-18T15:36:57.854431",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 4.16e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 842,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "D",
+    "expected": "D",
+    "total_tokens": 31388,
+    "input_tokens": 30418,
+    "output_tokens": 970,
+    "time_seconds": 9.80038595199585,
+    "iterations": 1,
+    "error": null,
+    "context_size": 129805,
+    "timestamp": "2026-02-18T15:37:01.299468",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00023895
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 842,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "D",
+    "expected": "D",
+    "total_tokens": 24251,
+    "input_tokens": 13042,
+    "output_tokens": 11209,
+    "time_seconds": 82.76905703544617,
+    "iterations": 1,
+    "error": null,
+    "context_size": 129805,
+    "timestamp": "2026-02-18T15:38:14.868826",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00064235
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 542,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "D",
+    "total_tokens": 97868,
+    "input_tokens": 97154,
+    "output_tokens": 714,
+    "time_seconds": 10.61803913116455,
+    "iterations": 1,
+    "error": null,
+    "context_size": 369293,
+    "timestamp": "2026-02-18T15:35:56.086339",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00064325
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 542,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "D",
+    "total_tokens": 5137,
+    "input_tokens": 4307,
+    "output_tokens": 830,
+    "time_seconds": 10.81003212928772,
+    "iterations": 2,
+    "error": null,
+    "context_size": 369293,
+    "timestamp": "2026-02-18T15:35:56.090727",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 6.895e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 542,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "FINAL(\nHere is a concise plan to output the backward error berr in SuperLU_DIST without iterative refinement, focused on the example driver pddrive.c and the solver call (pdgssvx).\n\nWhat to do (high level)\n- Do not modify pdgssvx or pdgsrfs. To print berr without iterative refinement, compute berr in the driver after obtaining the solution x.\n- Ensure you disable refinement when calling pdgssvx (pass the appropriate option flags to disable iterative refinement). No changes are needed in pdgssvx/pdgsrfs for printing berr.\n\nSteps to implement in pddrive.c (where A, b, and x are available)\n1) Compute the residual:\n   r = b - A*x\n   This uses the existing sparse-matrix\u2013vector multiply to obtain A*x, then subtract from b.\n\n2) Compute s = |A| * |x| (i.e., sum_j |a_ij| * |x_j| for each i)\n   - Create absA as the matrix A with every nonzero replaced by its absolute value, or implement a pass that accumulates into s_i directly from A\u2019s nonzeros:\n     s_i = sum_j |a_ij| * |x_j|\n   - Result is a vector s (often denoted y in some code bases), size n.\n\n3) Denominator and berr per-entry:\n   - denom_i = |b_i| + s_i\n   - if denom_i > 0, berr_i = |r_i| / denom_i\n   - berr = max_i berr_i over all i\n   - (If denom_i == 0 for some i, skip that i or use a small epsilon to avoid division by zero.)\n\n4) Output:\n   - Print berr (ideally from a single rank/root process if running in parallel)\n   - Example: printf(\"berr = %e\\n\", berr);\n\nNotes and caveats\n- This computes berr purely from A, b, and x; it does not rely on pdgssvx\u2019s refinement code paths.\n- If you\u2019re in a distributed run, perform the reduction to a single berr value (e.g., via MPI_Reduce) before printing.\n- Ensure the A*x you compute uses the same precision/layout as x. If you already have a routine to compute A*x from the solver, reuse it.\n- If you want the exact UG wording in your code, you\u2019ll be implementing exactly the approach described: residual-based berr with |A|*|x| in the denominator, reported after the solve.\n\nConcrete patch sketch (pseudocode)\n- After obtaining x from pdgssvx:\n  Ax = A * x\n  r = b - Ax\n  absx = abs(x)\n  s = zeros(n)\n  for each nonzero a_ij in A:\n      s_i += abs(a_ij) * absx_j\n  berr = 0\n  for i = 1..n:\n      denom = abs(b[i]) + s[i]\n      if denom > 0:\n          berr_i = abs(r[i]) / denom\n          berr = max(berr, berr_i)\n  print berr\n\nIf you\u2019d like, I can provide a concrete patch with the exact function names and data structures used in your version of SuperLU_DIST (e.g., how A is stored and how to traverse nonzeros) once you share the relevant code paths or headers you\u2019re using.\n\nEND\n)",
+    "expected": "D",
+    "total_tokens": 56588,
+    "input_tokens": 38231,
+    "output_tokens": 18357,
+    "time_seconds": 170.52247595787048,
+    "iterations": 1,
+    "error": null,
+    "context_size": 369293,
+    "timestamp": "2026-02-18T15:38:34.872747",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.001157
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 942,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "A",
+    "expected": "A",
+    "total_tokens": 2397,
+    "input_tokens": 2081,
+    "output_tokens": 316,
+    "time_seconds": 3.291306972503662,
+    "iterations": 1,
+    "error": null,
+    "context_size": 544828,
+    "timestamp": "2026-02-18T15:38:07.187708",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 2.905e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 942,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "A",
+    "expected": "A",
+    "total_tokens": 212602,
+    "input_tokens": 211887,
+    "output_tokens": 715,
+    "time_seconds": 13.548173189163208,
+    "iterations": 1,
+    "error": null,
+    "context_size": 544828,
+    "timestamp": "2026-02-18T15:38:27.299062",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00136035
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 942,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "A",
+    "expected": "A",
+    "total_tokens": 34107,
+    "input_tokens": 16888,
+    "output_tokens": 17219,
+    "time_seconds": 165.6127278804779,
+    "iterations": 1,
+    "error": null,
+    "context_size": 544828,
+    "timestamp": "2026-02-18T15:40:50.603111",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.00096675
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-BZFQY2QR",
+    "expected": "SECRET-BZFQY2QR",
+    "total_tokens": 2119,
+    "input_tokens": 1769,
+    "output_tokens": 350,
+    "time_seconds": 3.8841168880462646,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:54.583303",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 13069
+    },
+    "cost_usd": 2.91e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 42,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-BZFQY2QR",
+    "expected": "SECRET-BZFQY2QR",
+    "total_tokens": 6557,
+    "input_tokens": 6285,
+    "output_tokens": 272,
+    "time_seconds": 5.1940529346466064,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:55.911598",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 13069
+    },
+    "cost_usd": 5.29e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 42,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-BZFQY2QR",
+    "expected": "SECRET-BZFQY2QR",
+    "total_tokens": 5765,
+    "input_tokens": 3862,
+    "output_tokens": 1903,
+    "time_seconds": 17.417567014694214,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:09.498749",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 13069
+    },
+    "cost_usd": 0.0001198
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-G17QDSOJ",
+    "expected": "SECRET-G17QDSOJ",
+    "total_tokens": 2193,
+    "input_tokens": 1775,
+    "output_tokens": 418,
+    "time_seconds": 4.476165056228638,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:55.180255",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18493
+    },
+    "cost_usd": 3.235e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 342,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-G17QDSOJ",
+    "expected": "SECRET-G17QDSOJ",
+    "total_tokens": 6651,
+    "input_tokens": 6316,
+    "output_tokens": 335,
+    "time_seconds": 4.5729148387908936,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:55.289089",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18493
+    },
+    "cost_usd": 5.67e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 342,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-G17QDSOJ",
+    "expected": "SECRET-G17QDSOJ",
+    "total_tokens": 6933,
+    "input_tokens": 3921,
+    "output_tokens": 3012,
+    "time_seconds": 26.430004119873047,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:18.494714",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18493
+    },
+    "cost_usd": 0.00017535
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 242,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-9SPQLJAN",
+    "expected": "SECRET-9SPQLJAN",
+    "total_tokens": 6481,
+    "input_tokens": 6338,
+    "output_tokens": 143,
+    "time_seconds": 2.146516799926758,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:52.865605",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32490
+    },
+    "cost_usd": 4.725e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-9SPQLJAN",
+    "expected": "SECRET-9SPQLJAN",
+    "total_tokens": 2176,
+    "input_tokens": 1771,
+    "output_tokens": 405,
+    "time_seconds": 4.730134963989258,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:55.432019",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32490
+    },
+    "cost_usd": 3.15e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 242,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-9SPQLJAN",
+    "expected": "SECRET-9SPQLJAN",
+    "total_tokens": 7624,
+    "input_tokens": 4393,
+    "output_tokens": 3231,
+    "time_seconds": 30.4374258518219,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:22.536795",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32490
+    },
+    "cost_usd": 0.0001895
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 442,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-1AXJKKA5",
+    "expected": "SECRET-1AXJKKA5",
+    "total_tokens": 6544,
+    "input_tokens": 6336,
+    "output_tokens": 208,
+    "time_seconds": 2.585101842880249,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:12.103109",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18030
+    },
+    "cost_usd": 5e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-1AXJKKA5",
+    "expected": "SECRET-1AXJKKA5",
+    "total_tokens": 2311,
+    "input_tokens": 1773,
+    "output_tokens": 538,
+    "time_seconds": 6.071811199188232,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:15.573324",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18030
+    },
+    "cost_usd": 3.83e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 442,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-1AXJKKA5",
+    "expected": "SECRET-1AXJKKA5",
+    "total_tokens": 5344,
+    "input_tokens": 3802,
+    "output_tokens": 1542,
+    "time_seconds": 15.778950214385986,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:25.786241",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 18030
+    },
+    "cost_usd": 0.0001014
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 142,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-64BII0RU",
+    "expected": "SECRET-64BII0RU",
+    "total_tokens": 6510,
+    "input_tokens": 6302,
+    "output_tokens": 208,
+    "time_seconds": 2.3814401626586914,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:53.098126",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32782
+    },
+    "cost_usd": 4.985e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-64BII0RU",
+    "expected": "SECRET-64BII0RU",
+    "total_tokens": 2085,
+    "input_tokens": 1772,
+    "output_tokens": 313,
+    "time_seconds": 3.159029006958008,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:40:53.861478",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32782
+    },
+    "cost_usd": 2.71e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 142,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-64BII0RU",
+    "expected": "SECRET-64BII0RU",
+    "total_tokens": 11761,
+    "input_tokens": 6576,
+    "output_tokens": 5185,
+    "time_seconds": 44.46669793128967,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:36.556497",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32782
+    },
+    "cost_usd": 0.0003007
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 642,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-TNSS5KMN",
+    "expected": "SECRET-TNSS5KMN",
+    "total_tokens": 6500,
+    "input_tokens": 6292,
+    "output_tokens": 208,
+    "time_seconds": 2.664606809616089,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:25.219222",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 31542
+    },
+    "cost_usd": 4.975e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 642,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-TNSS5KMN",
+    "expected": "SECRET-TNSS5KMN",
+    "total_tokens": 2450,
+    "input_tokens": 1769,
+    "output_tokens": 681,
+    "time_seconds": 6.085331916809082,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:28.625347",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 31542
+    },
+    "cost_usd": 4.55e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 642,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-TNSS5KMN",
+    "expected": "SECRET-TNSS5KMN",
+    "total_tokens": 11067,
+    "input_tokens": 7007,
+    "output_tokens": 4060,
+    "time_seconds": 33.32251024246216,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:56.388848",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 31542
+    },
+    "cost_usd": 0.00024705
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 542,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-497D2V37",
+    "expected": "SECRET-497D2V37",
+    "total_tokens": 6423,
+    "input_tokens": 6279,
+    "output_tokens": 144,
+    "time_seconds": 1.761697769165039,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:20.271247",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 16720
+    },
+    "cost_usd": 4.65e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 542,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-497D2V37",
+    "expected": "SECRET-497D2V37",
+    "total_tokens": 2247,
+    "input_tokens": 1771,
+    "output_tokens": 476,
+    "time_seconds": 3.4666221141815186,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:21.964135",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 16720
+    },
+    "cost_usd": 3.51e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 542,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "secret_code",
+    "expected": "SECRET-497D2V37",
+    "total_tokens": 12726,
+    "input_tokens": 8166,
+    "output_tokens": 4560,
+    "time_seconds": 41.8768367767334,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:42:00.854026",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 16720
+    },
+    "cost_usd": 0.0002791
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 842,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-XSZZ5OUL",
+    "expected": "SECRET-XSZZ5OUL",
+    "total_tokens": 2091,
+    "input_tokens": 1768,
+    "output_tokens": 323,
+    "time_seconds": 3.829807996749878,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:40.389083",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 21124
+    },
+    "cost_usd": 2.745e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 842,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-XSZZ5OUL",
+    "expected": "SECRET-XSZZ5OUL",
+    "total_tokens": 6551,
+    "input_tokens": 6279,
+    "output_tokens": 272,
+    "time_seconds": 4.2144880294799805,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:40.782358",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 21124
+    },
+    "cost_usd": 5.29e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 842,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-XSZZ5OUL",
+    "expected": "SECRET-XSZZ5OUL",
+    "total_tokens": 7202,
+    "input_tokens": 3889,
+    "output_tokens": 3313,
+    "time_seconds": 24.313213109970093,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:42:01.336417",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 21124
+    },
+    "cost_usd": 0.00019035
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 742,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-ZK9AP6IL",
+    "expected": "SECRET-ZK9AP6IL",
+    "total_tokens": 6399,
+    "input_tokens": 6255,
+    "output_tokens": 144,
+    "time_seconds": 2.326493978500366,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:28.125196",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32724
+    },
+    "cost_usd": 4.635e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 742,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-ZK9AP6IL",
+    "expected": "SECRET-ZK9AP6IL",
+    "total_tokens": 2256,
+    "input_tokens": 1773,
+    "output_tokens": 483,
+    "time_seconds": 5.234929800033569,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:41:31.024725",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32724
+    },
+    "cost_usd": 3.55e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 742,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-ZK9AP6IL",
+    "expected": "SECRET-ZK9AP6IL",
+    "total_tokens": 16325,
+    "input_tokens": 11696,
+    "output_tokens": 4629,
+    "time_seconds": 43.350992918014526,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:42:09.718205",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 32724
+    },
+    "cost_usd": 0.0003047
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 942,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-TTE2GPS6",
+    "expected": "SECRET-TTE2GPS6",
+    "total_tokens": 6550,
+    "input_tokens": 6279,
+    "output_tokens": 271,
+    "time_seconds": 3.619346857070923,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:42:00.017793",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 14459
+    },
+    "cost_usd": 5.33e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 942,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-TTE2GPS6",
+    "expected": "SECRET-TTE2GPS6",
+    "total_tokens": 2254,
+    "input_tokens": 1778,
+    "output_tokens": 476,
+    "time_seconds": 4.551952123641968,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:42:00.943571",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 14459
+    },
+    "cost_usd": 3.515e-05
+  },
+  {
+    "task_name": "sniah",
+    "task_instance_seed": 942,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "SECRET-TTE2GPS6",
+    "expected": "SECRET-TTE2GPS6",
+    "total_tokens": 7275,
+    "input_tokens": 3897,
+    "output_tokens": 3378,
+    "time_seconds": 28.31203603744507,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50052,
+    "timestamp": "2026-02-18T15:42:25.231836",
+    "metadata": {
+      "context_size": 50000,
+      "needle_position": 14459
+    },
+    "cost_usd": 0.0001936
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "expected": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "total_tokens": 2263,
+    "input_tokens": 1781,
+    "output_tokens": 482,
+    "time_seconds": 5.253633975982666,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:30.595291",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-EVCR18",
+        "NEEDLE-5FC9F9",
+        "NEEDLE-1SVNIX",
+        "NEEDLE-E90ITZ",
+        "NEEDLE-CEI1M1"
+      ]
+    },
+    "cost_usd": 3.555e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 342,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "expected": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "total_tokens": 6911,
+    "input_tokens": 6350,
+    "output_tokens": 561,
+    "time_seconds": 6.853372812271118,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:32.202673",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-EVCR18",
+        "NEEDLE-5FC9F9",
+        "NEEDLE-1SVNIX",
+        "NEEDLE-E90ITZ",
+        "NEEDLE-CEI1M1"
+      ]
+    },
+    "cost_usd": 6.815e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 342,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "expected": "NEEDLE-EVCR18, NEEDLE-5FC9F9, NEEDLE-1SVNIX, NEEDLE-E90ITZ, NEEDLE-CEI1M1",
+    "total_tokens": 6151,
+    "input_tokens": 4217,
+    "output_tokens": 1934,
+    "time_seconds": 18.40707802772522,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:44.852848",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-EVCR18",
+        "NEEDLE-5FC9F9",
+        "NEEDLE-1SVNIX",
+        "NEEDLE-E90ITZ",
+        "NEEDLE-CEI1M1"
+      ]
+    },
+    "cost_usd": 0.0001236
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-XAJI0Y, NEEDLE-9B0R7O, NEEDLE-7G8IQ6, NEEDLE-CV9MTN, NEEDLE-FRS832",
+    "expected": "NEEDLE-XAJI0Y, NEEDLE-9B0R7O, NEEDLE-7G8IQ6, NEEDLE-CV9MTN, NEEDLE-FRS832",
+    "total_tokens": 2231,
+    "input_tokens": 1794,
+    "output_tokens": 437,
+    "time_seconds": 5.361037969589233,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:30.699149",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-XAJI0Y",
+        "NEEDLE-9B0R7O",
+        "NEEDLE-7G8IQ6",
+        "NEEDLE-CV9MTN",
+        "NEEDLE-FRS832"
+      ]
+    },
+    "cost_usd": 3.325e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 42,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-XAJI0Y, NEEDLE-9B0R7O, NEEDLE-7G8IQ6, NEEDLE-CV9MTN, NEEDLE-FRS832",
+    "expected": "NEEDLE-XAJI0Y, NEEDLE-9B0R7O, NEEDLE-7G8IQ6, NEEDLE-CV9MTN, NEEDLE-FRS832",
+    "total_tokens": 7054,
+    "input_tokens": 6364,
+    "output_tokens": 690,
+    "time_seconds": 6.230058908462524,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:31.578746",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-XAJI0Y",
+        "NEEDLE-9B0R7O",
+        "NEEDLE-7G8IQ6",
+        "NEEDLE-CV9MTN",
+        "NEEDLE-FRS832"
+      ]
+    },
+    "cost_usd": 7.46e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 42,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-7G8IQ6, NEEDLE-9B0R7O, NEEDLE-CV9MTN, NEEDLE-FRS832, NEEDLE-XAJI0Y",
+    "expected": "NEEDLE-XAJI0Y, NEEDLE-9B0R7O, NEEDLE-7G8IQ6, NEEDLE-CV9MTN, NEEDLE-FRS832",
+    "total_tokens": 7278,
+    "input_tokens": 4279,
+    "output_tokens": 2999,
+    "time_seconds": 31.434998989105225,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:57.981457",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-XAJI0Y",
+        "NEEDLE-9B0R7O",
+        "NEEDLE-7G8IQ6",
+        "NEEDLE-CV9MTN",
+        "NEEDLE-FRS832"
+      ]
+    },
+    "cost_usd": 0.0001772
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 242,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "expected": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "total_tokens": 6840,
+    "input_tokens": 6342,
+    "output_tokens": 498,
+    "time_seconds": 4.56210994720459,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:29.915688",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-MR8WS1",
+        "NEEDLE-1AYT3M",
+        "NEEDLE-LTQNMI",
+        "NEEDLE-9MXRNY",
+        "NEEDLE-Y7R6Y9"
+      ]
+    },
+    "cost_usd": 6.49e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "expected": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "total_tokens": 2267,
+    "input_tokens": 1778,
+    "output_tokens": 489,
+    "time_seconds": 6.211238145828247,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:31.552721",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-MR8WS1",
+        "NEEDLE-1AYT3M",
+        "NEEDLE-LTQNMI",
+        "NEEDLE-9MXRNY",
+        "NEEDLE-Y7R6Y9"
+      ]
+    },
+    "cost_usd": 3.595e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 242,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "expected": "NEEDLE-MR8WS1, NEEDLE-1AYT3M, NEEDLE-LTQNMI, NEEDLE-9MXRNY, NEEDLE-Y7R6Y9",
+    "total_tokens": 10465,
+    "input_tokens": 6584,
+    "output_tokens": 3881,
+    "time_seconds": 37.439645290374756,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:03.985055",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-MR8WS1",
+        "NEEDLE-1AYT3M",
+        "NEEDLE-LTQNMI",
+        "NEEDLE-9MXRNY",
+        "NEEDLE-Y7R6Y9"
+      ]
+    },
+    "cost_usd": 0.00023555
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "expected": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "total_tokens": 2215,
+    "input_tokens": 1779,
+    "output_tokens": 436,
+    "time_seconds": 4.382239103317261,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:29.723136",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-UYRRM4",
+        "NEEDLE-9OF82W",
+        "NEEDLE-B6HHRV",
+        "NEEDLE-MH407Q",
+        "NEEDLE-QI7MK2"
+      ]
+    },
+    "cost_usd": 3.315e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 142,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "expected": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "total_tokens": 6912,
+    "input_tokens": 6353,
+    "output_tokens": 559,
+    "time_seconds": 6.109528064727783,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:31.461720",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-UYRRM4",
+        "NEEDLE-9OF82W",
+        "NEEDLE-B6HHRV",
+        "NEEDLE-MH407Q",
+        "NEEDLE-QI7MK2"
+      ]
+    },
+    "cost_usd": 6.815e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 142,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "expected": "NEEDLE-UYRRM4, NEEDLE-9OF82W, NEEDLE-B6HHRV, NEEDLE-MH407Q, NEEDLE-QI7MK2",
+    "total_tokens": 12400,
+    "input_tokens": 6612,
+    "output_tokens": 5788,
+    "time_seconds": 47.96555805206299,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:14.400079",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-UYRRM4",
+        "NEEDLE-9OF82W",
+        "NEEDLE-B6HHRV",
+        "NEEDLE-MH407Q",
+        "NEEDLE-QI7MK2"
+      ]
+    },
+    "cost_usd": 0.00033095
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-NQQPRF, NEEDLE-MX0LL6, NEEDLE-VC3N8A, NEEDLE-589QYE, NEEDLE-SKP3TX",
+    "expected": "NEEDLE-NQQPRF, NEEDLE-MX0LL6, NEEDLE-VC3N8A, NEEDLE-589QYE, NEEDLE-SKP3TX",
+    "total_tokens": 2252,
+    "input_tokens": 1781,
+    "output_tokens": 471,
+    "time_seconds": 5.575156211853027,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:50.433213",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-NQQPRF",
+        "NEEDLE-MX0LL6",
+        "NEEDLE-VC3N8A",
+        "NEEDLE-589QYE",
+        "NEEDLE-SKP3TX"
+      ]
+    },
+    "cost_usd": 3.515e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 442,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-NQQPRF, NEEDLE-MX0LL6, NEEDLE-VC3N8A, NEEDLE-589QYE, NEEDLE-SKP3TX",
+    "expected": "NEEDLE-NQQPRF, NEEDLE-MX0LL6, NEEDLE-VC3N8A, NEEDLE-589QYE, NEEDLE-SKP3TX",
+    "total_tokens": 6780,
+    "input_tokens": 6349,
+    "output_tokens": 431,
+    "time_seconds": 6.8301451206207275,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:42:51.694025",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-NQQPRF",
+        "NEEDLE-MX0LL6",
+        "NEEDLE-VC3N8A",
+        "NEEDLE-589QYE",
+        "NEEDLE-SKP3TX"
+      ]
+    },
+    "cost_usd": 6.17e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 442,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-NQQPRF, NEEDLE-MX0LL6, NEEDLE-VC3N8A, NEEDLE-589QYE, NEEDLE-SKP3TX",
+    "expected": "NEEDLE-NQQPRF, NEEDLE-MX0LL6, NEEDLE-VC3N8A, NEEDLE-589QYE, NEEDLE-SKP3TX",
+    "total_tokens": 8780,
+    "input_tokens": 4122,
+    "output_tokens": 4658,
+    "time_seconds": 36.971391916275024,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:22.386702",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-NQQPRF",
+        "NEEDLE-MX0LL6",
+        "NEEDLE-VC3N8A",
+        "NEEDLE-589QYE",
+        "NEEDLE-SKP3TX"
+      ]
+    },
+    "cost_usd": 0.000259
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 642,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-XJP5Q1, NEEDLE-FUT40C, NEEDLE-WAK23X, NEEDLE-AHGTVD, NEEDLE-THBX14",
+    "expected": "NEEDLE-XJP5Q1, NEEDLE-FUT40C, NEEDLE-WAK23X, NEEDLE-AHGTVD, NEEDLE-THBX14",
+    "total_tokens": 2165,
+    "input_tokens": 1783,
+    "output_tokens": 382,
+    "time_seconds": 3.918539047241211,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:07.906492",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-XJP5Q1",
+        "NEEDLE-FUT40C",
+        "NEEDLE-WAK23X",
+        "NEEDLE-AHGTVD",
+        "NEEDLE-THBX14"
+      ]
+    },
+    "cost_usd": 3.08e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 642,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-XJP5Q1, NEEDLE-FUT40C, NEEDLE-WAK23X, NEEDLE-AHGTVD, NEEDLE-THBX14",
+    "expected": "NEEDLE-XJP5Q1, NEEDLE-FUT40C, NEEDLE-WAK23X, NEEDLE-AHGTVD, NEEDLE-THBX14",
+    "total_tokens": 6800,
+    "input_tokens": 6371,
+    "output_tokens": 429,
+    "time_seconds": 5.981834888458252,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:09.981565",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-XJP5Q1",
+        "NEEDLE-FUT40C",
+        "NEEDLE-WAK23X",
+        "NEEDLE-AHGTVD",
+        "NEEDLE-THBX14"
+      ]
+    },
+    "cost_usd": 6.145e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 642,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-XJP5Q1, NEEDLE-FUT40C, NEEDLE-WAK23X, NEEDLE-AHGTVD, NEEDLE-THBX14",
+    "expected": "NEEDLE-XJP5Q1, NEEDLE-FUT40C, NEEDLE-WAK23X, NEEDLE-AHGTVD, NEEDLE-THBX14",
+    "total_tokens": 7440,
+    "input_tokens": 4104,
+    "output_tokens": 3336,
+    "time_seconds": 29.880327939987183,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:34.396452",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-XJP5Q1",
+        "NEEDLE-FUT40C",
+        "NEEDLE-WAK23X",
+        "NEEDLE-AHGTVD",
+        "NEEDLE-THBX14"
+      ]
+    },
+    "cost_usd": 0.00019245
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 542,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-RFGQN6, NEEDLE-ACS1YZ, NEEDLE-0Z24CE, NEEDLE-8OJVJR, NEEDLE-H9437G",
+    "expected": "NEEDLE-RFGQN6, NEEDLE-ACS1YZ, NEEDLE-0Z24CE, NEEDLE-8OJVJR, NEEDLE-H9437G",
+    "total_tokens": 2349,
+    "input_tokens": 1779,
+    "output_tokens": 570,
+    "time_seconds": 4.618536949157715,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:02.604574",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-RFGQN6",
+        "NEEDLE-ACS1YZ",
+        "NEEDLE-0Z24CE",
+        "NEEDLE-8OJVJR",
+        "NEEDLE-H9437G"
+      ]
+    },
+    "cost_usd": 3.995e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 542,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-RFGQN6, NEEDLE-ACS1YZ, NEEDLE-0Z24CE, NEEDLE-8OJVJR, NEEDLE-H9437G",
+    "expected": "NEEDLE-RFGQN6, NEEDLE-ACS1YZ, NEEDLE-0Z24CE, NEEDLE-8OJVJR, NEEDLE-H9437G",
+    "total_tokens": 6854,
+    "input_tokens": 6360,
+    "output_tokens": 494,
+    "time_seconds": 5.027395963668823,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:03.022518",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-RFGQN6",
+        "NEEDLE-ACS1YZ",
+        "NEEDLE-0Z24CE",
+        "NEEDLE-8OJVJR",
+        "NEEDLE-H9437G"
+      ]
+    },
+    "cost_usd": 6.495e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 542,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-RFGQN6, NEEDLE-ACS1YZ, NEEDLE-0Z24CE, NEEDLE-8OJVJR, NEEDLE-H9437G",
+    "expected": "NEEDLE-RFGQN6, NEEDLE-ACS1YZ, NEEDLE-0Z24CE, NEEDLE-8OJVJR, NEEDLE-H9437G",
+    "total_tokens": 10720,
+    "input_tokens": 6743,
+    "output_tokens": 3977,
+    "time_seconds": 39.91905212402344,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:38.490438",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-RFGQN6",
+        "NEEDLE-ACS1YZ",
+        "NEEDLE-0Z24CE",
+        "NEEDLE-8OJVJR",
+        "NEEDLE-H9437G"
+      ]
+    },
+    "cost_usd": 0.0002414
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 742,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-OL8E55, NEEDLE-SZ9MDZ, NEEDLE-8NFIDH, NEEDLE-D3TYGL, NEEDLE-YJSQ88",
+    "expected": "NEEDLE-OL8E55, NEEDLE-SZ9MDZ, NEEDLE-8NFIDH, NEEDLE-D3TYGL, NEEDLE-YJSQ88",
+    "total_tokens": 6791,
+    "input_tokens": 6360,
+    "output_tokens": 431,
+    "time_seconds": 3.9382591247558594,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:18.350463",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-OL8E55",
+        "NEEDLE-SZ9MDZ",
+        "NEEDLE-8NFIDH",
+        "NEEDLE-D3TYGL",
+        "NEEDLE-YJSQ88"
+      ]
+    },
+    "cost_usd": 6.175e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 742,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-OL8E55, NEEDLE-SZ9MDZ, NEEDLE-8NFIDH, NEEDLE-D3TYGL, NEEDLE-YJSQ88",
+    "expected": "NEEDLE-OL8E55, NEEDLE-SZ9MDZ, NEEDLE-8NFIDH, NEEDLE-D3TYGL, NEEDLE-YJSQ88",
+    "total_tokens": 2277,
+    "input_tokens": 1782,
+    "output_tokens": 495,
+    "time_seconds": 6.031053066253662,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:20.434816",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-OL8E55",
+        "NEEDLE-SZ9MDZ",
+        "NEEDLE-8NFIDH",
+        "NEEDLE-D3TYGL",
+        "NEEDLE-YJSQ88"
+      ]
+    },
+    "cost_usd": 3.64e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 742,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-OL8E55, NEEDLE-SZ9MDZ, NEEDLE-8NFIDH, NEEDLE-D3TYGL, NEEDLE-YJSQ88",
+    "expected": "NEEDLE-OL8E55, NEEDLE-SZ9MDZ, NEEDLE-8NFIDH, NEEDLE-D3TYGL, NEEDLE-YJSQ88",
+    "total_tokens": 10684,
+    "input_tokens": 6763,
+    "output_tokens": 3921,
+    "time_seconds": 38.38585805892944,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:53.521951",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-OL8E55",
+        "NEEDLE-SZ9MDZ",
+        "NEEDLE-8NFIDH",
+        "NEEDLE-D3TYGL",
+        "NEEDLE-YJSQ88"
+      ]
+    },
+    "cost_usd": 0.0002387
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 842,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-5RUM6W, NEEDLE-3WPRNV, NEEDLE-UHS5ES, NEEDLE-TRNRV1, NEEDLE-9Z4L3W",
+    "expected": "NEEDLE-5RUM6W, NEEDLE-3WPRNV, NEEDLE-UHS5ES, NEEDLE-TRNRV1, NEEDLE-9Z4L3W",
+    "total_tokens": 6808,
+    "input_tokens": 6373,
+    "output_tokens": 435,
+    "time_seconds": 4.620316743850708,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:27.026098",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-5RUM6W",
+        "NEEDLE-3WPRNV",
+        "NEEDLE-UHS5ES",
+        "NEEDLE-TRNRV1",
+        "NEEDLE-9Z4L3W"
+      ]
+    },
+    "cost_usd": 6.185e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 842,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-5RUM6W, NEEDLE-3WPRNV, NEEDLE-UHS5ES, NEEDLE-TRNRV1, NEEDLE-9Z4L3W",
+    "expected": "NEEDLE-5RUM6W, NEEDLE-3WPRNV, NEEDLE-UHS5ES, NEEDLE-TRNRV1, NEEDLE-9Z4L3W",
+    "total_tokens": 2778,
+    "input_tokens": 1780,
+    "output_tokens": 998,
+    "time_seconds": 9.700719833374023,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:32.091561",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-5RUM6W",
+        "NEEDLE-3WPRNV",
+        "NEEDLE-UHS5ES",
+        "NEEDLE-TRNRV1",
+        "NEEDLE-9Z4L3W"
+      ]
+    },
+    "cost_usd": 6.155e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 842,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-5RUM6W, NEEDLE-3WPRNV, NEEDLE-UHS5ES, NEEDLE-TRNRV1, NEEDLE-9Z4L3W",
+    "expected": "NEEDLE-5RUM6W, NEEDLE-3WPRNV, NEEDLE-UHS5ES, NEEDLE-TRNRV1, NEEDLE-9Z4L3W",
+    "total_tokens": 12079,
+    "input_tokens": 6358,
+    "output_tokens": 5721,
+    "time_seconds": 48.84816217422485,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:44:11.735282",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-5RUM6W",
+        "NEEDLE-3WPRNV",
+        "NEEDLE-UHS5ES",
+        "NEEDLE-TRNRV1",
+        "NEEDLE-9Z4L3W"
+      ]
+    },
+    "cost_usd": 0.0003262
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 942,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-0TH47J], NEEDLE-9HZH85], NEEDLE-EBGF0R], NEEDLE-JXPEH8], NEEDLE-S4D337]",
+    "expected": "NEEDLE-9HZH85, NEEDLE-EBGF0R, NEEDLE-JXPEH8, NEEDLE-0TH47J, NEEDLE-S4D337",
+    "total_tokens": 2294,
+    "input_tokens": 1778,
+    "output_tokens": 516,
+    "time_seconds": 5.251901865005493,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:39.652094",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-9HZH85",
+        "NEEDLE-EBGF0R",
+        "NEEDLE-JXPEH8",
+        "NEEDLE-0TH47J",
+        "NEEDLE-S4D337"
+      ]
+    },
+    "cost_usd": 3.715e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 942,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-9HZH85, NEEDLE-EBGF0R, NEEDLE-JXPEH8, NEEDLE-0TH47J, NEEDLE-S4D337",
+    "expected": "NEEDLE-9HZH85, NEEDLE-EBGF0R, NEEDLE-JXPEH8, NEEDLE-0TH47J, NEEDLE-S4D337",
+    "total_tokens": 6801,
+    "input_tokens": 6369,
+    "output_tokens": 432,
+    "time_seconds": 5.4671971797943115,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:43:39.882016",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-9HZH85",
+        "NEEDLE-EBGF0R",
+        "NEEDLE-JXPEH8",
+        "NEEDLE-0TH47J",
+        "NEEDLE-S4D337"
+      ]
+    },
+    "cost_usd": 6.145e-05
+  },
+  {
+    "task_name": "multi_needle",
+    "task_instance_seed": 942,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "NEEDLE-9HZH85,NEEDLE-EBGF0R,NEEDLE-JXPEH8,NEEDLE-0TH47J,NEEDLE-S4D337",
+    "expected": "NEEDLE-9HZH85, NEEDLE-EBGF0R, NEEDLE-JXPEH8, NEEDLE-0TH47J, NEEDLE-S4D337",
+    "total_tokens": 11876,
+    "input_tokens": 6118,
+    "output_tokens": 5758,
+    "time_seconds": 50.95094704627991,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50150,
+    "timestamp": "2026-02-18T15:44:25.943884",
+    "metadata": {
+      "context_size": 50000,
+      "num_needles": 5,
+      "secrets": [
+        "NEEDLE-9HZH85",
+        "NEEDLE-EBGF0R",
+        "NEEDLE-JXPEH8",
+        "NEEDLE-0TH47J",
+        "NEEDLE-S4D337"
+      ]
+    },
+    "cost_usd": 0.0003267
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "expected": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "total_tokens": 2463,
+    "input_tokens": 1778,
+    "output_tokens": 685,
+    "time_seconds": 6.4668128490448,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T15:44:32.516016",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-OMICRON",
+          "relativity"
+        ],
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-GAMMA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-XI",
+          "electromagnetism"
+        ],
+        [
+          "DEF-EPSILON",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 4.555e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 342,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "expected": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "total_tokens": 8265,
+    "input_tokens": 6398,
+    "output_tokens": 1867,
+    "time_seconds": 22.082094192504883,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T15:44:48.137657",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-OMICRON",
+          "relativity"
+        ],
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-GAMMA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-XI",
+          "electromagnetism"
+        ],
+        [
+          "DEF-EPSILON",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 0.00013365
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 342,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "expected": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "total_tokens": 10737,
+    "input_tokens": 6421,
+    "output_tokens": 4316,
+    "time_seconds": 54.49345088005066,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T15:45:21.371761",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-OMICRON",
+          "relativity"
+        ],
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-GAMMA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-XI",
+          "electromagnetism"
+        ],
+        [
+          "DEF-EPSILON",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 0.00025615
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "expected": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "total_tokens": 2322,
+    "input_tokens": 1777,
+    "output_tokens": 545,
+    "time_seconds": 4.408666133880615,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50448,
+    "timestamp": "2026-02-18T15:44:30.454271",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-THETA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-KAPPA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ZETA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "continental drift"
+        ],
+        [
+          "DEF-LAMBDA",
+          "entropy"
+        ],
+        [
+          "DEF-NU",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 3.875e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 42,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-ETA=evolution, DEF-ZETA=relativity, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "expected": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "total_tokens": 7113,
+    "input_tokens": 6406,
+    "output_tokens": 707,
+    "time_seconds": 9.383408784866333,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50448,
+    "timestamp": "2026-02-18T15:44:35.445308",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-THETA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-KAPPA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ZETA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "continental drift"
+        ],
+        [
+          "DEF-LAMBDA",
+          "entropy"
+        ],
+        [
+          "DEF-NU",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 7.57e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 42,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "expected": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "total_tokens": 18258,
+    "input_tokens": 12922,
+    "output_tokens": 5336,
+    "time_seconds": 56.485793113708496,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50448,
+    "timestamp": "2026-02-18T15:45:23.406452",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-THETA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-KAPPA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ZETA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "continental drift"
+        ],
+        [
+          "DEF-LAMBDA",
+          "entropy"
+        ],
+        [
+          "DEF-NU",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 0.0003476
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "expected": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "total_tokens": 2399,
+    "input_tokens": 1778,
+    "output_tokens": 621,
+    "time_seconds": 6.263824701309204,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50445,
+    "timestamp": "2026-02-18T15:44:32.312951",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-PI",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "black holes"
+        ],
+        [
+          "DEF-MU",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "entropy"
+        ],
+        [
+          "DEF-OMICRON",
+          "antimatter"
+        ]
+      ]
+    },
+    "cost_usd": 4.235e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 242,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-OMICRON=antimatter, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-EPSILON=black holes",
+    "expected": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "total_tokens": 7555,
+    "input_tokens": 6397,
+    "output_tokens": 1158,
+    "time_seconds": 16.252036094665527,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50445,
+    "timestamp": "2026-02-18T15:44:42.325183",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-PI",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "black holes"
+        ],
+        [
+          "DEF-MU",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "entropy"
+        ],
+        [
+          "DEF-OMICRON",
+          "antimatter"
+        ]
+      ]
+    },
+    "cost_usd": 9.84e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 242,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "expected": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "total_tokens": 14659,
+    "input_tokens": 9054,
+    "output_tokens": 5605,
+    "time_seconds": 61.90923309326172,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50445,
+    "timestamp": "2026-02-18T15:45:28.914011",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-PI",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "black holes"
+        ],
+        [
+          "DEF-MU",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "entropy"
+        ],
+        [
+          "DEF-OMICRON",
+          "antimatter"
+        ]
+      ]
+    },
+    "cost_usd": 0.00033705
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 542,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-MU=continental drift, DEF-NU=photosynthesis, DEF-EPSILON=electromagnetism, DEF-IOTA=evolution, DEF-ALPHA=antimatter, DEF-LAMBDA=golden ratio, DEF-OMICRON=entropy, DEF-KAPPA=thermodynamics",
+    "expected": "DEF-MU=continental drift, DEF-NU=photosynthesis, DEF-EPSILON=electromagnetism, DEF-IOTA=evolution, DEF-ALPHA=antimatter, DEF-OMICRON=entropy, DEF-KAPPA=thermodynamics, DEF-LAMBDA=golden ratio",
+    "total_tokens": 7094,
+    "input_tokens": 6382,
+    "output_tokens": 712,
+    "time_seconds": 6.959605932235718,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50449,
+    "timestamp": "2026-02-18T15:45:30.382730",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-MU",
+          "continental drift"
+        ],
+        [
+          "DEF-NU",
+          "photosynthesis"
+        ],
+        [
+          "DEF-EPSILON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-IOTA",
+          "evolution"
+        ],
+        [
+          "DEF-ALPHA",
+          "antimatter"
+        ],
+        [
+          "DEF-OMICRON",
+          "entropy"
+        ],
+        [
+          "DEF-KAPPA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-LAMBDA",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 7.555e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 542,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-MU=continental drift, DEF-NU=photosynthesis, DEF-EPSILON=electromagnetism, DEF-IOTA=evolution, DEF-ALPHA=antimatter, DEF-OMICRON=entropy, DEF-KAPPA=thermodynamics, DEF-LAMBDA=golden ratio",
+    "expected": "DEF-MU=continental drift, DEF-NU=photosynthesis, DEF-EPSILON=electromagnetism, DEF-IOTA=evolution, DEF-ALPHA=antimatter, DEF-OMICRON=entropy, DEF-KAPPA=thermodynamics, DEF-LAMBDA=golden ratio",
+    "total_tokens": 2942,
+    "input_tokens": 1777,
+    "output_tokens": 1165,
+    "time_seconds": 11.024708032608032,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50449,
+    "timestamp": "2026-02-18T15:45:34.435617",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-MU",
+          "continental drift"
+        ],
+        [
+          "DEF-NU",
+          "photosynthesis"
+        ],
+        [
+          "DEF-EPSILON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-IOTA",
+          "evolution"
+        ],
+        [
+          "DEF-ALPHA",
+          "antimatter"
+        ],
+        [
+          "DEF-OMICRON",
+          "entropy"
+        ],
+        [
+          "DEF-KAPPA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-LAMBDA",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 6.955e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 542,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-MU=continental drift, DEF-NU=photosynthesis, DEF-EPSILON=electromagnetism, DEF-IOTA=evolution, DEF-ALPHA=antimatter, DEF-OMICRON=entropy, DEF-KAPPA=thermodynamics, DEF-LAMBDA=golden ratio",
+    "expected": "DEF-MU=continental drift, DEF-NU=photosynthesis, DEF-EPSILON=electromagnetism, DEF-IOTA=evolution, DEF-ALPHA=antimatter, DEF-OMICRON=entropy, DEF-KAPPA=thermodynamics, DEF-LAMBDA=golden ratio",
+    "total_tokens": 7226,
+    "input_tokens": 4264,
+    "output_tokens": 2962,
+    "time_seconds": 28.338617086410522,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50449,
+    "timestamp": "2026-02-18T15:45:52.559342",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-MU",
+          "continental drift"
+        ],
+        [
+          "DEF-NU",
+          "photosynthesis"
+        ],
+        [
+          "DEF-EPSILON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-IOTA",
+          "evolution"
+        ],
+        [
+          "DEF-ALPHA",
+          "antimatter"
+        ],
+        [
+          "DEF-OMICRON",
+          "entropy"
+        ],
+        [
+          "DEF-KAPPA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-LAMBDA",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 0.00017505
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "DEF-DELTA=prime numbers, DEF-IOTA=golden ratio, DEF-ETA=entropy, DEF-LAMBDA=continental drift, DEF-KAPPA=quantum entanglement, DEF-XI=superconductivity, DEF-OMICRON=electromagnetism, DEF-BETA=black holes",
+    "total_tokens": 2438,
+    "input_tokens": 1780,
+    "output_tokens": 658,
+    "time_seconds": 8.786962032318115,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50461,
+    "timestamp": "2026-02-18T15:44:34.834246",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "golden ratio"
+        ],
+        [
+          "DEF-ETA",
+          "entropy"
+        ],
+        [
+          "DEF-LAMBDA",
+          "continental drift"
+        ],
+        [
+          "DEF-KAPPA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "superconductivity"
+        ],
+        [
+          "DEF-OMICRON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 4.435e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 142,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-DELTA=prime numbers, DEF-IOTA=golden ratio, DEF-ETA=entropy, DEF-KAPPA=quantum entanglement, DEF-LAMBDA=continental drift, DEF-XI=superconductivity, DEF-OMICRON=electromagnetism, DEF-BETA=black holes",
+    "expected": "DEF-DELTA=prime numbers, DEF-IOTA=golden ratio, DEF-ETA=entropy, DEF-LAMBDA=continental drift, DEF-KAPPA=quantum entanglement, DEF-XI=superconductivity, DEF-OMICRON=electromagnetism, DEF-BETA=black holes",
+    "total_tokens": 7281,
+    "input_tokens": 6375,
+    "output_tokens": 906,
+    "time_seconds": 11.172814130783081,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50461,
+    "timestamp": "2026-02-18T15:44:37.239172",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "golden ratio"
+        ],
+        [
+          "DEF-ETA",
+          "entropy"
+        ],
+        [
+          "DEF-LAMBDA",
+          "continental drift"
+        ],
+        [
+          "DEF-KAPPA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "superconductivity"
+        ],
+        [
+          "DEF-OMICRON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 8.55e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 142,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "final_answer",
+    "expected": "DEF-DELTA=prime numbers, DEF-IOTA=golden ratio, DEF-ETA=entropy, DEF-LAMBDA=continental drift, DEF-KAPPA=quantum entanglement, DEF-XI=superconductivity, DEF-OMICRON=electromagnetism, DEF-BETA=black holes",
+    "total_tokens": 18495,
+    "input_tokens": 9888,
+    "output_tokens": 8607,
+    "time_seconds": 92.08938312530518,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50461,
+    "timestamp": "2026-02-18T15:45:59.045763",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "golden ratio"
+        ],
+        [
+          "DEF-ETA",
+          "entropy"
+        ],
+        [
+          "DEF-LAMBDA",
+          "continental drift"
+        ],
+        [
+          "DEF-KAPPA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "superconductivity"
+        ],
+        [
+          "DEF-OMICRON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 0.0004926
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-ZETA=quantum entanglement, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution",
+    "expected": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-ZETA=quantum entanglement, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution",
+    "total_tokens": 2422,
+    "input_tokens": 1774,
+    "output_tokens": 648,
+    "time_seconds": 5.936600685119629,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T15:45:27.311732",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ALPHA",
+          "dark matter"
+        ],
+        [
+          "DEF-ZETA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-GAMMA",
+          "entropy"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ],
+        [
+          "DEF-EPSILON",
+          "superconductivity"
+        ],
+        [
+          "DEF-BETA",
+          "electromagnetism"
+        ],
+        [
+          "DEF-OMICRON",
+          "evolution"
+        ]
+      ]
+    },
+    "cost_usd": 4.355e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 442,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-GAMMA=entropy, DEF-ZETA=quantum entanglement, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution, DEF-IOTA=black holes",
+    "expected": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-ZETA=quantum entanglement, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution",
+    "total_tokens": 7001,
+    "input_tokens": 6416,
+    "output_tokens": 585,
+    "time_seconds": 6.211460113525391,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T15:45:27.597387",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ALPHA",
+          "dark matter"
+        ],
+        [
+          "DEF-ZETA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-GAMMA",
+          "entropy"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ],
+        [
+          "DEF-EPSILON",
+          "superconductivity"
+        ],
+        [
+          "DEF-BETA",
+          "electromagnetism"
+        ],
+        [
+          "DEF-OMICRON",
+          "evolution"
+        ]
+      ]
+    },
+    "cost_usd": 6.97e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 442,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "final_output",
+    "expected": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-ZETA=quantum entanglement, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution",
+    "total_tokens": 12218,
+    "input_tokens": 7568,
+    "output_tokens": 4650,
+    "time_seconds": 45.362313985824585,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T15:46:07.866720",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ALPHA",
+          "dark matter"
+        ],
+        [
+          "DEF-ZETA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-GAMMA",
+          "entropy"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ],
+        [
+          "DEF-EPSILON",
+          "superconductivity"
+        ],
+        [
+          "DEF-BETA",
+          "electromagnetism"
+        ],
+        [
+          "DEF-OMICRON",
+          "evolution"
+        ]
+      ]
+    },
+    "cost_usd": 0.0002801
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 642,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 0.875,
+    "response": "DEF-DELTA=continental drift, DEF-MU=entropy, DEF-MU=entropy, DEF-LAMBDA=superconductivity, DEF-NU=dark matter, DEF-EPSILON=electromagnetism, DEF-GAMMA=thermodynamics, DEF-OMICRON=prime numbers",
+    "expected": "DEF-DELTA=continental drift, DEF-MU=entropy, DEF-ALPHA=fibonacci sequence, DEF-LAMBDA=superconductivity, DEF-NU=dark matter, DEF-EPSILON=electromagnetism, DEF-GAMMA=thermodynamics, DEF-OMICRON=prime numbers",
+    "total_tokens": 2366,
+    "input_tokens": 1779,
+    "output_tokens": 587,
+    "time_seconds": 6.033026695251465,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50464,
+    "timestamp": "2026-02-18T15:45:34.950452",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-MU",
+          "entropy"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-LAMBDA",
+          "superconductivity"
+        ],
+        [
+          "DEF-NU",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-GAMMA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-OMICRON",
+          "prime numbers"
+        ]
+      ]
+    },
+    "cost_usd": 4.075e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 642,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-DELTA=continental drift, DEF-MU=entropy, DEF-ALPHA=fibonacci sequence, DEF-LAMBDA=superconductivity, DEF-EPSILON=electromagnetism, DEF-OMICRON=prime numbers, DEF-GAMMA=thermodynamics, DEF-NU=dark matter",
+    "expected": "DEF-DELTA=continental drift, DEF-MU=entropy, DEF-ALPHA=fibonacci sequence, DEF-LAMBDA=superconductivity, DEF-NU=dark matter, DEF-EPSILON=electromagnetism, DEF-GAMMA=thermodynamics, DEF-OMICRON=prime numbers",
+    "total_tokens": 7302,
+    "input_tokens": 6397,
+    "output_tokens": 905,
+    "time_seconds": 8.777576923370361,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50464,
+    "timestamp": "2026-02-18T15:45:37.711616",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-MU",
+          "entropy"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-LAMBDA",
+          "superconductivity"
+        ],
+        [
+          "DEF-NU",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-GAMMA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-OMICRON",
+          "prime numbers"
+        ]
+      ]
+    },
+    "cost_usd": 8.56e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 642,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-DELTA=continental drift, DEF-MU=entropy, DEF-ALPHA=fibonacci sequence, DEF-LAMBDA=superconductivity, DEF-NU=dark matter, DEF-EPSILON=electromagnetism, DEF-GAMMA=thermodynamics, DEF-OMICRON=prime numbers",
+    "expected": "DEF-DELTA=continental drift, DEF-MU=entropy, DEF-ALPHA=fibonacci sequence, DEF-LAMBDA=superconductivity, DEF-NU=dark matter, DEF-EPSILON=electromagnetism, DEF-GAMMA=thermodynamics, DEF-OMICRON=prime numbers",
+    "total_tokens": 10961,
+    "input_tokens": 6754,
+    "output_tokens": 4207,
+    "time_seconds": 45.853471994400024,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50464,
+    "timestamp": "2026-02-18T15:46:15.727572",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-MU",
+          "entropy"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-LAMBDA",
+          "superconductivity"
+        ],
+        [
+          "DEF-NU",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-GAMMA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-OMICRON",
+          "prime numbers"
+        ]
+      ]
+    },
+    "cost_usd": 0.00025305
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 942,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "DEF-ZETA=neural plasticity, DEF-BETA=photosynthesis, DEF-ETA=dark matter, DEF-GAMMA=quantum entanglement, DEF-LAMBDA=prime numbers, DEF-ALPHA=thermodynamics, DEF-IOTA=evolution, DEF-THETA=golden ratio",
+    "total_tokens": 2305,
+    "input_tokens": 1779,
+    "output_tokens": 526,
+    "time_seconds": 5.4368040561676025,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T15:46:13.307522",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-BETA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-GAMMA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-LAMBDA",
+          "prime numbers"
+        ],
+        [
+          "DEF-ALPHA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "evolution"
+        ],
+        [
+          "DEF-THETA",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 3.795e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 942,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ZETA=neural plasticity, DEF-BETA=photosynthesis, DEF-ETA=dark matter, DEF-LAMBDA=prime numbers, DEF-GAMMA=quantum entanglement, DEF-ALPHA=thermodynamics, DEF-IOTA=evolution, DEF-THETA=golden ratio",
+    "expected": "DEF-ZETA=neural plasticity, DEF-BETA=photosynthesis, DEF-ETA=dark matter, DEF-GAMMA=quantum entanglement, DEF-LAMBDA=prime numbers, DEF-ALPHA=thermodynamics, DEF-IOTA=evolution, DEF-THETA=golden ratio",
+    "total_tokens": 7003,
+    "input_tokens": 6417,
+    "output_tokens": 586,
+    "time_seconds": 6.151585817337036,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T15:46:14.029148",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-BETA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-GAMMA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-LAMBDA",
+          "prime numbers"
+        ],
+        [
+          "DEF-ALPHA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "evolution"
+        ],
+        [
+          "DEF-THETA",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 6.975e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 942,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ZETA=neural plasticity, DEF-BETA=photosynthesis, DEF-ETA=dark matter, DEF-GAMMA=quantum entanglement, DEF-LAMBDA=prime numbers, DEF-ALPHA=thermodynamics, DEF-IOTA=evolution, DEF-THETA=golden ratio",
+    "expected": "DEF-ZETA=neural plasticity, DEF-BETA=photosynthesis, DEF-ETA=dark matter, DEF-GAMMA=quantum entanglement, DEF-LAMBDA=prime numbers, DEF-ALPHA=thermodynamics, DEF-IOTA=evolution, DEF-THETA=golden ratio",
+    "total_tokens": 7438,
+    "input_tokens": 4163,
+    "output_tokens": 3275,
+    "time_seconds": 31.36464786529541,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T15:46:40.041686",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-BETA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-GAMMA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-LAMBDA",
+          "prime numbers"
+        ],
+        [
+          "DEF-ALPHA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "evolution"
+        ],
+        [
+          "DEF-THETA",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 0.00019005
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 842,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-IOTA=superconductivity, DEF-DELTA=quantum entanglement, DEF-XI=continental drift, DEF-EPSILON=photosynthesis, DEF-LAMBDA=evolution, DEF-OMICRON=golden ratio, DEF-ALPHA=relativity, DEF-ETA=thermodynamics",
+    "expected": "DEF-IOTA=superconductivity, DEF-DELTA=quantum entanglement, DEF-XI=continental drift, DEF-EPSILON=photosynthesis, DEF-LAMBDA=evolution, DEF-OMICRON=golden ratio, DEF-ALPHA=relativity, DEF-ETA=thermodynamics",
+    "total_tokens": 2329,
+    "input_tokens": 1776,
+    "output_tokens": 553,
+    "time_seconds": 5.673548936843872,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50464,
+    "timestamp": "2026-02-18T15:46:04.724318",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-IOTA",
+          "superconductivity"
+        ],
+        [
+          "DEF-DELTA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "continental drift"
+        ],
+        [
+          "DEF-EPSILON",
+          "photosynthesis"
+        ],
+        [
+          "DEF-LAMBDA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "golden ratio"
+        ],
+        [
+          "DEF-ALPHA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ]
+      ]
+    },
+    "cost_usd": 3.91e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 842,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-IOTA=superconductivity, DEF-DELTA=quantum entanglement, DEF-XI=continental drift, DEF-EPSILON=photosynthesis, DEF-LAMBDA=evolution, DEF-OMICRON=golden ratio, DEF-ALPHA=relativity, DEF-ETA=thermodynamics",
+    "expected": "DEF-IOTA=superconductivity, DEF-DELTA=quantum entanglement, DEF-XI=continental drift, DEF-EPSILON=photosynthesis, DEF-LAMBDA=evolution, DEF-OMICRON=golden ratio, DEF-ALPHA=relativity, DEF-ETA=thermodynamics",
+    "total_tokens": 7199,
+    "input_tokens": 6421,
+    "output_tokens": 778,
+    "time_seconds": 10.932730197906494,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50464,
+    "timestamp": "2026-02-18T15:46:09.992035",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-IOTA",
+          "superconductivity"
+        ],
+        [
+          "DEF-DELTA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "continental drift"
+        ],
+        [
+          "DEF-EPSILON",
+          "photosynthesis"
+        ],
+        [
+          "DEF-LAMBDA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "golden ratio"
+        ],
+        [
+          "DEF-ALPHA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ]
+      ]
+    },
+    "cost_usd": 7.935e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 842,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-IOTA=superconductivity, DEF-DELTA=quantum entanglement, DEF-XI=continental drift, DEF-EPSILON=photosynthesis, DEF-LAMBDA=evolution, DEF-OMICRON=golden ratio, DEF-ALPHA=relativity, DEF-ETA=thermodynamics",
+    "expected": "DEF-IOTA=superconductivity, DEF-DELTA=quantum entanglement, DEF-XI=continental drift, DEF-EPSILON=photosynthesis, DEF-LAMBDA=evolution, DEF-OMICRON=golden ratio, DEF-ALPHA=relativity, DEF-ETA=thermodynamics",
+    "total_tokens": 10180,
+    "input_tokens": 4136,
+    "output_tokens": 6044,
+    "time_seconds": 55.44589900970459,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50464,
+    "timestamp": "2026-02-18T15:46:55.295359",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-IOTA",
+          "superconductivity"
+        ],
+        [
+          "DEF-DELTA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "continental drift"
+        ],
+        [
+          "DEF-EPSILON",
+          "photosynthesis"
+        ],
+        [
+          "DEF-LAMBDA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "golden ratio"
+        ],
+        [
+          "DEF-ALPHA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ]
+      ]
+    },
+    "cost_usd": 0.00032825
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 742,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-MU=evolution, DEF-OMICRON=neural plasticity, DEF-ZETA=photosynthesis, DEF-IOTA=antimatter, DEF-LAMBDA=superconductivity, DEF-DELTA=fibonacci sequence, DEF-THETA=black holes, DEF-PI=electromagnetism",
+    "expected": "DEF-MU=evolution, DEF-OMICRON=neural plasticity, DEF-ZETA=photosynthesis, DEF-IOTA=antimatter, DEF-LAMBDA=superconductivity, DEF-DELTA=fibonacci sequence, DEF-THETA=black holes, DEF-PI=electromagnetism",
+    "total_tokens": 2404,
+    "input_tokens": 1777,
+    "output_tokens": 627,
+    "time_seconds": 7.083518028259277,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T15:45:59.647089",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-MU",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ZETA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-LAMBDA",
+          "superconductivity"
+        ],
+        [
+          "DEF-DELTA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-THETA",
+          "black holes"
+        ],
+        [
+          "DEF-PI",
+          "electromagnetism"
+        ]
+      ]
+    },
+    "cost_usd": 4.275e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 742,
+    "runner_name": "vanilla",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-MU=evolution, DEF-OMICRON=neural plasticity, DEF-ZETA=photosynthesis, DEF-IOTA=antimatter, DEF-LAMBDA=superconductivity, DEF-DELTA=fibonacci sequence, DEF-THETA=black holes, DEF-PI=electromagnetism",
+    "expected": "DEF-MU=evolution, DEF-OMICRON=neural plasticity, DEF-ZETA=photosynthesis, DEF-IOTA=antimatter, DEF-LAMBDA=superconductivity, DEF-DELTA=fibonacci sequence, DEF-THETA=black holes, DEF-PI=electromagnetism",
+    "total_tokens": 7275,
+    "input_tokens": 6434,
+    "output_tokens": 841,
+    "time_seconds": 9.655267000198364,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T15:46:02.225404",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-MU",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ZETA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-LAMBDA",
+          "superconductivity"
+        ],
+        [
+          "DEF-DELTA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-THETA",
+          "black holes"
+        ],
+        [
+          "DEF-PI",
+          "electromagnetism"
+        ]
+      ]
+    },
+    "cost_usd": 8.265e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 742,
+    "runner_name": "official",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-MU=evolution, DEF-OMICRON=neural plasticity, DEF-ZETA=photosynthesis, DEF-IOTA=antimatter, DEF-LAMBDA=superconductivity, DEF-DELTA=fibonacci sequence, DEF-THETA=black holes, DEF-PI=electromagnetism",
+    "expected": "DEF-MU=evolution, DEF-OMICRON=neural plasticity, DEF-ZETA=photosynthesis, DEF-IOTA=antimatter, DEF-LAMBDA=superconductivity, DEF-DELTA=fibonacci sequence, DEF-THETA=black holes, DEF-PI=electromagnetism",
+    "total_tokens": 17787,
+    "input_tokens": 9776,
+    "output_tokens": 8011,
+    "time_seconds": 74.98200798034668,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T15:47:08.494164",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-MU",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ZETA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-LAMBDA",
+          "superconductivity"
+        ],
+        [
+          "DEF-DELTA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-THETA",
+          "black holes"
+        ],
+        [
+          "DEF-PI",
+          "electromagnetism"
+        ]
+      ]
+    },
+    "cost_usd": 0.0004619
+  }
+]

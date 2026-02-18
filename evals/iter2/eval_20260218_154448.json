@@ -1,0 +1,647 @@
+[
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: correct",
+    "expected": "correct",
+    "total_tokens": 2690,
+    "input_tokens": 2151,
+    "output_tokens": 539,
+    "time_seconds": 5.498266696929932,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T15:43:06.269580",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 80000
+    },
+    "cost_usd": 4.07e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "Label: correct",
+    "expected": "incorrect",
+    "total_tokens": 2719,
+    "input_tokens": 2151,
+    "output_tokens": 568,
+    "time_seconds": 5.7066779136657715,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T15:43:06.604465",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 80000
+    },
+    "cost_usd": 4.19e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: incorrect is more common than correct",
+    "expected": "more common than",
+    "total_tokens": 6461,
+    "input_tokens": 4556,
+    "output_tokens": 1905,
+    "time_seconds": 31.62034296989441,
+    "iterations": 2,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T15:43:31.975114",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 80000
+    },
+    "cost_usd": 0.0001241
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Label: correct",
+    "expected": "correct",
+    "total_tokens": 3324,
+    "input_tokens": 2151,
+    "output_tokens": 1173,
+    "time_seconds": 30.568015098571777,
+    "iterations": 1,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T15:43:36.842490",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.LABEL",
+      "context_window_id": 80000
+    },
+    "cost_usd": 7.23e-05
+  },
+  {
+    "task_name": "official_oolong",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "Answer: incorrect is more common than correct",
+    "expected": "more common than",
+    "total_tokens": 9374,
+    "input_tokens": 7222,
+    "output_tokens": 2152,
+    "time_seconds": 37.71470904350281,
+    "iterations": 3,
+    "error": null,
+    "context_size": 2382,
+    "timestamp": "2026-02-18T15:43:38.295324",
+    "metadata": {
+      "dataset": "metaphors",
+      "context_len": 1024,
+      "answer_type": "ANSWER_TYPE.COMPARISON",
+      "context_window_id": 80000
+    },
+    "cost_usd": 0.0001528
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "make_simple_prefix||def make_simple_prefix(nl_count: int, form_feed: bool, empty_line: str = \"\\n\") -> str:\n    \"\"\"Generate a normalized prefix string.\"\"\"\n    if form_feed:\n        return (empty_line * (nl_count - 1)) + \"\\f\" + empty_line\n    return empty_line * nl_count",
+    "total_tokens": 6771,
+    "input_tokens": 5381,
+    "output_tokens": 1390,
+    "time_seconds": 16.525506258010864,
+    "iterations": 2,
+    "error": null,
+    "context_size": 28941,
+    "timestamp": "2026-02-18T15:43:55.829403",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "make_simple_prefix"
+    },
+    "cost_usd": 0.00010365
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "make_simple_prefix||def make_simple_prefix(nl_count: int, form_feed: bool, empty_line: str = \"\\n\") -> str:\n    \"\"\"Generate a normalized prefix string.\"\"\"\n    if form_feed:\n        return (empty_line * (nl_count - 1)) + \"\\f\" + empty_line\n    return empty_line * nl_count",
+    "total_tokens": 6668,
+    "input_tokens": 5000,
+    "output_tokens": 1668,
+    "time_seconds": 18.9113028049469,
+    "iterations": 2,
+    "error": null,
+    "context_size": 28941,
+    "timestamp": "2026-02-18T15:43:58.058738",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "make_simple_prefix"
+    },
+    "cost_usd": 0.00011485
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "_merge_string_group||def _merge_string_group(\n        self, line: Line, string_indices: List[int]\n    ) -> TResult[Line]:\n        \"\"\"\n        Merges string groups (i.e. set of adjacent strings).\n\n        Each index from `string_indices` designates one string group's first\n        leaf in `line.leaves`.\n\n        Returns:\n            Ok(new_line), if ALL of the validation checks found in\n            _validate_msg(...) pass.\n                OR\n            Err(CannotTransform), otherwise.\n        \"\"\"\n        LL = line.leaves\n\n        is_valid_index = is_valid_index_factory(LL)\n\n        # A dict of {string_idx: tuple[num_of_strings, string_leaf]}.\n        merged_string_idx_dict: Dict[int, Tuple[int, Leaf]] = {}\n        for string_idx in string_indices:\n            vresult = self._validate_msg(line, string_idx)\n            if isinstance(vresult, Err):\n                continue\n            merged_string_idx_dict[string_idx] = self._merge_one_string_group(\n                LL, string_idx, is_valid_index\n            )\n\n        if not merged_string_idx_dict:\n            return TErr(\"No string group is merged\")\n\n        # Build the final line ('new_line') that this method will later return.\n        new_line = line.clone()\n        previous_merged_string_idx = -1\n        previous_merged_num_of_strings = -1\n        for i, leaf in enumerate(LL):\n            if i in merged_string_idx_dict:\n                previous_merged_string_idx = i\n                previous_merged_num_of_strings, string_leaf = merged_string_idx_dict[i]\n                new_line.append(string_leaf)\n\n            if (\n                previous_merged_string_idx\n                <= i\n                < previous_merged_string_idx + previous_merged_num_of_strings\n            ):\n                for comment_leaf in line.comments_after(LL[i]):\n                    new_line.append(comment_leaf, preformatted=True)\n                continue\n\n            append_leaves(new_line, line, [leaf])\n\n        return Ok(new_line)",
+    "total_tokens": 9232,
+    "input_tokens": 6134,
+    "output_tokens": 3098,
+    "time_seconds": 29.979764938354492,
+    "iterations": 2,
+    "error": null,
+    "context_size": 95502,
+    "timestamp": "2026-02-18T15:44:09.122752",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "_merge_string_group"
+    },
+    "cost_usd": 0.0001936
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "r:\n            raise ValueError(\n                \"Incorrect --line-ranges value, expect integer ranges, found\"\n                f\" {lines_str!r}\"\n            ) from None\n        else:\n            lines.append((start, end))\n    return lines\n\n\ndef is_valid_line_range(lines: Tuple[int, int]) -> bool:\n    \"\"\"Returns whether the line range is valid.\"\"\"\n    return not lines or lines[0] <= lines[1]\n\n\ndef adjusted_lines(\n    lines: Collection[Tuple[int, int]],\n    original_source: str,\n    modified_source: str,\n) -> List[Tuple[int, int]]:\n    \"\"\"Returns the adjusted line ranges based on edits from the original code.\n\n    This computes the new line ranges by diffing original_source and\n    modified_source, and adjust each range based on how the range overlaps with\n    the diffs.\n\n    Note the diff can contain lines outside of the original line ranges. This can\n    happen when the formatting has to be done in adj",
+    "expected": "convert_unchanged_lines||def convert_unchanged_lines(src_node: Node, lines: Collection[Tuple[int, int]]) -> None:\n    \"\"\"Converts unchanged lines to STANDALONE_COMMENT.\n\n    The idea is similar to how `# fmt: on/off` is implemented. It also converts the\n    nodes between those markers as a single `STANDALONE_COMMENT` leaf node with\n    the unformatted code as its value. `STANDALONE_COMMENT` is a \"fake\" token\n    that will be formatted as-is with its prefix normalized.\n\n    Here we perform two passes:\n\n    1. Visit the top-level statements, and convert them to a single\n       `STANDALONE_COMMENT` when unchanged. This speeds up formatting when some\n       of the top-level statements aren't changed.\n    2. Convert unchanged \"unwrapped lines\" to `STANDALONE_COMMENT` nodes line by\n       line. \"unwrapped lines\" are divided by the `NEWLINE` token. e.g. a\n       multi-line statement is *one* \"unwrapped line\" that ends with `NEWLINE`,\n       even though this statement itself can span multiple lines, and the\n       tokenizer only sees the last '\\n' as the `NEWLINE` token.\n\n    NOTE: During pass (2), comment prefixes and indentations are ALWAYS\n    normalized even when the lines aren't changed. This is fixable by moving\n    more formatting to pass (1). However, it's hard to get it correct when\n    incorrect indentations are used. So we defer this to future optimizations.\n    \"\"\"\n    lines_set: Set[int] = set()\n    for start, end in lines:\n        lines_set.update(range(start, end + 1))\n    visitor = _TopLevelStatementsVisitor(lines_set)\n    _ = list(visitor.visit(src_node))  # Consume all results.\n    _convert_unchanged_line_by_line(src_node, lines_set)",
+    "total_tokens": 6925,
+    "input_tokens": 5341,
+    "output_tokens": 1584,
+    "time_seconds": 17.30654287338257,
+    "iterations": 2,
+    "error": null,
+    "context_size": 18847,
+    "timestamp": "2026-02-18T15:44:13.142962",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "convert_unchanged_lines"
+    },
+    "cost_usd": 0.0001126
+  },
+  {
+    "task_name": "official_repoqa",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "r:\n            raise ValueError(\n                \"Incorrect --line-ranges value, expect integer ranges, found\"\n                f\" {lines_str!r}\"\n            ) from None\n        else:\n            lines.append((start, end))\n    return lines\n\n\ndef is_valid_line_range(lines: Tuple[int, int]) -> bool:\n    \"\"\"Returns whether the line range is valid.\"\"\"\n    return not lines or lines[0] <= lines[1]\n\n\ndef adjusted_lines(\n    lines: Collection[Tuple[int, int]],\n    original_source: str,\n    modified_source: str,\n) -> List[Tuple[int, int]]:\n    \"\"\"Returns the adjusted line ranges based on edits from the original code.\n\n    This computes the new line ranges by diffing original_source and\n    modified_source, and adjust each range based on how the range overlaps with\n    the diffs.\n\n    Note the diff can contain lines outside of the original line ranges. This can\n    happen when the formatting has to be done in adj",
+    "expected": "convert_unchanged_lines||def convert_unchanged_lines(src_node: Node, lines: Collection[Tuple[int, int]]) -> None:\n    \"\"\"Converts unchanged lines to STANDALONE_COMMENT.\n\n    The idea is similar to how `# fmt: on/off` is implemented. It also converts the\n    nodes between those markers as a single `STANDALONE_COMMENT` leaf node with\n    the unformatted code as its value. `STANDALONE_COMMENT` is a \"fake\" token\n    that will be formatted as-is with its prefix normalized.\n\n    Here we perform two passes:\n\n    1. Visit the top-level statements, and convert them to a single\n       `STANDALONE_COMMENT` when unchanged. This speeds up formatting when some\n       of the top-level statements aren't changed.\n    2. Convert unchanged \"unwrapped lines\" to `STANDALONE_COMMENT` nodes line by\n       line. \"unwrapped lines\" are divided by the `NEWLINE` token. e.g. a\n       multi-line statement is *one* \"unwrapped line\" that ends with `NEWLINE`,\n       even though this statement itself can span multiple lines, and the\n       tokenizer only sees the last '\\n' as the `NEWLINE` token.\n\n    NOTE: During pass (2), comment prefixes and indentations are ALWAYS\n    normalized even when the lines aren't changed. This is fixable by moving\n    more formatting to pass (1). However, it's hard to get it correct when\n    incorrect indentations are used. So we defer this to future optimizations.\n    \"\"\"\n    lines_set: Set[int] = set()\n    for start, end in lines:\n        lines_set.update(range(start, end + 1))\n    visitor = _TopLevelStatementsVisitor(lines_set)\n    _ = list(visitor.visit(src_node))  # Consume all results.\n    _convert_unchanged_line_by_line(src_node, lines_set)",
+    "total_tokens": 14956,
+    "input_tokens": 10612,
+    "output_tokens": 4344,
+    "time_seconds": 37.116594076156616,
+    "iterations": 3,
+    "error": null,
+    "context_size": 18847,
+    "timestamp": "2026-02-18T15:44:16.599750",
+    "metadata": {
+      "repo": "psf/black",
+      "language": "python",
+      "id": "convert_unchanged_lines"
+    },
+    "cost_usd": 0.00028355
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "D",
+    "expected": "D",
+    "total_tokens": 3049,
+    "input_tokens": 2493,
+    "output_tokens": 556,
+    "time_seconds": 5.344691038131714,
+    "iterations": 1,
+    "error": null,
+    "context_size": 129805,
+    "timestamp": "2026-02-18T15:44:22.343206",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 4.36e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "C",
+    "expected": "A",
+    "total_tokens": 3004,
+    "input_tokens": 2595,
+    "output_tokens": 409,
+    "time_seconds": 5.84543776512146,
+    "iterations": 1,
+    "error": null,
+    "context_size": 453895,
+    "timestamp": "2026-02-18T15:44:22.844142",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 3.705e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "B",
+    "expected": "D",
+    "total_tokens": 7572,
+    "input_tokens": 6326,
+    "output_tokens": 1246,
+    "time_seconds": 11.946586847305298,
+    "iterations": 2,
+    "error": null,
+    "context_size": 129805,
+    "timestamp": "2026-02-18T15:44:28.954371",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 0.0001024
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "C",
+    "expected": "B",
+    "total_tokens": 6058,
+    "input_tokens": 4888,
+    "output_tokens": 1170,
+    "time_seconds": 13.191642761230469,
+    "iterations": 2,
+    "error": null,
+    "context_size": 327523,
+    "timestamp": "2026-02-18T15:44:30.195221",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 8.935e-05
+  },
+  {
+    "task_name": "official_codeqa",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "C",
+    "expected": "A",
+    "total_tokens": 6409,
+    "input_tokens": 5356,
+    "output_tokens": 1053,
+    "time_seconds": 15.585649967193604,
+    "iterations": 2,
+    "error": null,
+    "context_size": 453895,
+    "timestamp": "2026-02-18T15:44:37.940890",
+    "metadata": {
+      "domain": "Code Repository Understanding",
+      "sub_domain": "Code repo QA"
+    },
+    "cost_usd": 8.63e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 42,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "expected": "DEF-THETA=fibonacci sequence, DEF-KAPPA=photosynthesis, DEF-ZETA=relativity, DEF-ETA=evolution, DEF-OMICRON=continental drift, DEF-LAMBDA=entropy, DEF-NU=thermodynamics, DEF-IOTA=black holes",
+    "total_tokens": 2454,
+    "input_tokens": 2104,
+    "output_tokens": 350,
+    "time_seconds": 3.381417989730835,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50448,
+    "timestamp": "2026-02-18T15:44:41.398370",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-THETA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-KAPPA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ZETA",
+          "relativity"
+        ],
+        [
+          "DEF-ETA",
+          "evolution"
+        ],
+        [
+          "DEF-OMICRON",
+          "continental drift"
+        ],
+        [
+          "DEF-LAMBDA",
+          "entropy"
+        ],
+        [
+          "DEF-NU",
+          "thermodynamics"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 3.115e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 242,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "expected": "DEF-ZETA=prime numbers, DEF-DELTA=continental drift, DEF-PI=thermodynamics, DEF-ETA=dark matter, DEF-EPSILON=black holes, DEF-MU=electromagnetism, DEF-BETA=entropy, DEF-OMICRON=antimatter",
+    "total_tokens": 2691,
+    "input_tokens": 2105,
+    "output_tokens": 586,
+    "time_seconds": 5.123734951019287,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50445,
+    "timestamp": "2026-02-18T15:44:43.142390",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-DELTA",
+          "continental drift"
+        ],
+        [
+          "DEF-PI",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ETA",
+          "dark matter"
+        ],
+        [
+          "DEF-EPSILON",
+          "black holes"
+        ],
+        [
+          "DEF-MU",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "entropy"
+        ],
+        [
+          "DEF-OMICRON",
+          "antimatter"
+        ]
+      ]
+    },
+    "cost_usd": 4.28e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 342,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "DEF-OMICRON=relativity, DEF-ZETA=prime numbers, DEF-IOTA=antimatter, DEF-GAMMA=neural plasticity, DEF-ETA=thermodynamics, DEF-ALPHA=fibonacci sequence, DEF-XI=electromagnetism, DEF-EPSILON=golden ratio",
+    "total_tokens": 2629,
+    "input_tokens": 2105,
+    "output_tokens": 524,
+    "time_seconds": 5.987667083740234,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50459,
+    "timestamp": "2026-02-18T15:44:44.004555",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-OMICRON",
+          "relativity"
+        ],
+        [
+          "DEF-ZETA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "antimatter"
+        ],
+        [
+          "DEF-GAMMA",
+          "neural plasticity"
+        ],
+        [
+          "DEF-ETA",
+          "thermodynamics"
+        ],
+        [
+          "DEF-ALPHA",
+          "fibonacci sequence"
+        ],
+        [
+          "DEF-XI",
+          "electromagnetism"
+        ],
+        [
+          "DEF-EPSILON",
+          "golden ratio"
+        ]
+      ]
+    },
+    "cost_usd": 3.96e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 142,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": false,
+    "partial_score": 0.0,
+    "response": "",
+    "expected": "DEF-DELTA=prime numbers, DEF-IOTA=golden ratio, DEF-ETA=entropy, DEF-LAMBDA=continental drift, DEF-KAPPA=quantum entanglement, DEF-XI=superconductivity, DEF-OMICRON=electromagnetism, DEF-BETA=black holes",
+    "total_tokens": 2738,
+    "input_tokens": 2107,
+    "output_tokens": 631,
+    "time_seconds": 7.302973985671997,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50461,
+    "timestamp": "2026-02-18T15:44:45.321149",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "prime numbers"
+        ],
+        [
+          "DEF-IOTA",
+          "golden ratio"
+        ],
+        [
+          "DEF-ETA",
+          "entropy"
+        ],
+        [
+          "DEF-LAMBDA",
+          "continental drift"
+        ],
+        [
+          "DEF-KAPPA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-XI",
+          "superconductivity"
+        ],
+        [
+          "DEF-OMICRON",
+          "electromagnetism"
+        ],
+        [
+          "DEF-BETA",
+          "black holes"
+        ]
+      ]
+    },
+    "cost_usd": 4.52e-05
+  },
+  {
+    "task_name": "pairs",
+    "task_instance_seed": 442,
+    "runner_name": "ours",
+    "model": "gpt-5-nano",
+    "correct": true,
+    "partial_score": 1.0,
+    "response": "DEF-ALPHA=dark matter, DEF-BETA=electromagnetism, DEF-DELTA=photosynthesis, DEF-EPSILON=superconductivity, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-OMICRON=evolution, DEF-ZETA=quantum entanglement",
+    "expected": "DEF-DELTA=photosynthesis, DEF-ALPHA=dark matter, DEF-ZETA=quantum entanglement, DEF-GAMMA=entropy, DEF-IOTA=black holes, DEF-EPSILON=superconductivity, DEF-BETA=electromagnetism, DEF-OMICRON=evolution",
+    "total_tokens": 2662,
+    "input_tokens": 2101,
+    "output_tokens": 561,
+    "time_seconds": 6.617382049560547,
+    "iterations": 1,
+    "error": null,
+    "context_size": 50458,
+    "timestamp": "2026-02-18T15:44:48.020990",
+    "metadata": {
+      "context_size": 50000,
+      "num_pairs": 8,
+      "pairs": [
+        [
+          "DEF-DELTA",
+          "photosynthesis"
+        ],
+        [
+          "DEF-ALPHA",
+          "dark matter"
+        ],
+        [
+          "DEF-ZETA",
+          "quantum entanglement"
+        ],
+        [
+          "DEF-GAMMA",
+          "entropy"
+        ],
+        [
+          "DEF-IOTA",
+          "black holes"
+        ],
+        [
+          "DEF-EPSILON",
+          "superconductivity"
+        ],
+        [
+          "DEF-BETA",
+          "electromagnetism"
+        ],
+        [
+          "DEF-OMICRON",
+          "evolution"
+        ]
+      ]
+    },
+    "cost_usd": 4.155e-05
+  }
+]

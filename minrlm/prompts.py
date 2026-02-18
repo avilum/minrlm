@@ -56,20 +56,17 @@ Approach by data type:
         parsed.append((date_str, user, instance))
     # If task asks for user ID, extract it with FINAL(user) not FINAL("User: " + user)
     # Labels are NEVER explicit — always classify semantically with sub_llm_batch:
-    # Extract expected label format from task_0 (e.g., correct/incorrect, positive/negative)
     import re
-    label_match = re.search(r'\b(correct|incorrect|true|false|positive|negative|yes|no)\b', task_0, re.I)
-    if label_match:
-        label1 = label_match.group(1).lower()
-        # Find the opposite label
-        opposite_map = {'correct':'incorrect', 'incorrect':'correct', 'true':'false', 'false':'true',
-                        'positive':'negative', 'negative':'positive', 'yes':'no', 'no':'yes'}
-        label2 = opposite_map.get(label1, 'incorrect')
-        task_str = f"Classify as {label1} or {label2}. Reply with ONLY the word: {label1} or {label2}"
+    # Determine label format from task (correct/incorrect, positive/negative, etc.)
+    if 'correct' in task_0.lower() or 'incorrect' in task_0.lower():
+        task_str = "Classify. Answer with ONLY ONE WORD: correct or incorrect"
+    elif 'positive' in task_0.lower() or 'negative' in task_0.lower():
+        task_str = "Classify. Answer with ONLY ONE WORD: positive or negative"
     else:
-        task_str = "Classify as correct or incorrect. Reply with ONLY the word: correct or incorrect"
+        task_str = "Classify as correct or incorrect. Answer with ONLY ONE WORD: correct or incorrect"
+    # Call sub_llm_batch and use results DIRECTLY - no "Label:" prefix, no formatting
     labels = sub_llm_batch([(task_str, inst) for _, _, inst in parsed])
-    # ALWAYS use labels directly without any prefix - compare: label.strip().lower() == "correct"
+    # Use the raw label: if labels[i].strip().lower() == "correct": ...
   For date-range filtering, parse date_str AFTER extracting it from parts[0]:
     from datetime import datetime
     DATE_FMTS = ("%b %d, %Y", "%B %d, %Y", "%Y-%m-%d", "%d %b %Y")
@@ -82,27 +79,24 @@ Approach by data type:
 - Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
 - Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
 - Multi-condition filter: iterate splitlines(), extract both fields from each line.
-- Code/function retrieval (REPOQA): find and return code that ALREADY EXISTS in input_0.
-  ⚠ NEVER search with description text. NEVER implement the function yourself.
-  ALWAYS use this mandatory 3-step pattern — step 1 is sub_llm, NO EXCEPTIONS:
-    # Step 1: sub_llm identifies the exact function name from code preview
-    preview = input_0[:2000]  # actual code — do NOT use peek() (returns size metadata)
-    func_name = sub_llm("What function name is being asked about? Reply with ONLY the function name.",
+- Code/function retrieval (REPOQA): Extract existing function from input_0.
+  ⚠ CRITICAL: Use sub_llm to identify function name. DO NOT guess or extract manually.
+  MANDATORY 3-step algorithm:
+    # Step 1: Ask sub_llm to identify the function name
+    preview = input_0[:2000]
+    func_name = sub_llm("Reply with ONLY the function name, nothing else.",
                         preview + "\n\nTask: " + task_0).strip()
-    # Step 2: search for the definition with fallback logic
+    # Step 2: Search with multiple fallbacks
     res = search(input_0, "def " + func_name)
     if not res: res = search(input_0, func_name + "(")
     if not res: res = search(input_0, func_name)
-    # Step 3: return name||code format (function name + "||" + code)
+    # Step 3: Format as "name||code" and return
     if res:
-        match, before, after = res[0]
-        FINAL(func_name + "||" + before[-400:] + match + after[:2000])
+        m, b, a = res[0]
+        result = func_name + "||" + b[-400:] + m + a[:2000]
+        FINAL(result)
     else:
-        pos = input_0.find(func_name)
-        if pos >= 0:
-            FINAL(func_name + "||" + input_0[max(0,pos-400):pos+3000])
-        else:
-            FINAL("")  # Function not found
+        FINAL("")
 - Multiple-choice questions on code (CODEQA): MUST search MULTIPLE terms and gather evidence.
   ⚠ NEVER answer based on single keyword! NEVER guess! NEVER pick based on one search result!
   ALWAYS collect evidence from at least 3 different searches before calling sub_llm:
