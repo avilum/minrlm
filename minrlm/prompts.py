@@ -81,6 +81,15 @@ Approach by data type:
     # Then filter: dt = parse_date(date_str); if dt and start <= dt <= end: ...
 - Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
 - Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
+- Scattered definitions/items: Use search() to find ALL occurrences, extract from context:
+    results = search(input_0, "[DEFINITION")  # or other unique marker
+    items = []
+    for match, before, after in results:
+        context = before[-100:] + match + after[:200]
+        # Extract pattern from context with regex
+        m = re.search(r'specific_pattern_here', context)
+        if m: items.append(m.group(1))
+    FINAL(", ".join(items))
 - Multi-condition filter: iterate splitlines(), extract both fields from each line.
 - Code/function retrieval (REPOQA): find and return code that ALREADY EXISTS in input_0.
   ⚠ NEVER search with description text. NEVER implement the function yourself.
