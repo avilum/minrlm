@@ -38,62 +38,69 @@ Tools:
 
 Approach by data type:
 - Structured data (JSON, CSV): parse directly (json.loads(), csv, etc.), filter/aggregate, FINAL.
-- Record-per-line pipe-delimited data (format: "Date: X || User: Y || Instance: ..."):
+- Record-per-line delimited data (format: "Field1: X || Field2: Y" or similar patterns):
   Use splitlines() — NEVER use search()+before/after for this format. Each record is one
   full line; search()'s 500-char window splits mid-record, corrupting field extraction.
-  Standard pattern for this 3-field format (label needs semantic classification):
+  Pattern with automatic delimiter detection (handles "||", "|", multiple spaces, etc.):
     import re
-    from collections import Counter, defaultdict
-    data_lines = [l for l in input_0.splitlines() if l.startswith("Date:")]
-    parsed = []
-    for line in data_lines:
-        parts = [p.strip() for p in line.split("||")]
-        if len(parts) < 3: continue
-        date_str = parts[0].replace("Date:", "").strip()
-        user_match = re.search(r"User:\s*(\d+)", parts[1])
-        user = user_match.group(1) if user_match else ""
-        instance = parts[2].replace("Instance:", "").strip()
-        parsed.append((date_str, user, instance))
-    # If task asks for user ID, extract it with FINAL(user) not FINAL("User: " + user)
-    # Labels are NEVER explicit — always classify semantically with sub_llm_batch:
-    # Extract expected label format from task_0 (e.g., correct/incorrect, positive/negative)
-    import re
-    label_match = re.search(r'\b(correct|incorrect|true|false|positive|negative|yes|no)\b', task_0, re.I)
+    from collections import Counter
+    # Step 1: Detect delimiter by finding most common multi-char separator in first 10 lines
+    sample_lines = input_0.splitlines()[:10]
+    delim_candidates = ["||", " | ", " |", "| ", "\t"]
+    delimiter = None
+    for delim in delim_candidates:
+        if any(delim in line for line in sample_lines if line.strip()):
+            delimiter = delim
+            break
+    # Step 2: Extract records - if no delimiter found, treat each line as one record
+    if delimiter:
+        data_lines = [l for l in input_0.splitlines() if delimiter in l]
+        parsed = []
+        for line in data_lines:
+            parts = [p.strip() for p in line.split(delimiter)]
+            # Extract field values (strip "FieldName:" prefix if present)
+            fields = []
+            for p in parts:
+                if ":" in p:
+                    fields.append(p.split(":", 1)[1].strip())
+                else:
+                    fields.append(p)
+            if fields:
+                parsed.append(tuple(fields))
+    else:
+        # Fallback: treat each non-empty line as a single-field record
+        data_lines = [l.strip() for l in input_0.splitlines() if l.strip()]
+        parsed = [(line,) for line in data_lines]
+    # Step 3: If classification needed, extract label types from task_0 dynamically
+    label_match = re.search(r'\b(correct|incorrect|true|false|positive|negative|yes|no|formal|informal)\b', task_0, re.I)
     if label_match:
         label1 = label_match.group(1).lower()
-        # Find the opposite label
         opposite_map = {'correct':'incorrect', 'incorrect':'correct', 'true':'false', 'false':'true',
-                        'positive':'negative', 'negative':'positive', 'yes':'no', 'no':'yes'}
+                        'positive':'negative', 'negative':'positive', 'yes':'no', 'no':'yes',
+                        'formal':'informal', 'informal':'formal'}
         label2 = opposite_map.get(label1, 'incorrect')
-        task_str = f"Classify as {label1} or {label2}. Reply with ONLY the word: {label1} or {label2}"
-    else:
-        task_str = "Classify as correct or incorrect. Reply with ONLY the word: correct or incorrect"
-    labels = sub_llm_batch([(task_str, inst) for _, _, inst in parsed])
-    # ALWAYS use labels directly without any prefix - compare: label.strip().lower() == "correct"
-  For date-range filtering, parse date_str AFTER extracting it from parts[0]:
-    from datetime import datetime
-    DATE_FMTS = ("%b %d, %Y", "%B %d, %Y", "%Y-%m-%d", "%d %b %Y")
-    def parse_date(s):
-        for fmt in DATE_FMTS:
-            try: return datetime.strptime(s.strip(), fmt).date()
-            except: pass
-        return None
-    # Then filter: dt = parse_date(date_str); if dt and start <= dt <= end: ...
+        task_str = f"Classify as {label1} or {label2}. Reply ONLY: {label1} or {label2}"
+        # Use appropriate field for classification - usually last field (the instance/text)
+        items_to_classify = [item[-1] if len(item) > 1 else item[0] for item in parsed]
+        labels = sub_llm_batch([(task_str, str(item)) for item in items_to_classify])
 - Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
 - Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
-- Scattered definitions/items: Use search() to find ALL occurrences, extract from context:
-    results = search(input_0, "[DEFINITION")  # or other unique marker
+- Scattered items (patterns spread throughout text, not line-delimited):
+  Use search() to find ALL occurrences with unique marker, extract from context:
+    # Identify marker from task description or first occurrence
+    marker = "unique_pattern"  # Could be "[TAG", "###", "ITEM:", etc.
+    results = search(input_0, marker)
     items = []
     for match, before, after in results:
         context = before[-100:] + match + after[:200]
-        # Extract pattern from context with regex
-        m = re.search(r'specific_pattern_here', context)
+        # Extract actual data with regex matching task format
+        m = re.search(r'pattern_from_task', context)
         if m: items.append(m.group(1))
     FINAL(", ".join(items))
 - Multi-condition filter: iterate splitlines(), extract both fields from each line.
-- Code/function retrieval (REPOQA): find and return code that ALREADY EXISTS in input_0.
+- Code/function retrieval: find and return code that ALREADY EXISTS in input_0.
   ⚠ NEVER search with description text. NEVER implement the function yourself.
-  ALWAYS use this mandatory 3-step pattern — step 1 is sub_llm, NO EXCEPTIONS:
+  MANDATORY 3-step pattern (step 1 uses sub_llm, NO EXCEPTIONS):
     # Step 1: sub_llm identifies the exact function name from code preview
     preview = input_0[:8000]  # actual code — do NOT use peek() (returns size metadata)
     func_name = sub_llm("What function name is being asked about? Reply with ONLY the function name.",
@@ -112,9 +119,9 @@ Approach by data type:
             FINAL(func_name + "||" + input_0[max(0,pos-400):pos+3000])
         else:
             FINAL("")  # Function not found
-- Multiple-choice questions on code (CODEQA): MUST search MULTIPLE terms and gather evidence.
-  ⚠ NEVER answer based on single keyword! NEVER guess! NEVER pick based on one search result!
-  ALWAYS collect evidence from at least 3 different searches before calling sub_llm:
+- Multiple-choice questions: MUST search MULTIPLE terms and gather evidence before answering.
+  ⚠ NEVER answer from single keyword! NEVER guess! NEVER pick from one search result!
+  Pattern - collect evidence from 3+ searches, then use sub_llm for reasoning:
     # 1. Search for question concept + keywords from EACH option (A, B, C, D)
     snippets = []
     # Example: if question is "What does function X do?" and options mention different behaviors,

@@ -28,11 +28,8 @@ uv run python eval/run.py --model gpt-5-mini --tasks scaling --paper-scale
 # Run all tasks
 uv run python eval/run.py --model gpt-5-mini --tasks all
 
-# Skip official RLM (if not installed)
-uv run python eval/run.py --model gpt-5-mini --skip-official
-
 # Multiple runs for statistical significance
-uv run python eval/run.py --model gpt-5-mini --runs 5
+uv run python eval/run.py --model gpt-5-mini --runs 5 --parallel 5 --task-parallel 2
 ```
 
 ## Official Datasets
