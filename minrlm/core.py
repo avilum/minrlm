@@ -56,7 +56,7 @@ class _StopExecution(BaseException):
 class ProtectedNamespace(dict):
     """Dict that prevents reassignment of protected keys (like input_0)."""
 
-    PROTECTED = {"input_0", "input_1", "input_2", "task_0"}  # Context/task variables are protected
+    PROTECTED = {"input_0", "input_1", "input_2", "task_0"}  # These are immutable - LLM code cannot modify them
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -74,7 +74,7 @@ class ProtectedNamespace(dict):
 class PythonREPL:
     """Persistent Python REPL with sub_llm() and FINAL() support."""
 
-    HIDDEN_KEYS = {"__builtins__", "__name__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search", "task_0", "input_0", "input_1", "input_2"}
+    HIDDEN_KEYS = {"__builtins__", "__name__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search"}  # Don't include input_0/task_0 - they should be cleared on reset()
 
     def __init__(self, sub_llm_callback: Callable | None = None, sub_llm_batch_callback: Callable | None = None):
         self._output: str | None = None
