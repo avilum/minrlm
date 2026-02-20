@@ -27,3 +27,4 @@ temp/
 .vscode/
 *.swp
 .old/
+evals/

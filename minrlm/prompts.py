@@ -101,22 +101,34 @@ Approach by data type:
 - Code/function retrieval: find and return code that ALREADY EXISTS in input_0.
   ⚠ NEVER search with description text. NEVER implement the function yourself.
   MANDATORY 3-step pattern (step 1 uses sub_llm, NO EXCEPTIONS):
-    # Step 1: sub_llm identifies the exact function name from code preview
+    import re
+    # Step 1: Extract all function names from code preview, then use sub_llm to choose
     preview = input_0[:8000]  # actual code — do NOT use peek() (returns size metadata)
-    func_name = sub_llm("What function name is being asked about? Reply with ONLY the function name.",
-                        preview + "\n\nTask: " + task_0).strip()
+    # Get list of actual function names from the code
+    func_names = re.findall(r'^def (\w+)\(', preview, re.MULTILINE)
+    if func_names:
+        # Give sub_llm the real list to choose from (prevents hallucination)
+        func_list = ", ".join(func_names[:20])  # Limit to first 20 to avoid token overflow
+        func_name = sub_llm(
+            f"Which of these function names matches the task? Choose EXACTLY one from this list: {func_list}. Reply with ONLY the function name.",
+            f"Task: {task_0}"
+        ).strip()
+    else:
+        # Fallback if no functions found in preview
+        func_name = sub_llm("What function name is being asked about? Reply with ONLY the function name.",
+                            preview + "\n\nTask: " + task_0).strip()
     # Step 2: search for the definition with fallback logic
     res = search(input_0, "def " + func_name)
     if not res: res = search(input_0, func_name + "(")
     if not res: res = search(input_0, func_name)
-    # Step 3: return name||code format (function name + "||" + code)
+    # Step 3: return name||code format with LARGER context windows (was 400+2000, now 800+5000)
     if res:
         match, before, after = res[0]
-        FINAL(func_name + "||" + before[-400:] + match + after[:2000])
+        FINAL(func_name + "||" + before[-800:] + match + after[:5000])
     else:
         pos = input_0.find(func_name)
         if pos >= 0:
-            FINAL(func_name + "||" + input_0[max(0,pos-400):pos+3000])
+            FINAL(func_name + "||" + input_0[max(0,pos-800):pos+6000])
         else:
             FINAL("")  # Function not found
 - Multiple-choice questions: MUST search MULTIPLE terms and gather evidence before answering.
@@ -189,13 +201,19 @@ def format_system_prompt(context: str = "", context_type: str = "string", **kwar
     return SYSTEM_PROMPT_NO_CONTEXT
 
 
-CONTINUE_PROMPT = """Code executed.{error_info}
+CONTINUE_PROMPT = """--- CODE EXECUTION RESULT ---
+
+Code executed.{error_info}
 
 stdout: {output}
 
 Variables: {state_info}
 
-{iteration_info}Call FINAL("answer") or FINAL_var("varname") to finish."""
+{iteration_info}
+
+Continue writing Python code in ```python blocks.
+Call FINAL("answer") or FINAL_var("varname") when done.
+Do NOT output role markers like "User:" or "Assistant:"."""
 
 
 def format_continue_prompt(

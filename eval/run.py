@@ -136,7 +136,7 @@ Examples:
 
     parser.add_argument("--output-dir", "-o", default="eval/results", help="Output directory for results and plots")
 
-    parser.add_argument("--log-dir", default=None, help="Directory to save RLM execution logs (default: None)")
+    parser.add_argument("--log-dir", default=None, help="Directory to save RLM execution logs (default: <output-dir>/logs)")
 
     parser.add_argument(
         "--skip-official", action="store_true", help="Skip official RLM runner (useful if not installed)"
@@ -194,6 +194,13 @@ Examples:
     )
 
     parser.add_argument(
+        "--official-longbench-max-context-tokens",
+        type=int,
+        default=None,
+        help="Max LongBench-v2 context length in tokens (filters samples by context size)",
+    )
+
+    parser.add_argument(
         "--browsecomp-max-docs",
         type=int,
         default=None,
@@ -245,6 +252,7 @@ def run_evaluation(
     official_max_samples: int | None = None,
     official_oolong_max_context_chars: int | None = None,
     official_oolong_max_context_tokens: int | None = None,
+    official_longbench_max_context_tokens: int | None = None,
     browsecomp_max_docs: int | None = None,
 ) -> list[EvalResult]:
     """
@@ -264,6 +272,10 @@ def run_evaluation(
     Returns:
         List of EvalResult objects
     """
+    # Set default log_dir to output_dir/logs if not specified
+    if log_dir is None and output_dir is not None:
+        log_dir = str(output_dir / "logs")
+
     # Use provided accumulator or create new list
     all_results = results_accumulator if results_accumulator is not None else []
 
@@ -318,9 +330,14 @@ def run_evaluation(
 
     for task_name in tqdm(tasks, desc="Tasks", disable=not verbose):
         if task_name.startswith("official_"):
+            # Use task-specific kwargs for longbench
+            task_kwargs = official_kwargs.copy()
+            if task_name == "official_longbench_v2" and official_longbench_max_context_tokens is not None:
+                task_kwargs["max_context_tokens"] = official_longbench_max_context_tokens
+
             results = _run_task_evaluations(
                 task_name=task_name,
-                task_kwargs=official_kwargs,
+                task_kwargs=task_kwargs,
                 runners=active_runners,
                 model=model,
                 runs=runs,
@@ -912,6 +929,7 @@ def main():
             official_max_samples=args.official_max_samples,
             official_oolong_max_context_chars=args.official_oolong_max_context_chars,
             official_oolong_max_context_tokens=args.official_oolong_max_context_tokens,
+            official_longbench_max_context_tokens=args.official_longbench_max_context_tokens,
             browsecomp_max_docs=args.browsecomp_max_docs,
         )
     except KeyboardInterrupt:

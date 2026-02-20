@@ -108,7 +108,10 @@ Here is the text to analyze:
 {context}"""
 
         try:
-            kwargs = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
+            kwargs = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+            }
             # Some models don't support temperature
             if "gpt-5" not in self.model.lower():
                 kwargs["temperature"] = 0.7
@@ -144,7 +147,9 @@ class OursRunner(BaseRunner):
 
     description = "Our minimal RLM implementation"
 
-    def __init__(self, model: str, max_iterations: int = 10, log_dir: str | None = None, **kwargs):
+    def __init__(
+        self, model: str, max_iterations: int = 10, log_dir: str | None = None, **kwargs
+    ):
         super().__init__(model, **kwargs)
         self.max_iterations = max_iterations
         self.log_dir = log_dir
@@ -220,7 +225,7 @@ class OfficialRunner(BaseRunner):
             task_file = f.name
 
         # Script to run official RLM
-        script = f'''
+        script = f"""
 import json
 import time
 
@@ -273,7 +278,7 @@ print(json.dumps({{
     "time_seconds": elapsed,
     "iterations": iterations
 }}))
-'''
+"""
 
         try:
             # Use uv run --with to install official RLM from GitHub
@@ -290,7 +295,10 @@ print(json.dumps({{
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
-                env={**os.environ, "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", "")},
+                env={
+                    **os.environ,
+                    "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", ""),
+                },
             )
 
             elapsed = time.time() - start
