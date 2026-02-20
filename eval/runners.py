@@ -372,3 +372,10 @@ def get_available_runners(model: str) -> list[str]:
         except Exception:
             pass
     return available
+
+
+# Import reasoning runner to register it
+try:
+    from .runners_reasoning import OursReasoningRunner  # noqa: F401
+except ImportError:
+    pass  # OK if reasoning dependencies not available
