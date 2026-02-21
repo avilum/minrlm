@@ -135,8 +135,6 @@ class PythonREPL:
             if (inner.startswith("'") and inner.endswith("'")) or (inner.startswith('"') and inner.endswith('"')):
                 inner = inner[1:-1]
             self._output = inner
-            if inner:
-                print(f"ℹ️ Cleaned output: '{self._output}'")
 
         # Disallow placeholder outputs
         if self._output.strip().lower() in {"unknown", "n/a", "none"}:
@@ -187,18 +185,7 @@ class PythonREPL:
             ctx_before = text[max(0, pos - context) : pos]
             ctx_after = text[end : min(len(text), end + context)]
             matches.append((actual_match, ctx_before, ctx_after))
-
-            print(f"\n[Match {len(matches)}]: {actual_match}")
-            print(f"<before>{ctx_before}</before>")
-            print(f"<match>{actual_match}</match>")
-            print(f"<after>{ctx_after}</after>")
             start = pos + 1
-
-        if not matches:
-            print(f"⚠️ NO MATCHES for '{pattern}'")
-            print("   -> Try shorter/partial pattern")
-        else:
-            print(f"\n✓ Found {len(matches)} match(es)")
 
         return matches
 
@@ -229,55 +216,32 @@ class PythonREPL:
 
     def _peek(self, data: Any, max_len: int = 500, max_items: int = 5, depth: int = 0) -> str:
         """Efficient preview of data - truncates large strings/lists, recurses into structures."""
-        indent = "  " * depth
-
         if isinstance(data, str):
             if len(data) <= max_len:
                 preview = repr(data)
-                print(f"{indent}{preview}")
             else:
-                # Show start, middle, AND end to reveal patterns throughout
-                chunk_size = max_len // 3
-                start = data[:chunk_size]
-                mid_pos = len(data) // 2
-                middle = data[mid_pos : mid_pos + chunk_size]
-                end = data[-chunk_size:]
-                print(f"{indent}Start: {repr(start)}...")
-                print(f"{indent}Middle ({mid_pos:,}): {repr(middle)}...")
-                print(f"{indent}End ({len(data) - chunk_size:,}): {repr(end)}")
-                print(f"{indent}({len(data):,} chars total)")
                 preview = f"str[{len(data):,}]"
             return preview
 
         elif isinstance(data, list | tuple):
             bracket = "[]" if isinstance(data, list) else "()"
             if len(data) == 0:
-                print(f"{indent}{bracket}")
                 return bracket
-            print(f"{indent}{bracket[0]}  # {len(data)} items")
             for item in data[:max_items]:
                 self._peek(item, max_len, max_items, depth + 1)
-            if len(data) > max_items:
-                print(f"{indent}  ... and {len(data) - max_items} more")
             return f"{bracket} ({len(data)} items)"
 
         elif isinstance(data, dict):
             if len(data) == 0:
-                print(f"{indent}{{}}")
                 return "{}"
-            print(f"{indent}{{  # {len(data)} keys")
             for k, v in list(data.items())[:max_items]:
-                print(f"{indent}  {repr(k)}:")
                 self._peek(v, max_len, max_items, depth + 2)
-            if len(data) > max_items:
-                print(f"{indent}  ... and {len(data) - max_items} more keys")
             return f"{{}} ({len(data)} keys)"
 
         else:
             preview = repr(data)
             if len(preview) > max_len:
                 preview = preview[:max_len] + "..."
-            print(f"{indent}{preview}")
             return preview
 
     def save_output(self) -> str | None:

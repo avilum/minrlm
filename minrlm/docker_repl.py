@@ -122,63 +122,35 @@ def search(text, pattern, context=100):
         ctx_end = min(len(text), pos + len(pattern) + context)
         match_text = text[ctx_start:ctx_end]
         matches.append(match_text)
-        print(f"[Match at {pos}]: ...{match_text}...")
         start = pos + 1
-
-    if not matches:
-        print(f"No matches found for '{pattern}'")
-    else:
-        print(f"\\nFound {len(matches)} match(es) for '{pattern}'")
 
     return matches
 
 def peek(data, max_len=500, max_items=5, depth=0):
     """Efficient preview of data."""
-    indent = "  " * depth
-
     if isinstance(data, str):
         if len(data) <= max_len:
             preview = repr(data)
-            print(f"{indent}{preview}")
         else:
-            chunk_size = max_len // 3
-            start = data[:chunk_size]
-            mid_pos = len(data) // 2
-            middle = data[mid_pos:mid_pos + chunk_size]
-            end = data[-chunk_size:]
-            print(f"{indent}Start: {repr(start)}...")
-            print(f"{indent}Middle ({mid_pos:,}): {repr(middle)}...")
-            print(f"{indent}End ({len(data) - chunk_size:,}): {repr(end)}")
-            print(f"{indent}({len(data):,} chars total)")
             preview = f"str[{len(data):,}]"
         return preview
     elif isinstance(data, (list, tuple)):
         bracket = "[]" if isinstance(data, list) else "()"
         if len(data) == 0:
-            print(f"{indent}{bracket}")
             return bracket
-        print(f"{indent}{bracket[0]}  # {len(data)} items")
         for item in data[:max_items]:
             peek(item, max_len, max_items, depth + 1)
-        if len(data) > max_items:
-            print(f"{indent}  ... and {len(data) - max_items} more")
         return f"{bracket} ({len(data)} items)"
     elif isinstance(data, dict):
         if len(data) == 0:
-            print(f"{indent}{{}}")
             return "{}"
-        print(f"{indent}{{  # {len(data)} keys")
         for k, v in list(data.items())[:max_items]:
-            print(f"{indent}  {repr(k)}:")
             peek(v, max_len, max_items, depth + 2)
-        if len(data) > max_items:
-            print(f"{indent}  ... and {len(data) - max_items} more keys")
         return f"{{}} ({len(data)} keys)"
     else:
         preview = repr(data)
         if len(preview) > max_len:
             preview = preview[:max_len] + "..."
-        print(f"{indent}{preview}")
         return preview
 
 def sub_llm(task, context=""):

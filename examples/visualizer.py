@@ -50,6 +50,7 @@ from eval.metrics import calculate_cost
 # Import evaluation tasks
 from eval.tasks import TASK_REGISTRY, get_task
 from minrlm import RLM  # Our implementation
+from minrlm.core_reasoning import RLMReasoning
 
 # =============================================================================
 # Build Benchmark Options from Eval Tasks
@@ -357,6 +358,97 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
         )
 
 
+def run_reasoning_rlm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
+    """Run with RLMReasoning (Reasoning approach)."""
+    trace_parts = ["## Recursive minRLM\n\n"]
+    if context:
+        trace_parts.append(f"Processing {len(context):,} chars with reasoning-first approach...\n\n")
+
+    def on_step(event: str, data: dict):
+        if event == "thinking":
+            trace_parts.append(f"### Iteration {data['iteration']}\n\n")
+        elif event == "reasoning":
+            reasoning = data.get("reasoning", "")
+            trace_parts.append(f"**Reasoning:**\n> {reasoning[:500]}{'...' if len(reasoning) > 500 else ''}\n\n")
+        elif event == "llm_response":
+            has_code = data.get("has_code", False)
+            trace_parts.append(f"**LLM Response** ({len(data.get('response', ''))} chars):\n")
+            if has_code:
+                trace_parts.append("Contains code block\n\n")
+            else:
+                response_preview = data.get("response", "")[:300]
+                trace_parts.append("No code block found\n\n")
+                trace_parts.append(
+                    f"```\n{response_preview}{'...' if len(data.get('response', '')) > 300 else ''}\n```\n\n"
+                )
+        elif event == "executing":
+            code = data.get("code", "")
+            trace_parts.append(f"**Executing Code:**\n```python\n{code}\n```\n\n")
+        elif event == "executed":
+            if data.get("error"):
+                trace_parts.append(f"**Error:**\n```\n{data['error']}\n```\n\n")
+            else:
+                stdout = data.get("stdout", "")
+                output = data.get("output")
+                if stdout:
+                    trace_parts.append(
+                        f"**stdout:**\n```\n{stdout[:2000]}{'...' if len(stdout) > 2000 else ''}\n```\n\n"
+                    )
+                if output:
+                    trace_parts.append(f"**FINAL():** `{output}`\n\n")
+                elif not stdout:
+                    trace_parts.append("*(no output)*\n\n")
+
+    start = time.time()
+    try:
+        rlm = RLMReasoning(model=model, max_iterations=10, on_step=on_step)
+        if context:
+            result = rlm.completion(task=task, context=context)
+        else:
+            result = rlm.completion(task=task)
+        elapsed = time.time() - start
+
+        response = result.response
+        correct = check_fn(response) if check_fn else True
+
+        cost = calculate_cost(model, result.input_tokens, result.output_tokens)
+
+        if result.reasoning:
+            trace_parts.append(f"\n**Reasoning Summary:** {result.reasoning[:300]}{'...' if len(result.reasoning) > 300 else ''}\n")
+        trace_parts.append(f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n")
+        trace_parts.append(
+            f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out = {result.total_tokens:,} total"
+        )
+        if cost is not None:
+            trace_parts.append(f" | **Cost:** ${cost:.6f}")
+        trace_parts.append(f" | **Time:** {elapsed:.1f}s\n")
+        if check_fn:
+            trace_parts.append(f"{'Correct' if correct else 'Incorrect'}\n\n")
+
+        return RunResult(
+            response=response,
+            correct=correct,
+            tokens=result.total_tokens,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            time_seconds=elapsed,
+            iterations=result.iterations,
+            cost_usd=cost,
+            trace="".join(trace_parts),
+        )
+    except Exception as e:
+        trace_parts.append(f"\n**Error:** {e}\n")
+        return RunResult(
+            response="",
+            correct=False,
+            tokens=0,
+            input_tokens=0,
+            output_tokens=0,
+            time_seconds=time.time() - start,
+            trace="".join(trace_parts),
+        )
+
+
 def run_official_rlm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
     """Run with official RLM from github.com/alexzhang13/rlm via uv --with."""
     trace = "## Official RLM\n\n"
@@ -549,23 +641,13 @@ def generate_task_instance(benchmark_name: str) -> tuple[str, str, str, str, cal
 def create_status_box(
     title: str, subtitle: str = "", icon: str = "⏳", color: str = "#818cf8", pulse: bool = True
 ) -> str:
-    pulse_style = "animation: pulse 1.5s ease-in-out infinite;" if pulse else ""
-    glow = f"box-shadow: 0 0 40px {color}33;" if pulse else ""
+    pulse_opacity = "animation: status-pulse 2s ease-in-out infinite;" if pulse else ""
     return f"""
-    <div style="
-        text-align: center;
-        padding: 32px 24px;
-        background: linear-gradient(135deg, rgba(30,41,59,0.9) 0%, rgba(15,23,42,0.95) 100%);
-        border-radius: 16px;
-        margin: 16px 0;
-        border: 1px solid rgba(148,163,184,0.1);
-        border-left: 4px solid {color};
-        {glow}
-    ">
-        <div style="font-size: 3em; margin-bottom: 12px; {pulse_style}">{icon}</div>
-        <div style="font-size: 1.5em; font-weight: 700; color: {color}; margin-bottom: 6px; letter-spacing: -0.01em;">{title}</div>
-        <div style="font-size: 1rem; color: #94a3b8;">{subtitle}</div>
-        <style>@keyframes pulse {{ 0%, 100% {{ opacity: 1; transform: scale(1); }} 50% {{ opacity: 0.7; transform: scale(1.05); }} }}</style>
+    <div class="status-box" style="--status-color: {color};">
+        <div class="status-box__accent"></div>
+        <div class="status-box__icon" style="{pulse_opacity}">{icon}</div>
+        <div class="status-box__title">{title}</div>
+        <div class="status-box__subtitle">{subtitle}</div>
     </div>"""
 
 
@@ -576,30 +658,29 @@ def build_charts(results_list: list) -> tuple:
     data = [{"Method": name, "Tokens": float(r.tokens), "Time": float(r.time_seconds)} for name, r in results_list]
     df = pd.DataFrame(data)
 
-    colors = {"Vanilla": "#60a5fa", "minRLM": "#f97316", "Official": "#22c55e"}
+    colors = {"Vanilla": "#60a5fa", "minRLM": "#f97316", "minRLM with Reasoning": "#c084fc", "Official": "#22c55e"}
     color_map = {m: colors.get(m, "#94a3b8") for m in df["Method"]}
 
-    # Common layout settings
     layout_common = {
         "showlegend": False,
-        "height": 320,
-        "template": "plotly_dark",
+        "height": 280,
         "paper_bgcolor": "rgba(0,0,0,0)",
-        "plot_bgcolor": "rgba(15,23,42,0.5)",
-        "font": {"family": "Inter, system-ui, sans-serif", "color": "#e2e8f0"},
-        "title_font": {"size": 16, "color": "#e2e8f0"},
-        "xaxis": {"gridcolor": "rgba(148,163,184,0.1)", "title": ""},
-        "yaxis": {"gridcolor": "rgba(148,163,184,0.1)"},
-        "margin": {"t": 50, "b": 40, "l": 60, "r": 20},
+        "plot_bgcolor": "rgba(24,24,27,0.6)",
+        "font": {"family": "DM Sans, system-ui, sans-serif", "color": "#a1a1aa", "size": 12},
+        "title_font": {"size": 14, "color": "#fafafa"},
+        "xaxis": {"gridcolor": "rgba(255,255,255,0.06)", "linecolor": "rgba(255,255,255,0.08)", "tickfont": {"color": "#71717a"}},
+        "yaxis": {"gridcolor": "rgba(255,255,255,0.06)", "linecolor": "rgba(255,255,255,0.08)", "tickfont": {"color": "#71717a"}},
+        "margin": {"t": 44, "b": 36, "l": 52, "r": 16},
+        "bargap": 0.36,
     }
 
     tokens_fig = px.bar(df, x="Method", y="Tokens", color="Method", color_discrete_map=color_map)
-    tokens_fig.update_layout(**layout_common, title="Token Usage", yaxis_title="Tokens")
-    tokens_fig.update_traces(marker_line_width=0, opacity=0.9)
+    tokens_fig.update_layout(**layout_common, title="Token usage", yaxis_title="Tokens")
+    tokens_fig.update_traces(marker_line_width=0, opacity=0.92)
 
     time_fig = px.bar(df, x="Method", y="Time", color="Method", color_discrete_map=color_map)
-    time_fig.update_layout(**layout_common, title="Execution Time", yaxis_title="Seconds")
-    time_fig.update_traces(marker_line_width=0, opacity=0.9)
+    time_fig.update_layout(**layout_common, title="Time (s)", yaxis_title="Seconds")
+    time_fig.update_traces(marker_line_width=0, opacity=0.92)
 
     return tokens_fig, time_fig
 
@@ -613,128 +694,194 @@ def build_app():
     initial_models = get_available_models()
     benchmark_names = list(BENCHMARKS.keys())
 
-    # Custom CSS for professional look
     custom_css = """
-    .gradio-container {
-        max-width: 1400px !important;
-        margin: auto !important;
+    :root {
+        --font-sans: "DM Sans", "Plus Jakarta Sans", system-ui, sans-serif;
+        --bg-page: #09090b;
+        --bg-card: #18181b;
+        --border: #27272a;
+        --text: #fafafa;
+        --text-muted: #a1a1aa;
+        --accent: #3b82f6;
     }
-    .header-title {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-size: 2.5rem !important;
-        font-weight: 800 !important;
-        letter-spacing: -0.02em;
-    }
-    .header-subtitle {
-        color: #94a3b8 !important;
-        font-size: 1.1rem !important;
-    }
-    .header-links a {
-        color: #818cf8 !important;
-        text-decoration: none !important;
-        font-weight: 500;
-        transition: color 0.2s;
-    }
-    .header-links a:hover {
-        color: #a5b4fc !important;
-    }
-    .control-panel {
-        background: linear-gradient(180deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.9) 100%);
-        border: 1px solid rgba(148,163,184,0.1);
-        border-radius: 16px;
-        padding: 20px;
-    }
-    .result-card {
-        background: rgba(30,41,59,0.6);
-        border: 1px solid rgba(148,163,184,0.1);
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+    .gradio-container { max-width: 1200px !important; margin: 0 auto !important; padding: 0 24px !important; }
+    .contain { max-width: 1200px; margin: 0 auto; }
+    /* Status box */
+    .status-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 28px 24px;
+        margin: 16px 0;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 16px;
+        position: relative;
+        overflow: hidden;
     }
+    .status-box__accent {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--status-color);
+    }
+    .status-box__icon { font-size: 2rem; line-height: 1; }
+    .status-box__title {
+        font-family: var(--font-sans);
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--status-color);
+        letter-spacing: -0.01em;
+    }
+    .status-box__subtitle {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+    }
+    @keyframes status-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    /* Header */
+    .app-header {
+        text-align: center;
+        padding: 40px 0 32px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 28px;
+    }
+    .app-header h1 {
+        margin: 0 0 8px 0;
+        font-family: var(--font-sans);
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: var(--text);
+    }
+    .app-header p {
+        margin: 0 0 20px 0;
+        font-size: 0.9375rem;
+        color: var(--text-muted);
+    }
+    .app-header .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+    }
+    .app-header .links {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        font-size: 0.875rem;
+    }
+    .app-header .links a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.15s;
+    }
+    .app-header .links a:hover { color: var(--accent); }
+    /* Blocks */
+    .gr-block { border-radius: 12px !important; }
+    .gr-input, .gr-box { border-radius: 10px !important; border-color: var(--border) !important; }
+    .gr-button { border-radius: 10px !important; font-weight: 500 !important; }
+    .gradio-container table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.8125rem;
+        margin: 12px 0;
+    }
+    .gradio-container th,
+    .gradio-container td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+    .gradio-container th { color: var(--text-muted); font-weight: 500; }
+    .gradio-container tbody tr:hover td { background: rgba(255,255,255,0.03); }
+    /* Footer */
+    .app-footer {
+        text-align: center;
+        padding: 28px 0;
+        margin-top: 40px;
+        border-top: 1px solid var(--border);
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+    .app-footer a { color: var(--text-muted); text-decoration: none; }
+    .app-footer a:hover { color: var(--accent); }
     """
 
     with gr.Blocks(
         title="RLM Visualizer",
         css=custom_css,
         theme=gr.themes.Base(
-            primary_hue="indigo",
-            secondary_hue="slate",
-            neutral_hue="slate",
-            font=gr.themes.GoogleFont("Inter"),
+            primary_hue="blue",
+            secondary_hue="zinc",
+            neutral_hue="zinc",
+            font=gr.themes.GoogleFont("DM Sans"),
         ).set(
-            body_background_fill="*neutral_950",
-            body_background_fill_dark="*neutral_950",
-            block_background_fill="*neutral_900",
-            block_background_fill_dark="*neutral_900",
-            block_border_color="*neutral_800",
-            block_border_color_dark="*neutral_800",
-            block_label_background_fill="*primary_600",
-            block_label_background_fill_dark="*primary_600",
-            block_title_text_color="*neutral_100",
-            block_title_text_color_dark="*neutral_100",
-            input_background_fill="*neutral_800",
-            input_background_fill_dark="*neutral_800",
-            button_primary_background_fill="*primary_600",
-            button_primary_background_fill_dark="*primary_600",
-            button_primary_background_fill_hover="*primary_500",
-            button_primary_background_fill_hover_dark="*primary_500",
+            body_background_fill="#09090b",
+            body_background_fill_dark="#09090b",
+            block_background_fill="#18181b",
+            block_background_fill_dark="#18181b",
+            block_border_color="#27272a",
+            block_border_color_dark="#27272a",
+            block_label_background_fill="#27272a",
+            block_label_background_fill_dark="#27272a",
+            block_title_text_color="#fafafa",
+            block_title_text_color_dark="#fafafa",
+            body_text_color="#fafafa",
+            body_text_color_dark="#fafafa",
+            input_background_fill="#27272a",
+            input_background_fill_dark="#27272a",
+            button_primary_background_fill="#3b82f6",
+            button_primary_background_fill_dark="#3b82f6",
+            button_primary_background_fill_hover="#2563eb",
+            button_primary_background_fill_hover_dark="#2563eb",
         ),
     ) as demo:
-        # Header
         gr.HTML("""
-        <div style="text-align: center; padding: 32px 0 24px 0; border-bottom: 1px solid rgba(148,163,184,0.1); margin-bottom: 24px;">
-            <h1 class="header-title" style="margin: 0; font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                🔬 RLM Visualizer
-            </h1>
-            <p class="header-subtitle" style="margin: 8px 0 16px 0; color: #94a3b8; font-size: 1.1rem;">
-                Compare <strong style="color:#60a5fa">Vanilla LLM</strong>, <strong style="color:#f97316">minRLM</strong>, and <strong style="color:#22c55e">Official RLM</strong> side-by-side
+        <header class="app-header">
+            <h1>RLM Visualizer</h1>
+            <p>
+                Compare <span class="pill" style="background: rgba(59,130,246,0.15); color: #60a5fa;">Vanilla</span>
+                <span class="pill" style="background: rgba(249,115,22,0.15); color: #fb923c;">minRLM</span>
+                <span class="pill" style="background: rgba(192,132,252,0.15); color: #c084fc;">minRLM with Reasoning</span>
+                <span class="pill" style="background: rgba(34,197,94,0.15); color: #4ade80;">Official RLM</span>
             </p>
-            <div class="header-links" style="display: flex; gap: 24px; justify-content: center; font-size: 0.95rem;">
-                <a href="https://arxiv.org/abs/2512.24601" target="_blank" style="color: #818cf8; text-decoration: none;">📄 Paper</a>
-                <a href="https://github.com/avilum/minrlm" target="_blank" style="color: #818cf8; text-decoration: none;">⭐ GitHub</a>
+            <div class="links">
+                <a href="https://arxiv.org/abs/2512.24601" target="_blank">Paper</a>
+                <a href="https://github.com/avilum/minrlm" target="_blank">GitHub</a>
             </div>
-        </div>
+        </header>
         """)
 
-        # About Section
-        with gr.Accordion("ℹ️ About", open=False):
+        with gr.Accordion("About", open=False):
             gr.Markdown("""
-            ### Let LLMs think through code.
+            **RLM** = Recursive Language Model. The model writes Python code to search/process data in a REPL; data never enters context—only metadata. Token usage stays flat with context size.
 
-            A minimal (<500 lines) RLM (Recursive Language Model) implementation that's **4.2x more token-efficient**.
-
-            **Benchmark Results (gpt-5-nano, 162 evaluations):**
-            - **Accuracy**: 87.0% (vs 92.6% vanilla)
-            - **Token Efficiency**: 4.20x fewer tokens (2,247 vs 9,441 avg)
-            - **Cost**: 4.1x cheaper ($0.001750 vs $0.007099)
-            - **Large contexts (128K+)**: RLMs often outperform vanilla
-            - **Extreme contexts (6M-11M)**: minRLM achieves 100% where vanilla fails
-
-            **How it works**: The model writes Python code to search/process data stored in a REPL. The data never enters the LLM's context - only metadata ("200K chars") is sent. Token usage stays flat regardless of context size.
-
-            See the [README](https://github.com/avilum/minrlm) for full details.
+            **Benchmarks (gpt-5-nano):** ~4.2× fewer tokens, ~4× cheaper; large contexts (128K+) often beat vanilla; 100% on 6M–11M where vanilla fails. [README](https://github.com/avilum/minrlm)
             """)
 
-        # Model & Method Selection Panel
-        with gr.Group():
-            with gr.Row(equal_height=True):
-                model_dropdown = gr.Dropdown(
-                    choices=initial_models,
-                    value=("gpt-5-nano" if "gpt-5-nano" in initial_models else initial_models[0]),
-                    label="🤖 Model",
-                    scale=3,
-                    container=True,
-                )
-                with gr.Column(scale=2, min_width=300):
-                    gr.Markdown("**Methods to Compare**", elem_classes=["method-label"])
-                    with gr.Row():
-                        vanilla_checkbox = gr.Checkbox(label="🔵 Vanilla", value=True, scale=1)
-                        rlm_checkbox = gr.Checkbox(label="🟠 minRLM", value=True, scale=1)
-                        official_checkbox = gr.Checkbox(label="🟢 Official", value=True, scale=1)
+        with gr.Row(equal_height=True):
+            model_dropdown = gr.Dropdown(
+                choices=initial_models,
+                value=("gpt-5-nano" if "gpt-5-nano" in initial_models else initial_models[0]),
+                label="Model",
+                scale=3,
+                container=True,
+            )
+            with gr.Column(scale=2, min_width=280):
+                gr.Markdown("Methods", elem_classes=["method-label"])
+                with gr.Row():
+                    vanilla_checkbox = gr.Checkbox(label="Vanilla", value=True, scale=1)
+                    rlm_checkbox = gr.Checkbox(label="minRLM", value=True, scale=1)
+                    reasoning_checkbox = gr.Checkbox(label="minRLM with Reasoning", value=True, scale=1)
+                    official_checkbox = gr.Checkbox(label="Official", value=True, scale=1)
 
-        gr.HTML("<div style='height: 16px'></div>")
+        gr.HTML("<div style='height: 20px'></div>")
 
         # =================================================================
         # TABS
@@ -743,7 +890,7 @@ def build_app():
             # =============================================================
             # TAB 1: Evaluation Tasks
             # =============================================================
-            with gr.TabItem("📊 Evaluation Benchmarks", id="eval"):
+            with gr.TabItem("Benchmarks", id="eval"):
                 check_fn_state = gr.State(value=None)
 
                 # Task Selection Row
@@ -752,42 +899,36 @@ def build_app():
                         benchmark_dropdown = gr.Dropdown(
                             choices=benchmark_names,
                             value=benchmark_names[0] if benchmark_names else None,
-                            label="📋 Select Benchmark",
+                            label="Benchmark",
                             scale=4,
                         )
-                        generate_btn = gr.Button("🎲 New Instance", variant="secondary", scale=1, min_width=140)
-                        run_eval_btn = gr.Button("▶️ Run Comparison", variant="primary", scale=1, min_width=140)
+                        generate_btn = gr.Button("New instance", variant="secondary", scale=1, min_width=120)
+                        run_eval_btn = gr.Button("Run comparison", variant="primary", scale=1, min_width=140)
 
-                # Task Description Card
-                with gr.Group():
-                    task_description = gr.Markdown("*Select a task and click 'New Instance' to generate*")
+                task_description = gr.Markdown("*Select a benchmark and click New instance*")
 
                 # Status & Results
                 eval_status_html = gr.HTML(
-                    create_status_box("Ready", "Select a task and click Run", "📋", "#64748b", False)
+                    create_status_box("Ready", "Select a task and run", "○", "#71717a", False)
                 )
+                eval_results_output = gr.Markdown("")
 
-                with gr.Group():
-                    eval_results_output = gr.Markdown("")
-
-                # Charts Row
                 with gr.Row(equal_height=True):
                     with gr.Column():
-                        eval_tokens_plot = gr.Plot(label="📊 Token Usage", show_label=True)
+                        eval_tokens_plot = gr.Plot(label="Token usage", show_label=True)
                     with gr.Column():
-                        eval_time_plot = gr.Plot(label="⏱️ Execution Time", show_label=True)
+                        eval_time_plot = gr.Plot(label="Time", show_label=True)
 
-                # Expandable Sections
-                with gr.Accordion("📜 Execution Traces", open=False):
-                    eval_traces_output = gr.Markdown("*Run a benchmark to see detailed execution traces.*")
+                with gr.Accordion("Execution traces", open=False):
+                    eval_traces_output = gr.Markdown("*Run a benchmark to see traces.*")
 
-                with gr.Accordion("📝 Task Details", open=False):
+                with gr.Accordion("Task details", open=False):
                     with gr.Row():
                         with gr.Column(scale=2):
-                            task_text = gr.Textbox(label="Task Prompt", lines=3, interactive=False)
+                            task_text = gr.Textbox(label="Task", lines=3, interactive=False)
                         with gr.Column(scale=1):
-                            expected_text = gr.Textbox(label="Expected Answer", interactive=False)
-                    context_preview = gr.Textbox(label="Context Preview", lines=5, interactive=False)
+                            expected_text = gr.Textbox(label="Expected", interactive=False)
+                    context_preview = gr.Textbox(label="Context preview", lines=5, interactive=False)
 
                 full_context = gr.State("")
 
@@ -814,7 +955,7 @@ def build_app():
                     outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state],
                 )
 
-                def run_eval_task(task, context, model, run_vanilla, run_rlm, run_official, benchmark_name, check_fn):
+                def run_eval_task(task, context, model, run_vanilla, run_rlm, run_reasoning, run_official, benchmark_name, check_fn):
                     if not task:
                         yield (
                             create_status_box("No Task", "Generate a task first", "📋", "#666", False),
@@ -833,6 +974,8 @@ def build_app():
                         methods.append(("Vanilla", "🔵", "#4dabf7", run_vanilla_llm))
                     if run_rlm:
                         methods.append(("minRLM", "🟠", "#ff922b", run_our_rlm))
+                    if run_reasoning:
+                        methods.append(("minRLM with Reasoning", "🟣", "#c084fc", run_reasoning_rlm))
                     if run_official:
                         methods.append(("Official", "🟢", "#51cf66", run_official_rlm))
 
@@ -850,9 +993,9 @@ def build_app():
                     for i, (name, icon, color, run_fn) in enumerate(methods):
                         yield (
                             create_status_box(
-                                f"Running {name}...",
+                                f"Running {name}…",
                                 f"Step {i + 1}/{len(methods)} · {len(context):,} chars",
-                                icon,
+                                "⋯",
                                 color,
                                 True,
                             ),
@@ -899,10 +1042,10 @@ def build_app():
 
                     all_correct = all(r.correct for _, r in results_list)
                     final_status = create_status_box(
-                        "✓ Complete" if all_correct else "Complete",
-                        f"⏱️ {total_elapsed:.1f}s",
-                        "🎉" if all_correct else "⚠️",
-                        "#51cf66" if all_correct else "#fcc419",
+                        "Done" if all_correct else "Done",
+                        f"{total_elapsed:.1f}s total",
+                        "✓" if all_correct else "○",
+                        "#22c55e" if all_correct else "#71717a",
                         False,
                     )
 
@@ -916,6 +1059,7 @@ def build_app():
                         model_dropdown,
                         vanilla_checkbox,
                         rlm_checkbox,
+                        reasoning_checkbox,
                         official_checkbox,
                         benchmark_dropdown,
                         check_fn_state,
@@ -932,29 +1076,23 @@ def build_app():
             # =============================================================
             # TAB 2: Custom Task
             # =============================================================
-            with gr.TabItem("✏️ Custom Task", id="custom"):
-                gr.HTML("""
-                <div style="padding: 12px 0 16px 0; border-bottom: 1px solid rgba(148,163,184,0.1); margin-bottom: 16px;">
-                    <h3 style="margin: 0; color: #e2e8f0; font-weight: 600;">🧪 Custom Experiment</h3>
-                    <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 0.9rem;">Test your own prompts with optional context data</p>
-                </div>
-                """)
+            with gr.TabItem("Custom", id="custom"):
+                gr.Markdown("Run your own task with optional context.")
 
-                with gr.Group():
-                    custom_task_input = gr.Textbox(
-                        label="💬 Task / Prompt",
-                        placeholder="e.g., Calculate 2^1000 or Find all employees in the Engineering department",
-                        lines=3,
-                    )
-                    custom_context_input = gr.Textbox(
-                        label="📄 Context (optional)",
-                        placeholder="Paste your document, JSON, code, or any text here. Leave empty for tasks without context.",
-                        lines=8,
-                    )
-                    run_custom_btn = gr.Button("▶️ Run Comparison", variant="primary", size="lg")
+                custom_task_input = gr.Textbox(
+                    label="Task",
+                    placeholder="e.g. Calculate 2^1000 or find all Engineering employees",
+                    lines=3,
+                )
+                custom_context_input = gr.Textbox(
+                    label="Context (optional)",
+                    placeholder="Paste document, JSON, or text. Leave empty if no context.",
+                    lines=8,
+                )
+                run_custom_btn = gr.Button("Run comparison", variant="primary", size="lg")
 
                 custom_status_html = gr.HTML(
-                    create_status_box("Ready", "Enter a task and click Run", "✏️", "#64748b", False)
+                    create_status_box("Ready", "Enter a task and run", "○", "#71717a", False)
                 )
 
                 with gr.Group():
@@ -962,17 +1100,17 @@ def build_app():
 
                 with gr.Row(equal_height=True):
                     with gr.Column():
-                        custom_tokens_plot = gr.Plot(label="📊 Token Usage", show_label=True)
+                        custom_tokens_plot = gr.Plot(label="Token usage", show_label=True)
                     with gr.Column():
-                        custom_time_plot = gr.Plot(label="⏱️ Execution Time", show_label=True)
+                        custom_time_plot = gr.Plot(label="Time", show_label=True)
 
-                with gr.Accordion("📜 Execution Traces", open=False):
-                    custom_traces_output = gr.Markdown("*Run a task to see detailed execution traces.*")
+                with gr.Accordion("Execution traces", open=False):
+                    custom_traces_output = gr.Markdown("*Run a task to see traces.*")
 
-                with gr.Accordion("💬 Responses", open=True):
-                    custom_responses = gr.Markdown("*Responses will appear here after running.*")
+                with gr.Accordion("Responses", open=True):
+                    custom_responses = gr.Markdown("*Responses appear here after running.*")
 
-                def run_custom_task(task, context, model, run_vanilla, run_rlm, run_official):
+                def run_custom_task(task, context, model, run_vanilla, run_rlm, run_reasoning, run_official):
                     if not task.strip():
                         yield (
                             create_status_box("No Task", "Enter a task prompt", "✏️", "#666", False),
@@ -992,6 +1130,8 @@ def build_app():
                         methods.append(("Vanilla", "🔵", "#4dabf7", run_vanilla_llm))
                     if run_rlm:
                         methods.append(("minRLM", "🟠", "#ff922b", run_our_rlm))
+                    if run_reasoning:
+                        methods.append(("minRLM with Reasoning", "🟣", "#c084fc", run_reasoning_rlm))
                     if run_official:
                         methods.append(("Official", "🟢", "#51cf66", run_official_rlm))
 
@@ -1012,7 +1152,7 @@ def build_app():
                     for i, (name, icon, color, run_fn) in enumerate(methods):
                         yield (
                             create_status_box(
-                                f"Running {name}...", f"Step {i + 1}/{len(methods)} · {context_info}", icon, color, True
+                                f"Running {name}…", f"Step {i + 1}/{len(methods)} · {context_info}", "⋯", color, True
                             ),
                             "",
                             *build_charts(results_list),
@@ -1058,7 +1198,7 @@ def build_app():
                             f"**{name}:**\n```\n{r.response[:2000]}{'...' if len(r.response) > 2000 else ''}\n```\n\n"
                         )
 
-                    final_status = create_status_box("✓ Complete", f"⏱️ {total_elapsed:.1f}s", "🎉", "#51cf66", False)
+                    final_status = create_status_box("Done", f"{total_elapsed:.1f}s total", "✓", "#22c55e", False)
 
                     yield final_status, output, *build_charts(results_list), traces, responses_md
 
@@ -1070,6 +1210,7 @@ def build_app():
                         model_dropdown,
                         vanilla_checkbox,
                         rlm_checkbox,
+                        reasoning_checkbox,
                         official_checkbox,
                     ],
                     outputs=[
@@ -1089,22 +1230,12 @@ def build_app():
             outputs=[task_description, task_text, expected_text, context_preview, full_context, check_fn_state],
         )
 
-        # Footer
         gr.HTML("""
-        <div style="
-            text-align: center;
-            padding: 24px 0;
-            margin-top: 32px;
-            border-top: 1px solid rgba(148,163,184,0.1);
-            color: #64748b;
-            font-size: 0.85rem;
-        ">
-            <p style="margin: 0;">
-                Built with 💜 using <a href="https://gradio.app" target="_blank" style="color: #818cf8;">Gradio</a> ·
-                <a href="https://arxiv.org/abs/2512.24601" target="_blank" style="color: #818cf8;">Paper</a> ·
-                <a href="https://github.com/avilum/minrlm" target="_blank" style="color: #818cf8;">GitHub</a>
-            </p>
-        </div>
+        <footer class="app-footer">
+            <a href="https://gradio.app" target="_blank">Gradio</a> ·
+            <a href="https://arxiv.org/abs/2512.24601" target="_blank">Paper</a> ·
+            <a href="https://github.com/avilum/minrlm" target="_blank">GitHub</a>
+        </footer>
         """)
 
     return demo

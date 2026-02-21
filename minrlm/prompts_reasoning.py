@@ -100,6 +100,11 @@ Approach by data type:
         # Fallback: treat each non-empty line as a single-field record
         data_lines = [l.strip() for l in input_0.splitlines() if l.strip()]
         parsed = [(line,) for line in data_lines]
+    # Step 2.5: VALIDATE parsing didn't completely fail
+    if len(parsed) == 0:
+        # Parsing failed! Use simple line-by-line fallback
+        lines = [l.strip() for l in input_0.splitlines() if l.strip()]
+        parsed = [(line,) for line in lines]
     # Step 3: If classification needed, extract label types from task_0 dynamically
     label_match = re.search(r'\b(correct|incorrect|true|false|positive|negative|yes|no|formal|informal)\b', task_0, re.I)
     if label_match:
@@ -112,6 +117,10 @@ Approach by data type:
         # Use appropriate field for classification - usually last field (the instance/text)
         items_to_classify = [item[-1] if len(item) > 1 else item[0] for item in parsed]
         labels = sub_llm_batch([(task_str, str(item)) for item in items_to_classify])
+    # Step 4: Format answer EXACTLY as task_0 requires (check for "Answer:", "ONLY the number", etc.)
+    #   if "Answer:" in task_0: FINAL(f"Answer: {count}")
+    #   elif "ONLY the number" in task_0 or "Return only" in task_0.lower(): FINAL(str(count))
+    #   else: FINAL(count)
 - Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
 - Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
 - Question-at-end needle-in-haystack (task says "Answer the final question"):
@@ -153,23 +162,34 @@ Approach by data type:
   ⚠ NEVER search with description text. NEVER implement the function yourself.
   MANDATORY 3-step pattern (step 1 uses sub_llm, NO EXCEPTIONS):
     import re
-    # Step 1: Extract all function names from code preview, then use sub_llm to choose
+    # Step 1: Extract ALL function names from code (including class methods!)
     preview = input_0[:8000]  # actual code — do NOT use peek() (returns size metadata)
-    # Get list of actual function names from the code
-    func_names = re.findall(r'^def (\w+)\(', preview, re.MULTILINE)
+    # CRITICAL: Use ^\s*def to match BOTH top-level AND indented class methods
+    func_names = re.findall(r'^\s*def (\w+)\(', preview, re.MULTILINE)
     if func_names:
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_funcs = []
+        for f in func_names:
+            if f not in seen:
+                seen.add(f)
+                unique_funcs.append(f)
         # Give sub_llm the real list to choose from (prevents hallucination)
-        func_list = ", ".join(func_names[:20])  # Limit to first 20 to avoid token overflow
+        func_list = ", ".join(unique_funcs[:25])  # Show up to 25 functions
         func_name = sub_llm(
-            f"Which of these function names matches the task? Choose EXACTLY one from this list: {func_list}. Reply with ONLY the function name.",
+            f"Which function name best matches the task description? Choose EXACTLY one from: {func_list}. Reply with ONLY the function name, nothing else.",
             f"Task: {task_0}"
         ).strip()
     else:
-        # Fallback if no functions found in preview
-        func_name = sub_llm("What function name is being asked about? Reply with ONLY the function name.",
-                            preview + "\n\nTask: " + task_0).strip()
-    # Step 2: search for the definition with fallback logic
-    res = search(input_0, "def " + func_name)
+        # Fallback: let sub_llm extract from code directly
+        func_name = sub_llm(
+            "Read this code and identify the function being requested. Reply with ONLY the exact function name.",
+            preview + "\n\nTask: " + task_0
+        ).strip()
+    # Step 2: Search for the definition with multiple fallback patterns (most specific first)
+    res = search(input_0, "def " + func_name + "(")
+    if not res: res = search(input_0, "    def " + func_name + "(")  # Try indented class method
+    if not res: res = search(input_0, "def " + func_name)
     if not res: res = search(input_0, func_name + "(")
     if not res: res = search(input_0, func_name)
     # Step 3: return name||code format with LARGER context windows (was 400+2000, now 800+5000)
@@ -186,21 +206,89 @@ Approach by data type:
   ⚠ Do NOT use this for simple needle-in-haystack! Only use when task shows explicit choices!
   MUST search MULTIPLE terms and gather evidence before answering.
   ⚠ NEVER answer from single keyword! NEVER guess! NEVER pick from one search result!
-  Pattern - collect evidence from 3+ searches, then use sub_llm for reasoning:
-    # 1. Search for question concept + keywords from EACH option (A, B, C, D)
-    snippets = []
-    # Example: if question is "What does function X do?" and options mention different behaviors,
-    # search for: the function name, key terms from option A, terms from B, terms from C, etc.
-    for term in ["main_concept", "option_A_keyword", "option_B_keyword", "option_C_keyword"]:
-        res = search(input_0, term)
-        if res:
-            m, b, a = res[0]
-            snippets.append(b[-300:] + m + a[:700])  # Gather context
-    # 2. Combine all evidence
-    evidence = "\n---\n".join(snippets) if snippets else input_0[:3000]
-    # 3. Pass task_0 (contains ALL choices A/B/C/D) + evidence to sub_llm for reasoning
-    answer = sub_llm(task_0, evidence)  # sub_llm picks the letter based on evidence
-    FINAL(answer)
+
+  # For LONG documents (>100KB), use enhanced evidence gathering:
+  if len(input_0) > 100000:
+      # Step 1: Read document preview to understand context
+      preview = input_0[:3000] + "\n...\n" + input_0[-2000:]  # Larger preview
+
+      # Step 2: Extract key terms from the question and ALL options
+      # Parse task_0 to find option keywords (look for A), B), C), D) patterns)
+      option_keywords = []
+      for match in re.finditer(r'[A-D]\)(.*?)(?=[A-D]\)|$)', task_0, re.DOTALL):
+          option_text = match.group(1).strip()
+          # Extract distinctive words: prioritize longer words (more specific)
+          # Get capitalized words (proper nouns) and longer lowercase words
+          words = re.findall(r'\b[A-Z][a-z]{4,}\b|\b[a-z]{6,}\b', option_text)
+          # Take top 4 most distinctive words per option
+          option_keywords.extend(words[:4])
+
+      # Step 3: Search for EACH keyword and collect multiple results
+      all_snippets = []
+      seen_positions = set()  # Avoid duplicate snippets from overlapping matches
+      for term in option_keywords[:15]:  # Increased from 12
+          results = search(input_0, term)
+          for match, before, after in results[:2]:  # Take top 2 results per keyword
+              # Use position to deduplicate (approximate)
+              pos = len(before)
+              if pos not in seen_positions and pos-500 not in seen_positions and pos+500 not in seen_positions:
+                  snippet = before[-500:] + match + after[:1000]  # Larger context
+                  all_snippets.append(snippet)
+                  seen_positions.add(pos)
+
+      # Step 4: Combine ALL evidence and use sub_llm
+      # Include more snippets (up to 12) for better coverage
+      evidence = preview + "\n\n--- EVIDENCE ---\n" + "\n---\n".join(all_snippets[:12])
+
+      # Step 5: Call sub_llm with gathered evidence
+      answer = sub_llm(task_0, evidence[:10000])  # Increased from 8000
+
+      # Step 6: VALIDATE answer is not empty - fallback if needed
+      if not answer or len(answer.strip()) == 0:
+          # Fallback: use even larger preview if evidence gathering failed
+          fallback_evidence = input_0[:5000] + "\n...\n" + input_0[-3000:]
+          answer = sub_llm(task_0, fallback_evidence[:8000])
+
+      FINAL(answer if answer else "A")  # Last resort: return A if still empty
+  else:
+      # Standard pattern for shorter documents (<100KB):
+      # Extract actual keywords from task options (not placeholders!)
+      option_keywords = []
+      for match in re.finditer(r'[A-D]\)(.*?)(?=[A-D]\)|$)', task_0, re.DOTALL):
+          option_text = match.group(1).strip()
+          # Extract distinctive words from each option
+          words = re.findall(r'\b[A-Z][a-z]{4,}\b|\b[a-z]{6,}\b', option_text)
+          option_keywords.extend(words[:3])
+
+      # Also extract key terms from the question itself
+      question_words = re.findall(r'\b[A-Z][a-z]{4,}\b|\b[a-z]{6,}\b', task_0.split('\n')[0])
+      all_terms = question_words[:3] + option_keywords[:12]
+
+      # Gather evidence from multiple searches
+      snippets = []
+      for term in all_terms:
+          res = search(input_0, term)
+          if res:
+              m, b, a = res[0]
+              snippets.append(b[-400:] + m + a[:800])
+
+      # Ensure we have some evidence - fallback to preview if needed
+      if not snippets:
+          evidence = input_0[:4000]  # Larger preview for short docs
+      else:
+          # Include preview + all gathered snippets
+          preview = input_0[:1500]
+          evidence = preview + "\n\n--- EVIDENCE ---\n" + "\n---\n".join(snippets[:10])
+
+      # Call sub_llm with evidence
+      answer = sub_llm(task_0, evidence[:8000])
+
+      # Validate and fallback if empty
+      if not answer or len(answer.strip()) == 0:
+          # Try with just the preview (simpler approach)
+          answer = sub_llm(task_0, input_0[:5000])
+
+      FINAL(answer if answer else "A")
 
 Universal constraints:
 1) Start code with # REASONING: comment. Then ONE python code block. Last line must be FINAL(...) or FINAL_var(...).
