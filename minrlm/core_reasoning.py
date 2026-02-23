@@ -176,8 +176,9 @@ class RLMReasoning(RLM):
                 )
 
                 # Save log if configured
+                log_path = None
                 if self.log_dir:
-                    self._save_log(task)
+                    log_path = self._save_log(task)
 
                 return RLMReasoningResult(
                     response=response,
@@ -187,6 +188,7 @@ class RLMReasoning(RLM):
                     output_tokens=output_tokens,
                     history=messages,
                     reasoning=self._reasoning,
+                    log_file_path=str(log_path) if log_path else None,
                 )
 
             # Continue with state
@@ -219,8 +221,9 @@ class RLMReasoning(RLM):
             if match:
                 last_stdout = match.group(1).strip()
 
+        log_path = None
         if self.log_dir:
-            self._save_log(task)
+            log_path = self._save_log(task)
 
         return RLMReasoningResult(
             response=last_stdout,
@@ -230,4 +233,5 @@ class RLMReasoning(RLM):
             output_tokens=output_tokens,
             history=messages,
             reasoning=self._reasoning,
+            log_file_path=str(log_path) if log_path else None,
         )

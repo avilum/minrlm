@@ -47,6 +47,7 @@ class RLMResult:
     input_tokens: int = 0
     output_tokens: int = 0
     history: list[dict[str, str]] = field(default_factory=list)
+    log_file_path: str | None = None
 
 
 class _StopExecution(BaseException):
@@ -1246,6 +1247,7 @@ class RLM:
         else:
             final_output = "Max iterations reached."
 
+        log_path = None
         if is_top_level:
             self._log(
                 "end",
@@ -1256,7 +1258,7 @@ class RLM:
                     "output_tokens": output_tokens,
                 },
             )
-            self._save_log(task)
+            log_path = self._save_log(task)
 
         return RLMResult(
             response=final_output if final_output is not None else "No output",
@@ -1265,4 +1267,5 @@ class RLM:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             history=history,
+            log_file_path=str(log_path) if log_path else None,
         )
