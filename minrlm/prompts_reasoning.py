@@ -36,6 +36,11 @@ Pre-loaded globals (call directly):
 
 You MUST examine input_0 to find the answer. Use search(), peek(), or direct parsing depending on the data type.
 
+⚠ CRITICAL FIRST CHECK: If task_0 mentions counting/comparing 'labels', 'users', 'dates', 'categories':
+   → STOP! Do NOT use regex on raw text (it matches headers/instructions).
+   → MANDATORY: Use peek() + sub_llm to detect structure, then parse records.
+   → See "Structured/delimited data" section below for exact pattern.
+
 Tools:
 - search(text, "keyword") -> [(match, before, after)]
   Each result is a tuple: match=the keyword, before=500 chars before, after=500 chars after.
@@ -53,25 +58,55 @@ Tools:
 
 Approach by data type:
 - Structured data (JSON, CSV): parse directly (json.loads(), csv, etc.), filter/aggregate, FINAL.
-- Record-per-line delimited data (format: "Field1: X || Field2: Y"):
-  Use splitlines() — NEVER use search()+before/after (500-char window splits records).
-  Basic pattern:
-    lines = [l for l in input_0.splitlines() if "||" in l]
-    for line in lines:
-        parts = line.split("||")
-        field1, field2 = parts[0].strip(), parts[1].strip() if len(parts) > 1 else ""
-        # Process fields - count, filter, or classify
+- Structured/delimited data (when task mentions labels, counts by user/date/category):
+  ⚠ CRITICAL: Use peek() + sub_llm to understand structure BEFORE parsing!
+  ⚠ WRONG approach: re.findall(r'\bincorrect\b', input_0) — this matches headers!
+
+  # MANDATORY PATTERN - Copy this structure:
+
+  # Step 1: Detect format with peek + sub_llm
+  structure_info = peek(input_0)
+  format_analysis = sub_llm(
+      "Analyze this data structure. What delimiter separates records (newlines/blank lines)? What delimiter separates fields (|| or tabs or commas)? What field names appear (e.g., 'Date:', 'User:', 'Label:')?",
+      str(structure_info) + "\n\nFirst 1000 chars:\n" + input_0[:1000]
+  )
+
+  # Step 2: Parse into structured records based on analysis
+  lines = [l.strip() for l in input_0.splitlines() if l.strip() and '||' in l]  # Adjust '||' if different delimiter
+  records = []
+  for line in lines:
+      record = {}
+      for part in line.split('||'):  # Adjust delimiter based on format_analysis
+          if ':' in part:
+              key, val = part.split(':', 1)
+              record[key.strip()] = val.strip()
+      if record:
+          records.append(record)
+
+  # Step 3: Query ONLY the structured records
+  # Example - Count labels: count = sum(1 for r in records if r.get('Label') == 'incorrect')
+  # Example - Filter by user first: user_records = [r for r in records if r.get('User') == '12345']
+  #           Then count: count = sum(1 for r in user_records if r.get('Label') == 'incorrect')
 - Comparison/frequency questions (e.g., "Is X more/less common than Y?"):
-  Read task_0 carefully - what are you comparing? Count BOTH items, compare numbers:
-    count_x = len(re.findall(r'\bterm_x\b', input_0, re.I))
-    count_y = len(re.findall(r'\bterm_y\b', input_0, re.I))
-    if count_x > count_y: FINAL("more common than")  # Use exact phrase from task
-    elif count_x < count_y: FINAL("less common")
-    else: FINAL("same frequency")
-- Counting questions: Validate your regex pattern captures what task asks for:
-    pattern = r'\bterm\b'  # Use word boundaries
-    matches = re.findall(pattern, input_0, re.I)
-    FINAL(str(len(matches)))
+  ⚠ CHECK FIRST: Does task mention "label", "user", "date", "category"?
+     → YES: Use structured parsing above! Parse records first, then count.
+     → NO: Use simple regex below.
+
+  # For PLAIN TEXT only (no structure, no labels):
+  count_x = len(re.findall(r'\bterm_x\b', input_0, re.I))
+  count_y = len(re.findall(r'\bterm_y\b', input_0, re.I))
+  if count_x > count_y: FINAL("more common than")  # Use exact phrase from task
+  elif count_x < count_y: FINAL("less common")
+  else: FINAL("same frequency")
+- Counting questions:
+  ⚠ CHECK FIRST: Does task mention "label", "user", "date", "category"?
+     → YES: MANDATORY structured parsing (see above section)! Parse records first.
+     → NO: Use regex below for plain text.
+
+  # For PLAIN TEXT only (no labels/structure):
+  pattern = r'\bterm\b'  # Use word boundaries
+  matches = re.findall(pattern, input_0, re.I)
+  FINAL(str(len(matches)))
 - Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
 - Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
 - Question-at-end needle-in-haystack (task says "Answer the final question"):
