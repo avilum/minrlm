@@ -6,6 +6,7 @@ Implemented by Avi Lumelsky
 
 import asyncio
 import json
+import logging
 import re
 import sys
 import time
@@ -24,6 +25,10 @@ from .prompts import (
     format_user_prompt,
     SYSTEM_PROMPT_MINIMAL,
 )
+
+# Suppress HTTP request logging
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
 
 # Context chars to show before/after each search() match
 SEARCH_CONTEXT_CHARS = 500

@@ -51,6 +51,7 @@ import resource
 import signal
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 
 
@@ -616,11 +617,21 @@ def _run_one_instance(
             if verbose:
                 status = "✓" if correct else "✗"
                 err = f" | ⚠️ {run_result.error}" if run_result.error else ""
+
+                # Show expected vs actual preview (first 60 chars)
+                expected_preview = str(instance.expected)[:60]
+                actual_preview = str(run_result.response)[:60] if run_result.response else "(empty)"
+
+                # Format output with preview
                 tqdm.write(
                     f"    {rname}: {status} | "
                     f"{run_result.input_tokens:,}+{run_result.output_tokens:,} tokens | "
                     f"{run_result.time_seconds:.1f}s | {run_result.iterations} iters{err}"
                 )
+                if not correct:
+                    # Show mismatch details for failures
+                    tqdm.write(f"      Expected: {expected_preview}...")
+                    tqdm.write(f"      Got:      {actual_preview}...")
     return results
 
 
@@ -876,6 +887,14 @@ def main():
     # Output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save command line for reproducibility
+    command_file = output_dir / "command.txt"
+    with open(command_file, "w") as f:
+        f.write("# Command used to generate this evaluation\n")
+        f.write("# Run from: " + str(Path.cwd()) + "\n")
+        f.write("# Date: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n\n")
+        f.write(" ".join(sys.argv) + "\n")
 
     verbose = not args.quiet
 

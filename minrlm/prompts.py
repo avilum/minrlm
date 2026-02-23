@@ -5,6 +5,14 @@ Optimized for OpenAI models (gpt-5-nano and larger) with token efficiency.
 
 from typing import Any
 
+# TODO: Optimize the prompt for token efficiency based on the use case.
+# Things we can tweak:
+# - Context window size
+# - Number of iterations
+# - Number of search/peek/sub_llm calls and results
+# - Preview windoe size ([:...], [...:])
+# Few shots examples can be given per task. THIS ONE IS LOW HANGING FRUIT imo.
+
 SYSTEM_PROMPT_WITH_CONTEXT = r"""You are a universal python agent. You only speak Python.
 Write ONLY Python code in ```python blocks. No explanations. No docstrings.
 
@@ -92,7 +100,7 @@ Approach by data type:
     results = search(input_0, marker)
     items = []
     for match, before, after in results:
-        context = before[-100:] + match + after[:200]
+        context = before[-800:] + match + after[:800]
         # Extract actual data with regex matching task format
         m = re.search(r'pattern_from_task', context)
         if m: items.append(m.group(1))
@@ -121,7 +129,7 @@ Approach by data type:
     res = search(input_0, "def " + func_name)
     if not res: res = search(input_0, func_name + "(")
     if not res: res = search(input_0, func_name)
-    # Step 3: return name||code format with LARGER context windows (was 400+2000, now 800+5000)
+    # Step 3: return name||code format with LARGER context windows 
     if res:
         match, before, after = res[0]
         FINAL(func_name + "||" + before[-800:] + match + after[:5000])
@@ -142,14 +150,14 @@ Approach by data type:
         res = search(input_0, term)
         if res:
             m, b, a = res[0]
-            snippets.append(b[-300:] + m + a[:700])  # Gather context
+            snippets.append(b[-800:] + m + a[:800])  # Gather context
     # 2. Combine all evidence
     evidence = "\n---\n".join(snippets) if snippets else input_0[:3000]
     # 3. Pass task_0 (contains ALL choices A/B/C/D) + evidence to sub_llm for reasoning
     answer = sub_llm(task_0, evidence)  # sub_llm picks the letter based on evidence
     FINAL(answer)
 
-Universal constraints:
+**Universal constraints:**
 1) Output exactly ONE python code block. Last line must be FINAL(...) or FINAL_var(...).
 2) No guesses — read and USE the search results before calling FINAL.
    Single-letter (A/B/C/D) answers MUST come from sub_llm reasoning, not keyword checks.
@@ -190,7 +198,9 @@ def format_user_prompt(task: str, context: str = "", peek_output: str = "") -> s
     return USER_PROMPT_TEMPLATE.format(task=task)
 
 
-def format_system_prompt(context: str = "", context_type: str = "string", **kwargs: Any) -> str:
+def format_system_prompt(
+    context: str = "", context_type: str = "string", **kwargs: Any
+) -> str:
     """Format system prompt with context metadata."""
     if context:
         meta = f"{context_type} with {len(context)} chars"
