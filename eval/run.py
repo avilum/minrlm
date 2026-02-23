@@ -294,8 +294,8 @@ def run_evaluation(
     active_runners = {}
     for runner_name in runners:
         try:
-            # Pass log_dir only to "ours" runner
-            kwargs = {"log_dir": log_dir} if runner_name == "ours" and log_dir else {}
+            # Pass log_dir to RLM runners
+            kwargs = {"log_dir": log_dir} if runner_name in ("ours", "ours_reasoning") and log_dir else {}
             runner = get_runner(runner_name, model, **kwargs)
             if runner.warmup():
                 active_runners[runner_name] = runner
@@ -612,6 +612,8 @@ def _run_one_instance(
                     context_size=len(instance.context),
                     metadata=instance.metadata or {},
                     cost_usd=cost,
+                    generated_code=run_result.generated_code,
+                    log_file_path=run_result.log_file_path,
                 )
             )
             if verbose:

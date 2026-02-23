@@ -46,6 +46,9 @@ class RunResult:
     iterations: int = 1
     error: str | None = None
     metadata: dict = field(default_factory=dict)
+    # Debug info (for RLM runners)
+    generated_code: str | None = None
+    log_file_path: str | None = None
 
     @property
     def success(self) -> bool:
@@ -177,6 +180,15 @@ class OursRunner(BaseRunner):
             result = rlm.completion(task=task, context=context)
             elapsed = time.time() - start
 
+            # Extract generated code from history (last assistant message with code)
+            generated_code = None
+            for msg in reversed(result.history):
+                if msg.get("role") == "assistant":
+                    content = msg.get("content", "")
+                    if "```python" in content:
+                        generated_code = content
+                        break
+
             return RunResult(
                 response=result.response,
                 total_tokens=result.total_tokens,
@@ -184,6 +196,8 @@ class OursRunner(BaseRunner):
                 output_tokens=result.output_tokens,
                 time_seconds=elapsed,
                 iterations=result.iterations,
+                generated_code=generated_code,
+                log_file_path=result.log_file_path,
             )
         except Exception as e:
             return RunResult(

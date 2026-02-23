@@ -84,6 +84,8 @@ def _load_dataset_from_disk(dataset_root: Path, split: str | None) -> "Dataset":
     """Load a Hugging Face dataset from disk with simple split resolution."""
     try:
         from datasets import load_from_disk  # type: ignore
+        from datasets.utils.logging import disable_progress_bar  # type: ignore
+        disable_progress_bar()  # Suppress "Loading dataset from disk" progress bar
     except Exception as exc:  # pragma: no cover - optional dependency
         raise RuntimeError(
             "Missing dependency: datasets. Install with: uv pip install datasets huggingface_hub"
@@ -332,7 +334,8 @@ class OfficialOOLONGTask(BaseTask):
         row = ds[self._indices[idx]]
 
         task = str(row["question"]).strip()
-        context = str(row["context_window_text"])
+        # Use context_with_labels for OOLONG label counting tasks
+        context = str(row["context_window_text_with_labels"])
         raw_answer = row.get("answer")
         answers: list[str]
         if isinstance(raw_answer, list):

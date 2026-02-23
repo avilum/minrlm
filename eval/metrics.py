@@ -76,6 +76,10 @@ class EvalResult:
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     metadata: dict = field(default_factory=dict)
 
+    # Debug info (for RLM runners)
+    generated_code: str | None = None
+    log_file_path: str | None = None
+
     # Cost (None if model not supported by tokencost)
     cost_usd: float | None = None
 
