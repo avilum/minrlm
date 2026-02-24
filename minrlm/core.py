@@ -383,7 +383,7 @@ class RLM:
         base_url: str | None = None,
         max_iterations: int = 6,  # Reduced from 20 - force early commitment
         max_time_seconds: int = DEFAULT_MAX_TIME_SECONDS,  # Timeout per completion
-        max_output_tokens: int | None = 1500,  # Reduced from 2000 - less verbose code
+        max_output_tokens: int | None = 3000,  # Allow complete code generation for complex tasks (was 1500, caused truncation)
         temperature: float = 0.0,  # Use 0 for deterministic code generation
         reasoning_effort: str = "low",  # For reasoning models: "low", "medium", "high"
         log_dir: str | None = None,

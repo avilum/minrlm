@@ -68,8 +68,16 @@ class RLMReasoning(RLM):
         if context:
             self._repl.set_variable("input_0", context, allow_override=True)
 
-        # Log start
-        self._log("start", {"task": task[:200], "model": self.model})
+        # Log start with full task and context for debugging
+        start_data = {
+            "task": task,  # Full task, not truncated
+            "model": self.model,
+            "context_length": len(context) if context else 0,
+        }
+        # Optionally include first 2000 chars of context for debugging
+        if context:
+            start_data["context_preview"] = context[:2000] if len(context) > 2000 else context
+        self._log("start", start_data)
 
         # Iteration loop
         total_tokens = 0
@@ -92,8 +100,12 @@ class RLMReasoning(RLM):
             if self.on_step:
                 self.on_step("thinking", {"iteration": iteration})
 
-            # Call LLM
-            self._log("llm_call", {"iteration": iteration})
+            # Call LLM - log full messages for debugging
+            llm_call_data = {
+                "iteration": iteration,
+                "messages": messages,  # Full messages array including all prompts
+            }
+            self._log("llm_call", llm_call_data)
             response_text, t_total, t_in, t_out = self._call_llm(messages)
             total_tokens += t_total
             input_tokens += t_in
@@ -114,14 +126,13 @@ class RLMReasoning(RLM):
                         if self.on_step:
                             self.on_step("reasoning", {"reasoning": self._reasoning})
 
-            # Log response
+            # Log response - full response for debugging (not truncated)
             code = self._extract_code(response_text)
             self._log(
                 "llm_response",
                 {
-                    "response": response_text[:500]
-                    if len(response_text) > 500
-                    else response_text
+                    "response": response_text,  # Full response, not truncated
+                    "response_length": len(response_text),
                 },
             )
             if self.on_step:
@@ -134,7 +145,7 @@ class RLMReasoning(RLM):
             messages.append({"role": "assistant", "content": response_text})
 
             if not code:
-                self._log("no_code", {"response": response_text[:200]})
+                self._log("no_code", {"response": response_text})
                 return RLMReasoningResult(
                     response="",
                     iterations=iteration,
@@ -145,8 +156,8 @@ class RLMReasoning(RLM):
                     reasoning=self._reasoning,
                 )
 
-            # Execute code
-            self._log("code_exec", {"code": code[:500] if len(code) > 500 else code})
+            # Execute code - log full code for debugging (not truncated)
+            self._log("code_exec", {"code": code, "code_length": len(code)})
             if self.on_step:
                 self.on_step("executing", {"iteration": iteration, "code": code})
             result = self._repl.execute(code)
