@@ -19,28 +19,28 @@ Paper Tasks:
 
 Usage:
     # Quick start
-    uv run python eval/run.py --model gpt-5-nano
+    uv run python eval/run.py --model gpt-4o-mini
 
     # Full evaluation with multiple runs
-    uv run python eval/run.py --model gpt-5-nano --runs 3 --tasks all
+    uv run python eval/run.py --model gpt-4o-mini --runs 3 --tasks all
 
     # Paper benchmarks (all core tasks from the RLM paper)
-    uv run python eval/run.py --model gpt-5-nano --tasks paper
+    uv run python eval/run.py --model gpt-4o-mini --tasks paper
 
     # Paper scaling test (8K to 1M, Figure 1)
-    uv run python eval/run.py --model gpt-5-nano --tasks scaling --paper-scale
+    uv run python eval/run.py --model gpt-4o-mini --tasks scaling --paper-scale
 
     # Skip official RLM (if not installed)
-    uv run python eval/run.py --model gpt-5-nano --skip-official
+    uv run python eval/run.py --model gpt-4o-mini --skip-official
 
     # Custom context sizes for scaling test
-    uv run python eval/run.py --model gpt-5-nano --tasks scaling --context-sizes 8192,16384,32768
+    uv run python eval/run.py --model gpt-4o-mini --tasks scaling --context-sizes 8192,16384,32768
 
     # Extended evaluation (8K to 256K contexts)
-    uv run python eval/run.py --model gpt-5-nano --tasks scaling --extended
+    uv run python eval/run.py --model gpt-4o-mini --tasks scaling --extended
 
     # Output to specific directory
-    uv run python eval/run.py --model gpt-5-nano --output-dir my_results/
+    uv run python eval/run.py --model gpt-4o-mini --output-dir my_results/
 """
 
 import argparse
@@ -102,14 +102,14 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  uv run python eval/run.py --model gpt-5-nano
-  uv run python eval/run.py --model gpt-5-nano --runs 3 --tasks all
-  uv run python eval/run.py --model gpt-5-nano --skip-official
+  uv run python eval/run.py --model gpt-4o-mini
+  uv run python eval/run.py --model gpt-4o-mini --runs 3 --tasks all
+  uv run python eval/run.py --model gpt-4o-mini --skip-official
         """,
     )
 
     parser.add_argument(
-        "--model", "-m", default="gpt-5-nano", help="Model to use for evaluation (e.g., gpt-5-nano, gpt-5-nano)"
+        "--model", "-m", default="gpt-4o-mini", help="Model to use for evaluation (e.g., gpt-4o-mini, gpt-4o, gpt-4-turbo)"
     )
 
     parser.add_argument(
@@ -316,7 +316,7 @@ def run_evaluation(
     max_context_chars = official_oolong_max_context_chars
     max_context_tokens = official_oolong_max_context_tokens
 
-    if max_context_chars is None and max_context_tokens is None and "gpt-5-nano" in model:
+    if max_context_chars is None and max_context_tokens is None and "gpt-4o-mini" in model:
         max_context_tokens = 272000
         max_context_chars = 10_000_000
 

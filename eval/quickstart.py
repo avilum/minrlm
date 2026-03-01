@@ -18,7 +18,7 @@ from eval.tasks import get_task
 
 
 def main():
-    model = "gpt-5-nano"  # Change to your model
+    model = "gpt-4o-mini"  # Change to your model
 
     print("=" * 60)
     print("RLM Quick Evaluation")
@@ -59,7 +59,7 @@ def main():
     print("\n" + "=" * 60)
     print("Quick test complete!")
     print("\nFor full evaluation, run:")
-    print("  uv run python eval/run.py --model gpt-5-nano --tasks sniah,multi_needle")
+    print("  uv run python eval/run.py --model gpt-4o-mini --tasks sniah,multi_needle")
     print("=" * 60)
 
 

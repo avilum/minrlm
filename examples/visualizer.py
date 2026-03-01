@@ -88,7 +88,7 @@ def get_benchmark_options() -> dict[str, dict]:
         else:
             size_label = f"{size // (1024 * 1024)}M"
         options[f"SCALING - {size_label}"] = {
-            "task": "scaling",
+            "task": "official_sniah",
             "context_size": size,
             "description": f"S-NIAH at {size:,} chars",
         }
@@ -134,14 +134,14 @@ def get_benchmark_options() -> dict[str, dict]:
                 "description": f"Find 10 needles in {size_val:,} chars",
             }
 
-    if "oolong" in TASK_REGISTRY:
+    if "official_oolong" in TASK_REGISTRY:
         options["OOLONG (Aggregation)"] = {
-            "task": "oolong",
+            "task": "official_oolong",
             "context_size": 131072,
             "description": "Count label occurrences (131K chars)",
         }
 
-    if "codeqa" in TASK_REGISTRY:
+    if "official_codeqa" in TASK_REGISTRY:
         # Paper's CodeQA sizes: 23K-4.2M, include 1M+
         codeqa_sizes = {
             "Small (100K)": 100000,
@@ -152,12 +152,12 @@ def get_benchmark_options() -> dict[str, dict]:
         }
         for size_name, size_val in codeqa_sizes.items():
             options[f"CODEQA - {size_name}"] = {
-                "task": "codeqa",
+                "task": "official_codeqa",
                 "context_size": size_val,
                 "description": f"Code repository understanding ({size_val:,} chars)",
             }
 
-    if "browsecomp" in TASK_REGISTRY:
+    if "official_browsecomp" in TASK_REGISTRY:
         # Paper's BrowseComp+ sizes: 6M-11M
         browsecomp_sizes = {
             "Small (200K)": 200000,
@@ -168,10 +168,24 @@ def get_benchmark_options() -> dict[str, dict]:
         }
         for size_name, size_val in browsecomp_sizes.items():
             options[f"BROWSECOMP - {size_name}"] = {
-                "task": "browsecomp",
+                "task": "official_browsecomp",
                 "context_size": size_val,
                 "description": f"Multi-hop research ({size_val:,} chars)",
             }
+
+    if "official_gdpval" in TASK_REGISTRY:
+        # Real professional work tasks across multiple occupations
+        options["GDPVAL (Professional Tasks)"] = {
+            "task": "official_gdpval",
+            "description": "Real professional work tasks (Accounting, Tax, Finance, etc.)",
+        }
+
+    if "official_aime_2025" in TASK_REGISTRY:
+        # AIME 2025 competition math problems
+        options["AIME 2025 (Competition Math)"] = {
+            "task": "official_aime_2025",
+            "description": "AIME 2025 - 30 competition-level math problems",
+        }
 
     return options
 
@@ -185,16 +199,49 @@ BENCHMARKS = get_benchmark_options()
 
 
 def get_available_models(base_url: str = None) -> list[str]:
-    """Fetch available models from API."""
+    """Fetch available models from API, returning only known working chat models."""
+    # Known working chat models (conservative list)
+    fallback_models = [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4-turbo",
+        "gpt-4",
+        "gpt-3.5-turbo",
+    ]
+
     try:
         client = OpenAI(**({"base_url": base_url} if base_url else {}))
         models = client.models.list()
-        chat_models = [
-            m.id for m in models.data if any(x in m.id.lower() for x in ["gpt", "claude", "llama", "o1", "o3"])
-        ]
-        return sorted(chat_models, reverse=True) if chat_models else ["gpt-5-nano"]
+        all_model_ids = [m.id for m in models.data]
+
+        # Conservative filter: Only include models with known-good patterns
+        # gpt-4o*, gpt-4-turbo*, gpt-4-*, gpt-3.5-turbo*
+        chat_models = []
+        for model_id in all_model_ids:
+            m_lower = model_id.lower()
+            # Include gpt-4o variants
+            if m_lower.startswith("gpt-4o"):
+                chat_models.append(model_id)
+            # Include gpt-4-turbo variants
+            elif m_lower.startswith("gpt-4-turbo"):
+                chat_models.append(model_id)
+            # Include gpt-4 (but not gpt-4-base, gpt-4-vision, etc.)
+            elif m_lower == "gpt-4" or (m_lower.startswith("gpt-4-") and "base" not in m_lower and "vision" not in m_lower):
+                chat_models.append(model_id)
+            # Include gpt-3.5-turbo variants
+            elif m_lower.startswith("gpt-3.5-turbo"):
+                chat_models.append(model_id)
+            # Include gpt-5 if it exists
+            elif m_lower.startswith("gpt-5"):
+                chat_models.append(model_id)
+
+        # Sort: latest versions first
+        if chat_models:
+            return sorted(chat_models, reverse=True)
+        else:
+            return fallback_models
     except:
-        return ["gpt-5-nano", "gpt-5-mini", "gpt-5-nano-mini"]
+        return fallback_models
 
 
 # =============================================================================
@@ -866,9 +913,15 @@ def build_app():
             """)
 
         with gr.Row(equal_height=True):
+            # Use gpt-4o-mini as default (it's reliable and cost-effective)
+            # Fallback to first model in list if gpt-4o-mini not available
+            default_model = "gpt-4o-mini" if "gpt-4o-mini" in initial_models else (
+                initial_models[0] if initial_models else "gpt-4o-mini"
+            )
+
             model_dropdown = gr.Dropdown(
                 choices=initial_models,
-                value=("gpt-5-nano" if "gpt-5-nano" in initial_models else initial_models[0]),
+                value=default_model,
                 label="Model",
                 scale=3,
                 container=True,

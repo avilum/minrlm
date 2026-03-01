@@ -16,7 +16,6 @@ eval/
 eval/results/*.json
 eval/results/*.md
 eval/results/plots/
-evals/data/
 evals/cache/
 evals/tmp/
 temp/

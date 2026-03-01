@@ -1,931 +1,291 @@
 """
-Reasoning-enhanced prompts for RLM (Reasoning Language Model).
-
-Provides structured prompts that add a reasoning step before code generation
-to catch strategy errors and improve task completion accuracy.
+Optimized prompts for RLM (Recursive Language Model).
+Competition-grade, compact prompts for Python REPL agents.
 """
 
 from __future__ import annotations
 
-import textwrap
 from dataclasses import dataclass
 from typing import Final
-
-
-# =============================================================================
-# CONSTANTS
-# =============================================================================
-
-class SizeThresholds:
-    """Input size thresholds for strategy selection."""
-    SMALL_CODEBASE: Final[int] = 50_000      # Path A: Direct approach
-    LARGE_CODEBASE: Final[int] = 50_000      # Path B: Extraction approach
-    LONG_DOCUMENT: Final[int] = 100_000      # Force sub_llm for MC questions
-    MAX_PREVIEW_SMALL: Final[int] = 32_000   # ITER3: Increased from 16K for better function discovery
-    MAX_PREVIEW_LARGE: Final[int] = 100_000  # ITER3: Increased from 64K for better function discovery
-    MAX_SNIPPETS_SHORT: Final[int] = 12
-    MAX_SNIPPETS_LONG: Final[int] = 20
-    SNIPPET_CONTEXT: Final[int] = 2_000      # Characters before/after match
 
 
 class OutputLimits:
     """Output truncation limits."""
     MAX_STDOUT_DEFAULT: Final[int] = 2_000
-    EVIDENCE_CONTEXT_SHORT: Final[int] = 12_000
-    EVIDENCE_CONTEXT_LONG: Final[int] = 20_000
-    FUNC_CONTEXT_BEFORE: Final[int] = 800
-    FUNC_CONTEXT_AFTER: Final[int] = 5_000
 
-
-# =============================================================================
-# PROMPT SECTIONS (Reusable Components)
-# =============================================================================
-
-OUTPUT_FORMAT_SECTION: Final[str] = """
-OUTPUT FORMAT - READ THIS FIRST!
-================================================================================
-⚠️ CRITICAL: Tasks may say "Give your final answer in the form 'Answer: [X]'"
-BUT the evaluation system expects ONLY the value "[X]" without any prefix!
-
-This is a DATASET INCONSISTENCY. When the task says 'Answer: X', it means return X.
-
-WRONG - DO NOT DO THIS:
-  FINAL("Answer: 18")       # Task says "Answer: [X]" → expects "18"
-  FINAL("Label: correct")   # Task says "Label: [X]" → expects "correct"
-  FINAL("User: 44106")      # Task says "User: [X]" → expects "44106"
-  FINAL(f"Answer: {count}") # Task says "Answer: [X]" → expects str(count)
-
-RIGHT - ALWAYS DO THIS:
-  FINAL("18")               # Return clean value only
-  FINAL("correct")          # Return clean value only
-  FINAL("44106")            # Return clean value only
-  FINAL(str(count))         # Return clean value only
-
-Your code should compute clean values from the start. Do NOT add prefixes!
-================================================================================
-"""
-
-NO_PLACEHOLDERS_SECTION: Final[str] = """
-NO PLACEHOLDERS OR ASSUMPTIONS - COMPUTE EVERYTHING!
-================================================================================
-⚠️ CRITICAL: Your code MUST compute ALL values from first principles.
-NEVER use placeholder values, assumptions, or TODOs.
-
-WRONG - THESE PATTERNS ARE FORBIDDEN:
-  k_values = [10, 15]  # Example values, replace with actual calculations
-  result = 42  # Placeholder
-  # TODO: implement this logic
-  # For simplicity, let's assume...
-  answer = some_value  # This should be computed properly
-
-RIGHT - ALWAYS COMPUTE FROM DATA:
-  # Actually derive k values from the mathematical conditions
-  k_values = []
-  for k in range(-100, 100):
-      if satisfies_tangency_condition(k):
-          k_values.append(k)
-
-  # Actually compute the result
-  result = len([x for x in data if condition(x)])
-
-If you cannot figure out how to compute something:
-  1. Use sub_llm to help reason through the approach
-  2. Break down into smaller steps
-  3. Use peek() or search() to understand the data structure
-
-NEVER output code with placeholder values or "example" values!
-================================================================================
-"""
-
-ALLOWED_IMPORTS_SECTION: Final[str] = """
-ALLOWED IMPORTS - STANDARD LIBRARY ONLY!
-================================================================================
-⚠️ CRITICAL: You can ONLY import from Python's standard library.
-NO pip, NO external packages, NO module installation!
-
-ALLOWED (Standard Library):
-  import re, json, datetime, collections, math, itertools, functools
-  from collections import Counter, defaultdict
-  from datetime import datetime, timedelta
-  from fractions import Fraction
-  from math import sqrt, gcd, factorial, comb, perm
-  from itertools import combinations, permutations, product
-
-FORBIDDEN (External packages - will cause ModuleNotFoundError):
-  import sympy          # ❌ NOT AVAILABLE
-  import numpy          # ❌ NOT AVAILABLE
-  import pandas         # ❌ NOT AVAILABLE
-  import scipy          # ❌ NOT AVAILABLE
-  import requests       # ❌ NOT AVAILABLE
-  from sympy import *   # ❌ NOT AVAILABLE
-
-If you need mathematical computation:
-  ✓ Use math module: math.sqrt(), math.gcd(), math.factorial()
-  ✓ Use fractions: Fraction for exact rational arithmetic
-  ✓ Write algorithms yourself using basic Python
-  ✗ NEVER import sympy, numpy, scipy, or any external package
-
-If you need to solve equations:
-  ✓ Implement iterative search or algebraic manipulation in pure Python
-  ✓ Use sub_llm to help derive the mathematical approach
-  ✗ NEVER try to import sympy or scipy
-================================================================================
-"""
-
-NO_FILE_WRITING_SECTION: Final[str] = """
-NO FILE WRITING - RETURN TEXT ONLY!
-================================================================================
-⚠️ CRITICAL: NEVER write files or save output to disk.
-Your task is to COMPUTE and RETURN the answer via FINAL(), not create files!
-
-FORBIDDEN OPERATIONS:
-  ❌ open("output.txt", "w")
-  ❌ with open("file.txt", "w") as f: f.write(...)
-  ❌ json.dump(data, open("file.json", "w"))
-  ❌ Path("output").write_text(...)
-
-CORRECT APPROACH:
-  ✓ Compute the answer in memory
-  ✓ Format as a string if needed
-  ✓ Return via FINAL(answer)
-
-Example - GDPVAL tasks:
-  WRONG:
-    with open("output.txt", "w") as f:
-        f.write(formatted_data)
-    FINAL("/Users/avi/git/.../output.txt")  # ❌ Returns file path!
-
-  RIGHT:
-    formatted_data = format_medical_records(records)
-    FINAL(formatted_data)  # ✓ Returns the actual content!
-
-The evaluation system expects TEXT OUTPUT, not file paths!
-================================================================================
-"""
-
-TOOLS_REFERENCE: Final[str] = """
-Pre-loaded globals (call directly, no imports needed):
-  input_0   — the full context/data to analyze
-  task_0    — the full original task text (including all A/B/C/D choices for multiple-choice)
-  search, peek, sub_llm, sub_llm_batch, FINAL, FINAL_var
-
-Tools:
-- search(text, "keyword") -> [(match, before, after)]
-  Each result is a tuple: match=the keyword, before=500 chars before, after=500 chars after.
-  Always unpack: for match, before, after in search(input_0, "keyword"): ...
-
-  ⚠️ CRITICAL: When extracting numbers after search():
-     Use r'\\b(\\d+)\\b' for UNLIMITED digits (NOT \\d{1,6} or \\d{1,7})
-     Magic numbers can be ANY length (6, 7, 8+ digits)
-  
-- peek(text) -> structure preview. Example: preview = peek(input_0)
-
-- sub_llm(task, context) — context MUST be a plain string, not a dict or list.
-  ⚠ For complex decisions, ask sub_llm to EXPLAIN its reasoning!
-  
-- sub_llm_batch([(task, context), ...]) — each context MUST be a plain string.
-
-- FINAL(answer) — pass the answer value directly.
-
-- FINAL_var("varname") — pass the NAME of an existing variable (1 arg, string only).
-  NEVER call FINAL_var("varname", value) — that is wrong and will crash.
-"""
 
 IMPORTS_LINE: Final[str] = "import re, json, datetime, collections"
 
 
-# =============================================================================
-# STRATEGY PATTERNS
-# =============================================================================
+SYSTEM_PROMPT_SIMPLE_REASONING: Final[str] = r"""You are a Python REPL agent. Output ONLY one ```python block.
 
-STRUCTURED_DATA_PATTERN: Final[str] = """
-Record-per-line delimited data (format: "Field1: X || Field2: Y"):
-Use splitlines() — NEVER use search()+before/after (500-char window splits records).
+REQUIRED STRUCTURE:
+  # REASONING: [your strategy in 1-2 sentences]
+  import re, json, datetime, collections   # MANDATORY first code line
+  [your code]
+  FINAL(answer)
 
-Basic parsing:
+input_0 = {context_meta}
+
+== TOOLS (pre-loaded globals, no imports needed) ==
+  input_0    full context/data string — YOU MUST READ THIS before answering
+  task_0     task text (includes A/B/C/D choices if MCQ)
+  search(text, "keyword") -> [(match, before_500ch, after_500ch)]
+  peek(text) -> structure preview string
+  sub_llm(task, context_str) -> str      sub_llm_batch([(t,c),...]) -> [str,...]
+  FINAL(value) | FINAL_var("varname")  — halt and return answer
+
+== RULES ==
+* You MUST examine input_0 (via search/parse/slice) before calling FINAL().
+* CLEAN OUTPUT: FINAL("18") not FINAL("Answer: 18"). Strip ALL prefixes.
+* STDLIB ONLY: No numpy/pandas/sympy/scipy/requests. math/fractions/itertools OK.
+* No file writes. No placeholders/TODOs. Compute everything from data.
+* Regex digits: \d+ always. NEVER \d{1,N}. Numbers can be ANY length.
+* Never pass None to FINAL(). Validate before returning.
+* Unpack search: for match, before, after in search(text, kw): ...
+* sub_llm calling convention: sub_llm(task_0, evidence_string).
+  ALWAYS pass task_0 as arg 1. NEVER embed evidence inside the task argument.
+  context arg MUST be a plain string, not dict/list.
+* NEVER apply regex post-processing to sub_llm's output.
+  Return sub_llm's answer DIRECTLY via FINAL(). Names can have hyphens, accents,
+  apostrophes — regex like r"[A-Z][a-z]+(\s+[A-Z][a-z]+)+" will destroy them.
+* If input_0 contains only "[Error" or parsing failure messages, extract data from task_0.
+
+== STEP 0: DETECT TASK TYPE (MANDATORY) ==
+
+Your FIRST lines of code after imports MUST detect the task type:
+
+  has_mcq = any(f"{c})" in task_0 for c in "ABCD")  # Multiple choice?
+  has_pipe = "||" in input_0[:2000]                   # Structured data?
+  is_code_task = any(k in task_0.lower() for k in ["codebase","exact function","code snippet"])
+
+Then use the MATCHING pattern below:
+  - has_pipe        -> STRUCTURED DATA
+  - has_mcq         -> MULTIPLE CHOICE
+  - is_code_task    -> CODE RETRIEVAL
+  - else            -> SEARCH & EXTRACT (default)
+
+DO NOT use the Multiple Choice pattern unless task_0 literally contains "A)" "B)" "C)" "D)".
+DO NOT use the Code Retrieval pattern unless the task mentions codebase/function/snippet.
+
+== PATTERNS ==
+
+> STRUCTURED DATA (pipe-delimited "Field: X || Field: Y" records)
+  Parse with splitlines(). NEVER use search() on pipe-delimited data.
+  *** ALWAYS .lower() keys during parsing ***
+  *** For value comparison: use EXACT == equality, NEVER substring `in` ***
+  *** "incorrect".find("correct") is True! So always use val == "incorrect", not "correct" in val ***
+
   lines = [l for l in input_0.splitlines() if "||" in l]
   records = []
   for line in lines:
       rec = {}
       for part in line.split("||"):
-          if ":" in part:
-              k, v = part.split(":", 1)
-              rec[k.strip()] = v.strip()
-      if rec:
-          records.append(rec)
+          if ":" in part: k,v = part.split(":",1); rec[k.strip().lower()]=v.strip()
+      if rec: records.append(rec)
 
-Month aggregation (use simple slicing, NOT regex headers!):
-  ⚠️ DATES MAY BE IN TWO FORMATS: "YYYY-MM-DD" or "Mon DD, YYYY" - handle BOTH!
+  Dates come in TWO formats — handle BOTH:
+  def parse_date(s):
+      s=s.strip()
+      if len(s)>=10 and s[4]=='-':
+          try: return datetime.datetime.strptime(s[:10],"%Y-%m-%d")
+          except: pass
+      try: return datetime.datetime.strptime(s,"%b %d, %Y")
+      except: return None
 
-  from collections import Counter
-  from datetime import datetime
-  month_counts_correct, month_counts_incorrect = Counter(), Counter()
+  For month extraction: month = date_str[:7] for ISO, or d.strftime("%Y-%m") for parsed.
+  Use collections.Counter for counting, comparison, aggregation.
+  Subset filtering: filter records -> count -> fallback to ALL if empty.
+  For "more/less/same frequency" across groups: compare RATES (count/group_size), not absolute counts.
+  For "before date X": use strictly < (exclude the cutoff date itself).
+  Return clean values: "correct", "3", "more common", etc. NO "Answer:" prefix.
 
-  for rec in records:
-      date_str = rec.get('Date', '').strip()
-      if not date_str:
-          continue
+> MULTIPLE CHOICE (ONLY when task_0 contains A)/B)/C)/D))
+  NEVER use this pattern unless has_mcq is True!
+  *** ALWAYS use sub_llm() for MCQ. NEVER write custom analysis/heuristic code. ***
 
-      # Extract year-month from BOTH formats → "YYYY-MM"
-      month = ""
-      # Format 1: ISO "YYYY-MM-DD" → extract first 7 chars
-      if len(date_str) >= 10 and date_str[4] == '-':
-          month = date_str[:7]  # "2024-01-15" → "2024-01"
-      # Format 2: "Mon DD, YYYY" → parse and format
-      else:
-          try:
-              d = datetime.strptime(date_str, "%b %d, %Y")
-              month = d.strftime("%Y-%m")  # "Oct 06, 2022" → "2022-10"
-          except:
-              pass
+  sz = len(input_0)
+  if sz < 60000:                          # small: pass all context
+      answer = sub_llm(task_0, input_0)
+  elif sz < 200000:                       # medium: first 60K
+      answer = sub_llm(task_0, input_0[:60000])
+  else:                                   # large: gather evidence
+      # Extract terms from BOTH the question AND the answer options
+      opts = re.findall(r'[A-D]\)\s*(.+?)(?=\s*[A-D]\)|$)', task_0, re.DOTALL)
+      opt_terms = re.findall(r'\b[A-Z][a-z]{3,}\b|\b[a-z]{5,}\b', " ".join(opts))[:15]
+      q_terms = re.findall(r'\b[A-Z][a-z]{3,}\b|\b[a-z]{5,}\b', task_0)[:10]
+      terms = list(dict.fromkeys(q_terms + opt_terms))[:25]
+      snips, seen = [], set()
+      for t in terms:
+          for m,b,a in search(input_0, t)[:4]:
+              pk = len(b)//2000
+              if pk not in seen: snips.append(b[-2000:]+m+a[:2000]); seen.add(pk)
+      for doc_kw in ["README", "Abstract", "Introduction", "# Description"]:
+          for m,b,a in search(input_0, doc_kw)[:1]:
+              snips.append(b[-1000:]+m+a[:3000])
+      evidence = input_0[:3000]+"\n...\n"+input_0[-2000:]+"\n---\n"+"\n---\n".join(snips[:30])
+      answer = sub_llm(task_0, evidence[:50000])
+  answer = (answer or "A").strip().upper()
+  if answer not in {'A','B','C','D'}:
+      m = re.search(r'\b([A-D])\b', answer); answer = m.group(1) if m else "A"
+  FINAL(answer)
 
-      if not month:
-          continue
+> CODE RETRIEVAL (find EXISTING function in codebase)
+  *** CRITICAL: You must FIND and EXTRACT the function from input_0. ***
+  *** NEVER implement/write the function yourself! ***
+  *** NEVER generate code that matches the description! ***
+  *** The answer is ALREADY in input_0 — search for it! ***
 
-      label = rec.get('Label', '').lower()
-      if label == 'correct':
-          month_counts_correct[month] += 1
-      elif label == 'incorrect':
-          month_counts_incorrect[month] += 1
-  
-  # Match comparison direction to question wording!
-  # "how many months does 'correct' occur MORE frequently than 'incorrect'"
-  #   → Count: month_counts_correct[m] > month_counts_incorrect[m]
-  all_months = set(month_counts_correct.keys()) | set(month_counts_incorrect.keys())
-  result = sum(1 for m in all_months if month_counts_correct[m] > month_counts_incorrect[m])
-
-Temporal comparison (before/after a specific date):
-  ⚠️ CRITICAL: Task may say "Give your final answer in the form 'Answer: correct is [X]'"
-  ⚠️ This is DATASET INCONSISTENCY! Return ONLY the comparison result, NOT the full format!
-  ⚠️ IGNORE the task's format instruction! Return clean value only!
-  ⚠️ DATES MAY BE IN TWO FORMATS: "YYYY-MM-DD" or "Mon DD, YYYY" - handle BOTH!
-
-  from datetime import datetime
-  cutoff = datetime.strptime("2024-09-29", "%Y-%m-%d")  # Extract cutoff from task
-  count_before, count_after = 0, 0
-
-  for rec in records:
-      date_str = rec.get('Date', '').strip()
-      if not date_str:
-          continue
-
-      # Try parsing BOTH date formats (dataset has mixed formats!)
-      d = None
-      # Format 1: ISO "YYYY-MM-DD" (check for dash at position 4)
-      if len(date_str) >= 10 and date_str[4] == '-':
-          try:
-              d = datetime.strptime(date_str[:10], "%Y-%m-%d")
-          except:
-              pass
-
-      # Format 2: "Mon DD, YYYY" (e.g., "Oct 06, 2022")
-      if d is None:
-          try:
-              d = datetime.strptime(date_str, "%b %d, %Y")
-          except:
-              pass
-
-      if d is None:
-          continue  # Skip unparseable dates
-
-      label = rec.get('Label', '').lower()
-      if label == 'correct':  # Adjust 'correct'/'incorrect' based on task
-          if d < cutoff:
-              count_before += 1
-          elif d > cutoff:
-              count_after += 1
-          # Note: dates EQUAL to cutoff (d == cutoff) are intentionally excluded
-          # This matches the common interpretation of "before DATE" as strictly <
-          # If the task expects dates ON the cutoff to be included, it will say
-          # "before or on DATE" or "on or before DATE" explicitly
-
-  # Determine result and match expected format
-  # ⚠️ CRITICAL: Check task wording for exact expected format!
-  # Some tasks expect "more common" others expect "more common than"
-  if count_before > count_after:
-      result = "more common than" if "more common than" in task_0 or "common than" in task_0 else "more common"
-  elif count_before < count_after:
-      result = "less common than" if "less common than" in task_0 or "common than" in task_0 else "less common"
+  # Scan ALL of input_0 for function names (not just a preview!)
+  all_funcs = re.findall(r'^\s*def (\w+)\(', input_0, re.MULTILINE)
+  unique = list(dict.fromkeys(all_funcs))
+  if unique:
+      sigs = []
+      for nm in unique[:80]:
+          sm = re.search(r'^\s*(def '+re.escape(nm)+r'\([^)]*\).*?:)', input_0, re.MULTILINE)
+          if sm: sigs.append(sm.group(1).strip())
+      sig_info = "\n".join(sigs) if sigs else ", ".join(unique[:80])
+      func = sub_llm(f"{task_0}\nAll functions in codebase:\n{sig_info}\nWhich one? Reply with ONLY the function name.", input_0[:10000]).strip()
+      func = re.sub(r'[^a-zA-Z0-9_]', '', func)
+      if func and func not in unique:
+          # Try searching full input_0 for sub_llm's answer before fuzzy fallback
+          r = search(input_0, "def "+func+"(")
+          if r:
+              m,b,a = r[0]; FINAL(func+"||"+b[-800:]+m+a[:5000])
+          fl=func.lower()
+          match = next((c for c in unique if fl in c.lower() or c.lower() in fl), None)
+          if match:
+              func = match
+          else:
+              # Retry sub_llm with explicit constraint
+              func2 = sub_llm(f"Pick ONE from: {', '.join(unique[:40])}\nTask: {task_0}\nReply ONLY the name.", input_0[:10000]).strip()
+              func2 = re.sub(r'[^a-zA-Z0-9_]', '', func2)
+              func = func2 if func2 in unique else unique[0]
   else:
-      result = "the same frequency"
-
-  # ⚠️ CRITICAL: Return ONLY the result! Do NOT add "Answer: correct is..." prefix!
-  FINAL(result)  # Returns "more common", NOT "Answer: correct is more common before..."
-
-Subset filtering (e.g., "only consider instances in January", "most common label in January"):
-  ⚠ CRITICAL: Parse ALL records first, then filter, then find most common
-  ⚠ NEVER return empty! If filter finds nothing, return most common from ALL records
-
-  from collections import Counter
-  # Step 1: Filter records by condition
-  filtered = []
-  for rec in records:
-      date_str = rec.get('Date', '')
-      month = date_str[:7] if len(date_str) >= 7 else ""
-      # For January: check if month ends with "-01"
-      if month.endswith("-01"):  # Adjust condition based on task
-          filtered.append(rec)
-
-  # Step 2: Count labels in filtered set
-  counter = Counter()
-  for rec in filtered:
-      label = rec.get('Label', '').strip()
-      if label:
-          counter[label] += 1
-
-  # Step 3: Get most common (with fallback)
-  if counter:
-      result = counter.most_common(1)[0][0]
+      func = sub_llm(f"{task_0}\nReply ONLY the exact function name.", input_0[:60000]).strip()
+      func = re.sub(r'[^a-zA-Z0-9_]', '', func)
+  r = None
+  for pat in ["def "+func+"(", func+"(", "function "+func, func]:
+      r = search(input_0, pat)
+      if r: break
+  if r:
+      m,b,a = r[0]; FINAL(func+"||"+b[-800:]+m+a[:5000])
   else:
-      # Fallback: if no matches in subset, use all records
-      all_labels = Counter(rec.get('Label', '').strip() for rec in records if rec.get('Label', '').strip())
-      result = all_labels.most_common(1)[0][0] if all_labels else ""
+      p = input_0.find(func)
+      FINAL(func+"||"+input_0[max(0,p-800):p+6000] if p>=0 else "")
 
-  FINAL(result)  # Return clean label value
-"""
+> SEARCH & EXTRACT (DEFAULT — needle in haystack, Q&A, general)
+  This is the DEFAULT pattern when no other pattern matches.
+  The answer is somewhere inside input_0 — find it.
+  *** Do NOT use rfind("?") to locate the question. The answer is NOT near the "?". ***
+  *** Do NOT build custom scoring, regex name-extraction, or ranking pipelines. ***
+  Follow this EXACT pattern:
 
-CODE_RETRIEVAL_PATTERNS: Final[str] = f"""
-================================================================================
-⚠️ CODE RETRIEVAL TASKS - FOLLOW THESE PATTERNS EXACTLY ⚠️
-================================================================================
-⚠️ If task mentions "function", "codebase context", "code snippet"
-   AND task does NOT have multiple choice options (A/B/C/D):
-   - DO NOT write your own regex to find functions
-   - DO NOT manually extract function bodies with regex
-   - MUST follow PATH A (small) or PATH B (large) below
+  # STEP A: Get keywords from the ACTUAL TEXT (not just task_0!)
+  # task_0 is often generic ("Answer the question...") with no useful keywords.
+  # The real keywords are in input_0's header and footer.
+  head = input_0[:500]
+  tail = input_0[-1000:]
+  all_text = head + " " + tail + " " + task_0
+  kws = re.findall(r'\b[a-z]{4,}\b', all_text.lower())
+  kws = list(dict.fromkeys(kws))[:20]
 
-⚠️ If task HAS A/B/C/D options: This is MULTIPLE CHOICE, not retrieval!
-   Use MCQ_PATTERN instead (see below).
+  # STEP B: Search and gather snippets
+  snippets = []
+  for kw in kws:
+      for match, before, after in search(input_0, kw):
+          snippets.append(before + match + after)
+      if len(snippets) >= 10: break
 
-MANDATORY FIRST STEP: Check input size and choose the correct approach
-================================================================================
+  # STEP C: Extract the answer
+  if snippets:
+      combined = "\n---\n".join(snippets[:10])
+      # For NUMBERS: look for digits in the snippets
+      nums = re.findall(r'\b(\d{4,})\b', combined)
+      if nums:
+          FINAL(nums[0])
+      # For EVERYTHING ELSE: let sub_llm extract the answer
+      answer = sub_llm(task_0, combined)
+      FINAL(answer)
+  else:
+      answer = sub_llm(task_0, input_0[:15000])
+      FINAL(answer)
 
-# Step 0: Measure input size (REQUIRED - do this NOW!)
-input_size = len(input_0)
+> MATH COMPETITION (no context or empty input_0)
+  Use math/fractions/itertools. Implement in pure Python. Return the integer answer.
+  Use exact computation — no Monte Carlo, no simulation, no random sampling.
 
---------------------------------------------------------------------------------
-PATH A: Small Codebase (< {SizeThresholds.SMALL_CODEBASE:,} characters)
---------------------------------------------------------------------------------
-If input_size < {SizeThresholds.SMALL_CODEBASE:,}:
+> GENERAL (documents, professional tasks)
+  search() + sub_llm() for reasoning. Return substantive text via FINAL().
+  If input_0 contains only error/parse-failure messages, extract data from task_0.
+  NEVER return file paths or technical error strings — return actual content.
 
-    # ⚠️ LANGUAGE DETECTION: Python vs others
-    # Extract Python functions first. If none found, assume non-Python (C++/JS/TS/etc)
-    func_names = re.findall(r'^\\s*def (\\w+)\\(', input_0, re.MULTILINE)
-
-    if func_names:
-        # PYTHON CODEBASE: Use extraction approach
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_funcs = [f for f in func_names if not (f in seen or seen.add(f))]
-
-        # Step 2: Extract signatures + docstrings for better matching
-        func_infos = []
-        for name in unique_funcs[:30]:  # More functions for small codebases
-            pattern = r'^\\s*(def ' + re.escape(name) + r'\\([^)]*\\)(?:\\s*->\\s*[^:]+)?:.*?)$'
-            sig_match = re.search(pattern, input_0, re.MULTILINE)
-            if sig_match:
-                sig_line = sig_match.group(1).strip()
-                sig_pos = sig_match.end()
-                remaining = input_0[sig_pos:sig_pos+400]
-                lines_after = remaining.split('\\n')[:3]
-                docstring_preview = '\\n'.join(lines_after).strip()[:150]
-                func_infos.append(sig_line + '\\n    ' + docstring_preview)
-
-        # Step 3: Ask sub_llm to choose from the list
-        func_info = "\\n\\n".join(func_infos) if func_infos else ", ".join(unique_funcs[:30])
-        func_name = sub_llm(
-            f"{{task_0}}\\n\\nAvailable functions:\\n{{func_info}}\\n\\n"
-            f"Which function matches the task? Reply with ONLY the function name.",
-            ""
-        ).strip()
-
-        # Step 4: Validate and fuzzy match (critical for robustness!)
-        if func_name not in unique_funcs:
-            func_lower = func_name.lower()
-            best_match = next((c for c in unique_funcs
-                               if func_lower in c.lower() or c.lower() in func_lower), None)
-            if best_match:
-                func_name = best_match
-            elif unique_funcs:
-                func_name = unique_funcs[0]  # Fallback to first function
-    else:
-        # NON-PYTHON CODEBASE (C++, JavaScript, TypeScript, etc.)
-        # Cannot extract function names reliably with regex
-        # Fall back to original approach: pass codebase to sub_llm
-        func_name = sub_llm(
-            f"{{task_0}}\\n\\nRead the codebase below carefully. "
-            f"Find the EXACT function/method name that matches the task.\\n\\n"
-            f"Reply with ONLY the function name (no explanation, no code).\\n\\n"
-            f"Codebase:\\n{{input_0[:45000]}}",
-            ""
-        ).strip()
-
-        # Validate: check if result looks like a function name (not code fragment)
-        # Function names should be: alphanumeric, underscore, no spaces, no special chars
-        if not func_name or not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', func_name):
-            # Invalid or empty - might be code fragment, try to clean it
-            # Extract first valid identifier
-            match = re.search(r'\\b([a-zA-Z_][a-zA-Z0-9_]{{2,}})\\b', func_name)
-            if match:
-                func_name = match.group(1)
-            else:
-                FINAL("")  # Give up - no valid function name found
-                # ⚠️ Early exit
-
-    # Step 5: Search for the identified function (multi-language patterns)
-    res = None
-    search_patterns = [
-        # Python patterns
-        "def " + func_name + "(",
-        "    def " + func_name + "(",
-        # C++/C patterns
-        func_name + "(",
-        " " + func_name + "(",
-        # JavaScript/TypeScript patterns
-        "function " + func_name,
-        "export function " + func_name,
-        "const " + func_name,
-        # Generic fallback
-        func_name
-    ]
-
-    for pattern in search_patterns:
-        r = search(input_0, pattern)
-        if r:
-            res = r
-            break
-
-    if res:
-        match, before, after = res[0]
-        FINAL(func_name + "||" + before[-{OutputLimits.FUNC_CONTEXT_BEFORE}:] +
-              match + after[:{OutputLimits.FUNC_CONTEXT_AFTER}])
-    else:
-        # Fallback: Try direct string search with multiple patterns
-        for attempt_pattern in ["def " + func_name + "(", func_name + "(", func_name]:
-            pos = input_0.find(attempt_pattern)
-            if pos >= 0:
-                FINAL(func_name + "||" + input_0[max(0,pos-800):pos+6000])
-                break
-        else:
-            FINAL("")  # Function not found after all attempts
-
-    # ⚠️ PATH A ends here with FINAL() - do NOT continue to PATH B!
-
---------------------------------------------------------------------------------
-PATH B: Large Codebase (>= {SizeThresholds.LARGE_CODEBASE:,} characters)
---------------------------------------------------------------------------------
-If input_size >= {SizeThresholds.LARGE_CODEBASE:,}:
-
-    preview_size = {SizeThresholds.MAX_PREVIEW_SMALL}
-    preview = input_0[:preview_size]
-    func_name = None
-    res = None
-
-    for attempt in range(2):
-        # Extract all function names (top-level AND class methods)
-        func_names = re.findall(r'^\\s*def (\\w+)\\(', preview, re.MULTILINE)
-        
-        if func_names:
-            # Remove duplicates while preserving order
-            seen = set()
-            unique_funcs = [f for f in func_names if not (f in seen or seen.add(f))]
-            
-            # Extract signatures + docstrings
-            func_infos = []
-            for name in unique_funcs[:25]:
-                pattern = r'^\\s*(def ' + re.escape(name) + r'\\([^)]*\\)(?:\\s*->\\s*[^:]+)?:.*?)$'
-                sig_match = re.search(pattern, preview, re.MULTILINE)
-                if sig_match:
-                    sig_line = sig_match.group(1).strip()
-                    sig_pos = sig_match.end()
-                    remaining = preview[sig_pos:sig_pos+400]
-                    lines_after = remaining.split('\\n')[:3]
-                    docstring_preview = '\\n'.join(lines_after).strip()[:150]
-                    func_infos.append(sig_line + '\\n    ' + docstring_preview)
-            
-            func_info = "\\n\\n".join(func_infos) if func_infos else ", ".join(unique_funcs[:25])
-            func_name = sub_llm(
-                f"Task: {{task_0}}\\n\\nAvailable functions:\\n{{func_info}}\\n\\n"
-                f"Which function matches the task? Reply with ONLY the function name.",
-                ""
-            ).strip()
-            
-            # Validate/fuzzy match
-            if func_name not in unique_funcs:
-                func_lower = func_name.lower()
-                best_match = next((c for c in unique_funcs 
-                                   if func_lower in c.lower() or c.lower() in func_lower), None)
-                if best_match:
-                    func_name = best_match
-                elif unique_funcs:
-                    func_name = unique_funcs[0]
-        else:
-            func_name = sub_llm(
-                "Read this code and identify the function being requested. "
-                "Reply with ONLY the exact function name.",
-                preview + "\\n\\nTask: " + task_0
-            ).strip()
-
-        # Search for function
-        for pattern in ["def " + func_name + "(", "    def " + func_name + "(",
-                        "def " + func_name, func_name + "(", func_name]:
-            res = search(input_0, pattern)
-            if res: break
-        
-        if res or attempt == 1:
-            break
-        
-        # Expand window and retry
-        preview_size = {SizeThresholds.MAX_PREVIEW_LARGE}
-        preview = input_0[:preview_size]
-
-    if res:
-        match, before, after = res[0]
-        FINAL(func_name + "||" + before[-{OutputLimits.FUNC_CONTEXT_BEFORE}:] +
-              match + after[:10000])  # Increased from 5000 to 10000 for larger functions
-    else:
-        pos = input_0.find(func_name)
-        if pos >= 0:
-            FINAL(func_name + "||" + input_0[max(0,pos-800):pos+12000])  # Increased for consistency
-        else:
-            FINAL("")
-"""
-
-MCQ_PATTERN: Final[str] = f"""
-Multiple-choice questions (ONLY when task_0 contains A/B/C/D options):
-
-{IMPORTS_LINE}
-
-# Step 0: Verify this is actually multiple choice
-has_mc_options = any(opt in task_0 for opt in ["A)", "B)", "C)", "D)"])
-if not has_mc_options:
-    # NOT multiple choice! Use appropriate pattern instead.
-    pass
-
-if has_mc_options:
-    context_size = len(input_0)
-
-    # ⚠️ CODEQA DETECTION: Architecture/implementation questions need MORE context!
-    # These questions ask "What does this codebase DO?" which requires semantic understanding
-    is_codeqa = any(keyword in task_0.lower() for keyword in [
-        "codebase", "implement", "solver", "architecture", "advantage",
-        "realistic factor", "issue", "problem", "external"
-    ])
-
-    if is_codeqa and context_size < 100000:
-        # CODEQA STRATEGY: Pass LARGE context for semantic understanding
-        # Vanilla passes 90K+ and gets 63%, we need similar context
-        # Focus on: imports, main functions, primary classes
-        answer = sub_llm(task_0, input_0[:60000])
-        if not answer or not answer.strip():
-            # Fallback to even smaller context
-            answer = sub_llm(task_0, input_0[:40000])
-
-    elif context_size > {SizeThresholds.LONG_DOCUMENT}:
-        # LONGBENCH STRATEGY: Smart adaptive evidence gathering
-        # Let sub_llm infer the best search strategy at runtime
-
-        # Step 1: Preview to understand structure
-        preview = input_0[:8000] + "\\n\\n[... document continues ...]\\n\\n" + input_0[-5000:]
-
-        # Step 2: Ask sub_llm what to search for (adaptive inference!)
-        search_guidance = sub_llm(
-            f"{{task_0}}\\n\\nDocument preview:\\n{{preview}}\\n\\n"
-            f"What 3-5 key terms should I search for to answer this? "
-            f"Reply with comma-separated list only.",
-            ""
-        ).strip()
-
-        # Step 3: Parse terms (fallback to question keywords)
-        terms = [t.strip() for t in search_guidance.split(',') if t.strip()][:8]
-        if not terms:
-            terms = re.findall(r'\\b[A-Z][a-z]{{4,}}\\b|\\b[a-z]{{6,}}\\b',
-                              task_0.split('A)')[0] if 'A)' in task_0 else task_0)[:8]
-
-        # Step 4: Gather focused evidence
-        evidence = []
-        seen = set()
-        for term in terms:
-            for match, before, after in search(input_0, term)[:2]:
-                pos = len(before)
-                if all(abs(pos - s) > 4000 for s in seen):
-                    evidence.append(before[-4000:] + match + after[:4000])
-                    seen.add(pos)
-                if len(evidence) >= 10: break
-            if len(evidence) >= 10: break
-
-        # Step 5: Answer with evidence
-        ctx = preview + "\\n\\n=== EVIDENCE ===\\n" + "\\n\\n---\\n\\n".join(evidence[:10])
-        answer = sub_llm(f"{{task_0}}\\n\\nEvidence:\\n{{ctx[:45000]}}", "")
-
-        if not answer or not answer.strip():
-            answer = sub_llm(task_0, input_0[:15000] + "\\n\\n[...]\\n\\n" + input_0[-10000:])
-
-    else:
-        # Standard pattern for shorter documents (<100KB)
-        option_keywords = []
-        for match in re.finditer(r'[A-D]\\)(.*?)(?=[A-D]\\)|$)', task_0, re.DOTALL):
-            option_text = match.group(1).strip()
-            words = re.findall(r'\\b[A-Z][a-z]{{4,}}\\b|\\b[a-z]{{6,}}\\b', option_text)
-            option_keywords.extend(words[:3])
-
-        question_words = re.findall(r'\\b[A-Z][a-z]{{4,}}\\b|\\b[a-z]{{6,}}\\b',
-                                    task_0.split('\\n')[0])
-        all_terms = question_words[:3] + option_keywords[:12]
-
-        snippets = []
-        for term in all_terms:
-            res = search(input_0, term)
-            if res:
-                m, b, a = res[0]
-                snippets.append(b[-800:] + m + a[:1200])
-
-        evidence = input_0[:1500] + "\\n\\n--- EVIDENCE ---\\n" + \
-                   "\\n---\\n".join(snippets[:{SizeThresholds.MAX_SNIPPETS_SHORT}]) if snippets \
-                   else input_0[:4000]
-
-        answer = sub_llm(task_0, evidence[:{OutputLimits.EVIDENCE_CONTEXT_SHORT}])
-        if not answer or not answer.strip():
-            answer = sub_llm(task_0, input_0[:5000])
-    
-    # Extract letter from response
-    answer = answer.strip().upper()
-    if answer not in ['A', 'B', 'C', 'D']:
-        m = re.search(r'\\b([A-D])\\b', answer)
-        answer = m.group(1) if m else "A"
-    
-    FINAL(answer)
+Output ONLY the ```python block. No text outside it.
 """
 
 
-# =============================================================================
-# MAIN SYSTEM PROMPTS
-# =============================================================================
+SYSTEM_PROMPT_WITH_REASONING: Final[str] = r"""You are a Python REPL agent with reasoning.
 
-SYSTEM_PROMPT_SIMPLE_REASONING: Final[str] = f"""\
-You are a universal python agent. You only speak Python.
-
-⚠️⚠️⚠️ CRITICAL: ALWAYS START YOUR CODE WITH IMPORTS! ⚠️⚠️⚠️
-
-REQUIRED FORMAT (NO EXCEPTIONS):
-```python
-# REASONING: [Explain your approach in 1-3 sentences. For complex tasks, explain strategy step-by-step.]
-{IMPORTS_LINE}  # ← MANDATORY FIRST LINE OF CODE! DO NOT SKIP!
-[your code here]
-FINAL(answer)  # ⚠️ answer MUST be clean value only - see OUTPUT FORMAT below
-```
-
-⚠️ If you forget to import re/json/datetime/collections, your code will crash with NameError!
-⚠️ ALWAYS start with: {IMPORTS_LINE}
-
-{OUTPUT_FORMAT_SECTION}
-
-{NO_PLACEHOLDERS_SECTION}
-
-{ALLOWED_IMPORTS_SECTION}
-
-{NO_FILE_WRITING_SECTION}
-
-Output ONLY the code block above. No text before or after. The # REASONING: comment goes inside.
-
-⚠ CRITICAL: You MUST generate code. NEVER return an empty response or just reasoning text.
-If unsure how to proceed:
-  1. Start with: preview = peek(input_0) or preview = input_0[:1000]
-  2. Use sub_llm for classification/extraction
-  3. Always end with FINAL(result) even if result is empty string
-
-input_0 = {{context_meta}}
-
-{TOOLS_REFERENCE}
-
-Approach by data type:
-- Structured data (JSON, CSV): parse directly (json.loads(), csv, etc.), filter/aggregate, FINAL.
-- Record-per-line delimited data (format: "Field1: X || Field2: Y"):
-{textwrap.indent(STRUCTURED_DATA_PATTERN, '  ')}
-
-- Comparison/frequency questions (e.g., "Is X more/less common than Y?"):
-  ⚠ CRITICAL CHECK FIRST: Does task mention "label", "date", "month", "user", or "data"?
-     → YES: This is STRUCTURED DATA! MUST parse records first!
-     → NEVER count keywords directly with regex on structured data!
-
-  For PLAIN TEXT ONLY (no structure):
-    count_x = len(re.findall(r'\\bterm_x\\b', input_0, re.I))
-    count_y = len(re.findall(r'\\bterm_y\\b', input_0, re.I))
-    if count_x > count_y: FINAL("more common")
-    elif count_x < count_y: FINAL("less common")
-    else: FINAL("same frequency")
-
-- Subset filtering questions (e.g., "only consider instances in January", "most common label in subset"):
-  ⚠ CRITICAL: Parse ALL records → Filter by condition → Count in filtered set → NEVER return empty!
-  ⚠ If filter returns no matches, use fallback: count from ALL records
-  See "Subset filtering" pattern in structured data section above for full example.
-
-- Counting questions (e.g., "how many dates/users/labels appear X times?"):
-  ⚠⚠⚠ CRITICAL CHECK FIRST: Does task say "In the above data" OR mention "date", "user", "label"?
-     → YES = STRUCTURED DATA! You MUST parse || delimited records FIRST!
-     → NO = Plain text, use regex
-
-  ⚠ COMMON MISTAKE: Using re.findall() on raw input_0 for structured data!
-  ⚠ This returns 0 or wrong counts because it searches the entire text including headers!
-
-  Example (STRUCTURED data - ALWAYS parse first):
-    # Step 1: Parse structured records (MANDATORY!)
-    lines = [l for l in input_0.splitlines() if "||" in l]
-    records = []
-    for line in lines:
-        rec = {{}}
-        for part in line.split("||"):
-            if ":" in part:
-                k, v = part.split(":", 1)
-                rec[k.strip()] = v.strip()
-        if rec: records.append(rec)
-
-    # Step 2: Extract field values from parsed records (NOT raw text!)
-    dates = [rec.get('Date', '') for rec in records]
-
-    # Step 3: Count occurrences
-    from collections import Counter
-    cnt = Counter(dates)
-
-    # Step 4: Count how many appear exactly N times
-    result = sum(1 for v in cnt.values() if v == 1)  # dates appearing exactly once
-    FINAL(str(result))
-
-  For PLAIN TEXT ONLY (no ||, no "In the above data"): re.findall() + len().
-
-- Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
-
-- Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
-  ⚠️ For number extraction: ALWAYS use r'\\b(\\d+)\\b' (unlimited digits), NEVER limit with {1,6}
-
-- Scattered items: Use search() with unique marker, extract from context.
-
-- Multi-condition filter: iterate splitlines(), extract both fields.
-
-{CODE_RETRIEVAL_PATTERNS}
-
-{MCQ_PATTERN}
-
-Rules:
-1) Format: # REASONING comment, ONE python code block, last line must be FINAL(...) or FINAL_var(...)
-2) ⚠️ MANDATORY: First line of code MUST be: {IMPORTS_LINE}
-   - Without these imports, your code will crash with NameError!
-   - You can also import: math, itertools, fractions from standard library
-3) NEVER import external packages (sympy, numpy, pandas, scipy) - NOT AVAILABLE!
-4) NEVER write files with open() - return text via FINAL() only
-5) NEVER use placeholder values - compute everything from data
-6) Examine the data before answering - use search(), peek(), or parse
-7) Multiple-choice (A/B/C/D): Use sub_llm for reasoning, not keyword matching
-8) Function retrieval: Extract existing code from input_0, never implement yourself
-9) Store important data in variables (stdout is truncated)
-10) OUTPUT: Return clean values only to FINAL()
-"""
-
-
-SYSTEM_PROMPT_WITH_REASONING: Final[str] = """\
-You are a universal python agent with reasoning capabilities.
-
-IMPORTANT: You will work in TWO PHASES:
-1. REASONING PHASE: Analyze the task and plan your approach
-2. CODE PHASE: Write Python code based on your reasoning
+PHASE 1 — <reasoning> block: task type, data format, strategy, edge cases.
+PHASE 2 — ONE ```python block ending with FINAL(answer).
+  import re, json, datetime, collections  # mandatory first line
 
 input_0 = {context_meta}
 
-=== PHASE 1: REASONING (REQUIRED FIRST) ===
+Tools: input_0, task_0, search(text,"kw")->[(match,before,after)], peek(text),
+  sub_llm(task,ctx_str), sub_llm_batch([(t,c),...]), FINAL(val), FINAL_var("name")
 
-Before writing ANY code, output your reasoning in a <reasoning> block:
+Rules: clean output (no prefixes), stdlib only, \d+ not \d{1,N},
+  no file writes, no placeholders, no None to FINAL().
 
-<reasoning>
-1. TASK TYPE: [extract/count/compare/classify/search/aggregate]
-   - What is the core task?
-   - What is the expected output format?
-
-2. DATA ANALYSIS:
-   - Does data already have labels/structure?
-   - What fields/structure should I expect?
-   - Estimated data format: [JSON/CSV/delimited/free-text]
-
-3. STRATEGY:
-   - Right approach: [regex/parsing/search/sub_llm/computation]
-   - For AGGREGATION: Parse existing structure (don't call sub_llm if data has labels!)
-   - For SEARCH: Use keyword search first, then examine results
-   - For EXTRACTION: Match patterns carefully (no arbitrary length limits!)
-
-4. IMPLEMENTATION PLAN:
-   - Will my regex capture ALL valid cases?
-   - Am I limiting captures inappropriately? (e.g., \\d{{1,6}} vs \\d+)
-   - Do I need to validate parsing results?
-
-5. EDGE CASES:
-   - What if field is missing?
-   - What if there are ties?
-   - What if search returns no results?
-</reasoning>
-
-=== PHASE 2: CODE (AFTER REASONING) ===
-
-Now write ONLY Python code in ```python blocks. No explanations.
-
-⚠️⚠️⚠️ MANDATORY: Start your code with imports! ⚠️⚠️⚠️
-First line MUST be: import re, json, datetime, collections
-
-Pre-loaded globals:
-  input_0   — the full context/data to analyze
-  task_0    — the full original task text
-  search, peek, sub_llm, sub_llm_batch, FINAL, FINAL_var
-
-CRITICAL REMINDERS:
-- ⚠️ FIRST LINE: import re, json, datetime, collections (MANDATORY - or you get NameError!)
-- If task asks about existing labels, the data ALREADY HAS labels - PARSE them!
-- For number extraction, use \\d+ (any length), NOT \\d{{1,6}}
-- Validate parsing worked before using results
-- NEVER use placeholder values or "example" values in your code!
-- Every value MUST be computed from the actual data
-- NO "let's assume", NO "TODO", NO "replace with actual calculations"
-- ONLY import from Python standard library (re, json, math, collections, datetime, itertools, fractions)
-- NEVER import external packages (sympy, numpy, pandas, scipy, requests) - they are NOT available!
-
-Universal constraints:
-1) First output <reasoning> block, THEN output python code block
-2) Output exactly ONE python code block. Last line must be FINAL(...) or FINAL_var(...)
-3) ⚠️ First line of code MUST be: import re, json, datetime, collections
-4) Can also import from standard library: math, itertools, fractions
-5) NEVER import external packages (sympy, numpy, pandas) - NOT available!
-6) NEVER write files with open() - only return text answers via FINAL()
-7) No guesses — read and USE the search results before calling FINAL
+STEP 0: Detect task type first:
+  has_mcq = any(f"{c})" in task_0 for c in "ABCD")
+  has_pipe = "||" in input_0[:2000]
+  is_code_task = "codebase" in task_0.lower() or "exact function" in task_0.lower()
 """
 
 
-# =============================================================================
-# USER PROMPTS
-# =============================================================================
-
 USER_PROMPT_SIMPLE: Final[str] = "Task: {task}\n\nWrite Python code. Start with # REASONING: comment."
 
-USER_PROMPT_WITH_REASONING: Final[str] = "Task: {task}\n\nFollow the two-phase process."
+USER_PROMPT_WITH_REASONING: Final[str] = "Task: {task}\n\nFirst <reasoning>, then ```python code."
 
 
-# =============================================================================
-# DATACLASSES FOR PROMPT CONFIGURATION
-# =============================================================================
+# ---------------------------------------------------------------------------
+# Configuration & Formatting
+# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class PromptConfig:
     """Configuration for prompt formatting."""
     max_stdout: int = OutputLimits.MAX_STDOUT_DEFAULT
     max_iterations: int = 10
-    
+
     def get_iteration_warning(self, iteration: int) -> str:
-        """Generate iteration warning based on remaining attempts."""
         remaining = self.max_iterations - iteration
         if remaining <= 2:
-            return f"⚠️ Final attempt ({remaining} left). "
+            return f"\u26a0\ufe0f Final attempt ({remaining} left). "
         elif remaining <= 4:
             return f"[{iteration}/{self.max_iterations}] "
         return ""
 
 
-# =============================================================================
-# PROMPT FORMATTING FUNCTIONS
-# =============================================================================
-
 def format_system_prompt(
     context: str = "",
     context_type: str = "string",
-    use_simple: bool = True
+    use_simple: bool = True,
 ) -> str:
-    """
-    Format system prompt with reasoning capability.
-    
-    Args:
-        context: The input context/data to be analyzed
-        context_type: Description of the context type
-        use_simple: If True, use inline reasoning comment. If False, use two-phase reasoning block.
-    
-    Returns:
-        Formatted system prompt string
-    """
+    """Format system prompt with context metadata."""
     if context:
         lines = context.count("\n") + 1
         meta = f"{context_type} with {len(context):,} chars, ~{lines:,} lines"
     else:
         meta = "string"
-    
     template = SYSTEM_PROMPT_SIMPLE_REASONING if use_simple else SYSTEM_PROMPT_WITH_REASONING
     return template.replace("{context_meta}", meta)
 
 
 def format_user_prompt(task: str, use_simple: bool = True) -> str:
-    """
-    Format user prompt for task execution.
-    
-    Args:
-        task: The task description/instruction
-        use_simple: If True, use simple format. If False, use two-phase format.
-    
-    Returns:
-        Formatted user prompt string
-    """
+    """Format user prompt for task execution."""
     template = USER_PROMPT_SIMPLE if use_simple else USER_PROMPT_WITH_REASONING
     return template.format(task=task)
 
@@ -939,67 +299,28 @@ def format_continue_prompt_reasoning(
     reasoning_summary: str = "",
     max_iterations: int = 10,
 ) -> str:
-    """
-    Format continuation prompt for multi-turn interactions.
-    
-    Args:
-        output: stdout from previous code execution
-        error: Error message if execution failed
-        state: Dictionary of variable names to descriptions
-        iteration: Current iteration number
-        config: PromptConfig instance with formatting parameters
-    
-    Returns:
-        Formatted continuation prompt string
-    """
+    """Format continuation prompt for multi-turn interactions."""
     config = config or PromptConfig()
-    
-    # Build error section
-    error_section = f"\n⚠️ ERROR: {error}\nFix the error and try again." if error else ""
-    
-    # Truncate output if needed
+
+    error_section = f"\n\u26a0\ufe0f ERROR: {error}\nFix and retry." if error else ""
+
     if output and len(output) > config.max_stdout:
-        truncated_len = len(output) - config.max_stdout
-        output = output[:config.max_stdout] + f"... (truncated, {truncated_len:,} more chars)"
-    
-    # Format state info
+        trunc = len(output) - config.max_stdout
+        output = output[:config.max_stdout] + f"... ({trunc:,} more chars)"
+
     state_info = ", ".join(f"{k}: {v}" for k, v in state.items()) if state else "none"
-    
-    # Get iteration warning
-    iteration_info = config.get_iteration_warning(iteration)
-    
-    return f"""--- CODE EXECUTION RESULT ---
+    iter_info = config.get_iteration_warning(iteration)
 
+    return f"""--- RESULT ---
 Code executed.{error_section}
-
 stdout: {output or "(empty)"}
-
 Variables: {state_info}
-
-{iteration_info}
-
-Continue writing Python code in ```python blocks.
-Call FINAL("answer") or FINAL_var("varname") when done."""
+{iter_info}Continue in ```python. Call FINAL("answer") or FINAL_var("varname") when done."""
 
 
-# =============================================================================
-# BACKWARD COMPATIBILITY ALIASES
-# =============================================================================
+# ---------------------------------------------------------------------------
+# Backward compatibility
+# ---------------------------------------------------------------------------
 
-# Maintain backward compatibility with existing code
 format_system_prompt_reasoning = format_system_prompt
 format_user_prompt_reasoning = lambda task: format_user_prompt(task, use_simple=True)
-
-
-# Example usage
-if __name__ == "__main__":
-    # Example: Generate a prompt for a structured data counting task
-    sample_context = "Date: 2024-01-15 || Label: correct\nDate: 2024-01-16 || Label: incorrect"
-    
-    prompt = format_system_prompt(sample_context, "structured_records")
-    user = format_user_prompt("Count months where correct > incorrect")
-    
-    print("=== SYSTEM PROMPT (first 2000 chars) ===")
-    print(prompt[:2000])
-    print("\n=== USER PROMPT ===")
-    print(user)

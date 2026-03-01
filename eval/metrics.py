@@ -6,7 +6,7 @@ Provides:
 - Aggregation functions for multiple runs
 - Statistical analysis utilities
 - Report generation
-- Cost calculation via tokencost
+- Cost calculation via litellm pricing data
 """
 
 import json
@@ -15,33 +15,39 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-# Cost calculation
-try:
-    from tokencost import calculate_completion_cost, calculate_prompt_cost
+# Cost calculation using litellm pricing data
+_PRICING_DATA = None
 
-    TOKENCOST_AVAILABLE = True
-except ImportError:
-    TOKENCOST_AVAILABLE = False
+
+def _load_pricing_data():
+    """Load litellm model pricing data."""
+    global _PRICING_DATA
+    if _PRICING_DATA is None:
+        pricing_path = Path(__file__).parent / "data" / "model_prices.json"
+        try:
+            with open(pricing_path) as f:
+                _PRICING_DATA = json.load(f)
+        except Exception:
+            _PRICING_DATA = {}
+    return _PRICING_DATA
 
 
 def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
     """
-    Calculate cost for a completion using tokencost.
+    Calculate cost for a completion using litellm pricing data.
 
-    Returns None if model is not supported or tokencost is unavailable.
+    Returns None if model is not supported.
     """
-    if not TOKENCOST_AVAILABLE:
-        return None
-
     try:
-        # tokencost expects actual text, but we only have token counts
-        # Use a workaround: create dummy strings of the right length
-        # (tokencost will tokenize and may differ slightly, but close enough)
-        input_cost = calculate_prompt_cost(prompt="x" * input_tokens, model=model)
-        output_cost = calculate_completion_cost(completion="x" * output_tokens, model=model)
+        pricing = _load_pricing_data()
+        if model not in pricing:
+            return None
+
+        model_pricing = pricing[model]
+        input_cost = input_tokens * model_pricing.get("input_cost_per_token", 0)
+        output_cost = output_tokens * model_pricing.get("output_cost_per_token", 0)
         return float(input_cost + output_cost)
     except Exception:
-        # Model not in tokencost database
         return None
 
 
@@ -80,7 +86,7 @@ class EvalResult:
     generated_code: str | None = None
     log_file_path: str | None = None
 
-    # Cost (None if model not supported by tokencost)
+    # Cost (None if model not supported by litellm pricing data)
     cost_usd: float | None = None
 
     def to_dict(self) -> dict:
@@ -466,7 +472,7 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
             f"- **Cost savings**: minRLM is **{cost_ratio:.1f}x cheaper** than vanilla (${ours_cost:.6f} vs ${vanilla_cost:.6f})"
         )
     elif ours_cost is None:
-        lines.append("- **Cost**: Unable to calculate (model not in tokencost database)")
+        lines.append("- **Cost**: Unable to calculate (model not in litellm pricing database)")
 
     return "\n".join(lines)
 
