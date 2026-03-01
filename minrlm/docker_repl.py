@@ -107,8 +107,12 @@ def FINAL_var(var_name):
         raise NameError(f"Variable '{var_name}' not found")
     _output = str(exec_namespace[var_name])
 
-def search(text, pattern, context=100):
-    """Search for pattern in text and return matches with context."""
+def search(text, pattern, context=500):
+    """Search for pattern in text and return matches with context.
+
+    Returns:
+        List of tuples: (match, before_context, after_context)
+    """
     matches = []
     text_lower = text.lower()
     pattern_lower = pattern.lower()
@@ -118,10 +122,18 @@ def search(text, pattern, context=100):
         pos = text_lower.find(pattern_lower, start)
         if pos == -1:
             break
-        ctx_start = max(0, pos - context)
-        ctx_end = min(len(text), pos + len(pattern) + context)
-        match_text = text[ctx_start:ctx_end]
-        matches.append(match_text)
+
+        # Extract the actual matched text (preserve original case)
+        match = text[pos:pos + len(pattern)]
+
+        # Extract before and after context
+        before_start = max(0, pos - context)
+        before = text[before_start:pos]
+
+        after_end = min(len(text), pos + len(pattern) + context)
+        after = text[pos + len(pattern):after_end]
+
+        matches.append((match, before, after))
         start = pos + 1
 
     return matches
@@ -153,13 +165,25 @@ def peek(data, max_len=500, max_items=5, depth=0):
             preview = preview[:max_len] + "..."
         return preview
 
+# sub_llm support via request/response protocol
+# Code can call sub_llm() - it will be handled by the host
+_sub_llm_cache = input_data.get("sub_llm_cache", {})
+
 def sub_llm(task, context=""):
-    """sub_llm is not supported in Docker mode - raises error."""
-    raise RuntimeError("sub_llm() is not available in Docker mode. Use non-Docker RLM for recursive calls.")
+    """Call sub_llm via host. Results are cached and injected by host."""
+    cache_key = f"{task}||{context}"
+    if cache_key in _sub_llm_cache:
+        return _sub_llm_cache[cache_key]
+    # Signal to host that we need a sub_llm call
+    # This will cause execution to pause and request will be sent to host
+    raise RuntimeError(f"__SUB_LLM_REQUEST__:{cache_key}")
 
 def sub_llm_batch(tasks):
-    """sub_llm_batch is not supported in Docker mode - raises error."""
-    raise RuntimeError("sub_llm_batch() is not available in Docker mode. Use non-Docker RLM for recursive calls.")
+    """Call sub_llm_batch via host. Results are cached and injected by host."""
+    results = []
+    for task, context in tasks:
+        results.append(sub_llm(task, context))
+    return results
 
 # Add helper functions to namespace
 exec_namespace["FINAL"] = FINAL
@@ -248,6 +272,8 @@ class DockerREPL:
         cpu_limit: float = 1.0,
         timeout: int = 60,
         network_disabled: bool = True,
+        sub_llm_callback=None,
+        sub_llm_batch_callback=None,
     ):
         """
         Initialize DockerREPL.
@@ -257,6 +283,8 @@ class DockerREPL:
             memory_limit: Memory limit (e.g., "256m", "1g")
             cpu_limit: CPU limit (1.0 = 1 CPU core)
             timeout: Execution timeout in seconds
+            sub_llm_callback: Optional callback for sub_llm() support
+            sub_llm_batch_callback: Optional callback for sub_llm_batch() support
             network_disabled: Disable all networking (default: True)
         """
         self.image = image
@@ -264,6 +292,8 @@ class DockerREPL:
         self.cpu_limit = cpu_limit
         self.timeout = timeout
         self.network_disabled = network_disabled
+        self._sub_llm_callback = sub_llm_callback
+        self._sub_llm_batch_callback = sub_llm_batch_callback
 
         self._output: str | None = None
         self._namespace: dict[str, Any] = {}
@@ -301,8 +331,15 @@ class DockerREPL:
         """Check if Docker REPL is available."""
         return self._docker_available
 
-    def set_variable(self, name: str, value: Any) -> None:
-        """Set a variable in the namespace."""
+    def set_variable(self, name: str, value: Any, allow_override: bool = False) -> None:
+        """Set a variable in the namespace.
+
+        Args:
+            name: Variable name
+            value: Variable value
+            allow_override: Accepted for API compatibility with PythonREPL
+                           (Docker provides isolation via containers, not protected namespaces)
+        """
         if name == "input_0":
             self._input_0 = value
         else:
@@ -324,7 +361,7 @@ class DockerREPL:
 
     def execute(self, code: str) -> dict[str, Any]:
         """
-        Execute code in Docker container.
+        Execute code in Docker container with sub_llm support.
 
         Returns:
             Dict with {stdout, output, error, state}
@@ -342,141 +379,193 @@ class DockerREPL:
 
         self._output = None
 
-        # Prepare input data
-        input_data = {
-            "code": code,
-            "namespace": {
-                k: v for k, v in self._namespace.items() if isinstance(v, str | int | float | bool | list | dict)
-            },
-            "input_0": self._input_0,
-        }
-        log.debug(f"Input data prepared, input_0 len={len(self._input_0) if self._input_0 else 0}")
+        # Cache for sub_llm results (persists across retries)
+        sub_llm_cache: dict[str, str] = {}
+        max_sub_llm_calls = 10  # Prevent infinite loops
+        attempt = 0
 
-        # Create temp directory for seccomp profile
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Write seccomp profile
-            seccomp_path = Path(tmpdir) / "seccomp.json"
-            with open(seccomp_path, "w") as f:
-                json.dump(SECCOMP_PROFILE, f)
-            log.debug(f"Wrote seccomp profile to {seccomp_path}")
+        while attempt < max_sub_llm_calls:
+            attempt += 1
+            log.debug(f"Execute attempt {attempt} (sub_llm_cache has {len(sub_llm_cache)} entries)")
 
-            # Write wrapper script
-            wrapper_path = Path(tmpdir) / "wrapper.py"
-            with open(wrapper_path, "w") as f:
-                f.write(DOCKER_WRAPPER_SCRIPT)
-            log.debug(f"Wrote wrapper script to {wrapper_path}")
+            # Prepare input data
+            input_data = {
+                "code": code,
+                "namespace": {
+                    k: v for k, v in self._namespace.items() if isinstance(v, str | int | float | bool | list | dict)
+                },
+                "input_0": self._input_0,
+                "sub_llm_cache": sub_llm_cache,  # Inject cached sub_llm results
+            }
+            log.debug(f"Input data prepared, input_0 len={len(self._input_0) if self._input_0 else 0}")
 
-            # Build Docker command
-            cmd = [
-                "docker",
-                "run",
-                "--rm",  # Remove container after execution
-                "-i",  # Interactive (for stdin)
-                f"--memory={self.memory_limit}",
-                f"--cpus={self.cpu_limit}",
-                "--pids-limit=100",  # Limit processes
-                "--read-only",  # Read-only filesystem
-                "--tmpfs=/tmp:rw,noexec,nosuid,size=64m",  # Writable /tmp
-                f"--security-opt=seccomp={seccomp_path}",
-            ]
+            # Create temp directory for seccomp profile
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # Write seccomp profile
+                seccomp_path = Path(tmpdir) / "seccomp.json"
+                with open(seccomp_path, "w") as f:
+                    json.dump(SECCOMP_PROFILE, f)
+                log.debug(f"Wrote seccomp profile to {seccomp_path}")
 
-            # Disable networking
-            if self.network_disabled:
-                cmd.append("--network=none")
+                # Write wrapper script
+                wrapper_path = Path(tmpdir) / "wrapper.py"
+                with open(wrapper_path, "w") as f:
+                    f.write(DOCKER_WRAPPER_SCRIPT)
+                log.debug(f"Wrote wrapper script to {wrapper_path}")
 
-            # Mount wrapper script
-            cmd.extend(
-                [
-                    "-v",
-                    f"{wrapper_path}:/app/wrapper.py:ro",
-                    self.image,
-                    "python",
-                    "/app/wrapper.py",
+                # Build Docker command
+                cmd = [
+                    "docker",
+                    "run",
+                    "--rm",  # Remove container after execution
+                    "-i",  # Interactive (for stdin)
+                    f"--memory={self.memory_limit}",
+                    f"--cpus={self.cpu_limit}",
+                    "--pids-limit=100",  # Limit processes
+                    "--read-only",  # Read-only filesystem
+                    "--tmpfs=/tmp:rw,noexec,nosuid,size=64m",  # Writable /tmp
+                    f"--security-opt=seccomp={seccomp_path}",
                 ]
-            )
 
-            log.debug(f"Docker command: {' '.join(cmd)}")
-            log.debug(f"Running with timeout={self.timeout}s...")
+                # Disable networking
+                if self.network_disabled:
+                    cmd.append("--network=none")
 
-            try:
-                result = subprocess.run(
-                    cmd,
-                    input=json.dumps(input_data),
-                    capture_output=True,
-                    text=True,
-                    timeout=self.timeout,
+                # Mount wrapper script
+                cmd.extend(
+                    [
+                        "-v",
+                        f"{wrapper_path}:/app/wrapper.py:ro",
+                        self.image,
+                        "python",
+                        "/app/wrapper.py",
+                    ]
                 )
 
-                log.debug(f"Docker exited with code {result.returncode}")
-                log.debug(f"stdout len={len(result.stdout)}, stderr len={len(result.stderr)}")
+                log.debug(f"Docker command: {' '.join(cmd)}")
+                log.debug(f"Running with timeout={self.timeout}s...")
 
-                # Parse output
-                stdout = result.stdout
-                stderr = result.stderr
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        input=json.dumps(input_data),
+                        capture_output=True,
+                        text=True,
+                        timeout=self.timeout,
+                    )
 
-                if stderr:
-                    log.debug(f"stderr: {stderr[:500]}")
+                    log.debug(f"Docker exited with code {result.returncode}")
+                    log.debug(f"stdout len={len(result.stdout)}, stderr len={len(result.stderr)}")
 
-                # Look for our result marker
-                if "__DOCKER_RESULT__:" in stdout:
-                    log.debug("Found result marker in output")
-                    parts = stdout.split("__DOCKER_RESULT__:", 1)
-                    visible_stdout = parts[0]
-                    try:
-                        exec_result = json.loads(parts[1].strip())
-                        self._output = exec_result.get("output")
-                        log.debug(
-                            f"Parsed result: output={exec_result.get('output')}, error={exec_result.get('error')}"
-                        )
+                    # Parse output
+                    stdout = result.stdout
+                    stderr = result.stderr
 
-                        # Update namespace from container state
-                        # Note: We can't actually transfer complex objects back,
-                        # but we can track what variables exist
+                    if stderr:
+                        log.debug(f"stderr: {stderr[:500]}")
 
-                        return {
-                            "stdout": visible_stdout + exec_result.get("stdout", ""),
-                            "output": exec_result.get("output"),
-                            "error": exec_result.get("error"),
-                            "state": exec_result.get("state", {}),
-                        }
-                    except json.JSONDecodeError as e:
-                        log.debug(f"Failed to parse JSON result: {e}")
+                    # Look for our result marker
+                    if "__DOCKER_RESULT__:" in stdout:
+                        log.debug("Found result marker in output")
+                        parts = stdout.split("__DOCKER_RESULT__:", 1)
+                        visible_stdout = parts[0]
+                        try:
+                            exec_result = json.loads(parts[1].strip())
+                            self._output = exec_result.get("output")
+                            error_msg = exec_result.get("error")
+                            log.debug(
+                                f"Parsed result: output={exec_result.get('output')}, error={error_msg}"
+                            )
+
+                            # Check if this is a sub_llm request
+                            if error_msg and "__SUB_LLM_REQUEST__:" in str(error_msg):
+                                cache_key = str(error_msg).split("__SUB_LLM_REQUEST__:", 1)[1]
+                                log.debug(f"Detected sub_llm request: {cache_key[:100]}...")
+
+                                # Parse task and context from cache key
+                                if "||" in cache_key:
+                                    task, context = cache_key.split("||", 1)
+                                else:
+                                    task, context = cache_key, ""
+
+                                # Call host's sub_llm callback
+                                if self._sub_llm_callback:
+                                    log.debug(f"Calling host sub_llm: task={task[:50]}...")
+                                    try:
+                                        llm_result = self._sub_llm_callback(task, context)
+                                        sub_llm_cache[cache_key] = str(llm_result)
+                                        log.debug(f"Got sub_llm result: {str(llm_result)[:100]}...")
+                                        continue  # Retry with cached result
+                                    except Exception as e:
+                                        log.debug(f"sub_llm callback failed: {e}")
+                                        return {
+                                            "stdout": visible_stdout,
+                                            "output": None,
+                                            "error": f"sub_llm failed - {e}",
+                                            "state": exec_result.get("state", {}),
+                                        }
+                                else:
+                                    log.debug("No sub_llm callback available")
+                                    return {
+                                        "stdout": visible_stdout,
+                                        "output": None,
+                                        "error": "sub_llm() not available - no callback provided",
+                                        "state": exec_result.get("state", {}),
+                                    }
+
+                            # Normal result (no sub_llm request)
+                            return {
+                                "stdout": visible_stdout + exec_result.get("stdout", ""),
+                                "output": exec_result.get("output"),
+                                "error": error_msg,
+                                "state": exec_result.get("state", {}),
+                            }
+                        except json.JSONDecodeError as e:
+                            log.debug(f"Failed to parse JSON result: {e}")
+                            return {
+                                "stdout": stdout,
+                                "output": None,
+                                "error": f"Failed to parse container output: {stderr}",
+                                "state": {},
+                            }
+                    else:
+                        # No result marker - might be an error
+                        log.debug(f"No result marker found. stdout preview: {stdout[:200]}")
+                        error = stderr if stderr else "No output from container"
+                        if result.returncode != 0:
+                            error = f"Container exited with code {result.returncode}: {stderr}"
+                        log.debug(f"Returning error: {error[:200]}")
                         return {
                             "stdout": stdout,
                             "output": None,
-                            "error": f"Failed to parse container output: {stderr}",
+                            "error": error,
                             "state": {},
                         }
-                else:
-                    # No result marker - might be an error
-                    log.debug(f"No result marker found. stdout preview: {stdout[:200]}")
-                    error = stderr if stderr else "No output from container"
-                    if result.returncode != 0:
-                        error = f"Container exited with code {result.returncode}: {stderr}"
-                    log.debug(f"Returning error: {error[:200]}")
+
+                except subprocess.TimeoutExpired:
+                    log.debug(f"Docker execution timed out after {self.timeout}s")
                     return {
-                        "stdout": stdout,
+                        "stdout": "",
                         "output": None,
-                        "error": error,
+                        "error": f"Execution timed out after {self.timeout}s",
+                        "state": {},
+                    }
+                except Exception as e:
+                    log.debug(f"Docker execution failed with exception: {e}")
+                    return {
+                        "stdout": "",
+                        "output": None,
+                        "error": f"Docker execution failed: {e}",
                         "state": {},
                     }
 
-            except subprocess.TimeoutExpired:
-                log.debug(f"Docker execution timed out after {self.timeout}s")
-                return {
-                    "stdout": "",
-                    "output": None,
-                    "error": f"Execution timed out after {self.timeout}s",
-                    "state": {},
-                }
-            except Exception as e:
-                log.debug(f"Docker execution failed with exception: {e}")
-                return {
-                    "stdout": "",
-                    "output": None,
-                    "error": f"Docker execution failed: {e}",
-                    "state": {},
-                }
+        # If we exhausted retries (too many sub_llm calls)
+        return {
+            "stdout": "",
+            "output": None,
+            "error": f"Too many sub_llm calls (max {max_sub_llm_calls})",
+            "state": {},
+        }
 
     def get_state(self) -> dict[str, str]:
         """Get current namespace state."""

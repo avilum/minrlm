@@ -423,6 +423,8 @@ class RLM:
                 memory_limit=docker_memory,
                 timeout=docker_timeout,
                 network_disabled=True,
+                sub_llm_callback=self._handle_sub_llm,
+                sub_llm_batch_callback=self._handle_sub_llm_batch,
             )
             # Verify Docker is available, fall back to local REPL with warning if not
             if docker_repl.is_available():
@@ -548,7 +550,9 @@ class RLM:
         return f"patch = '''{safe_patch}'''\nFINAL(patch)"
 
     def _call_llm(self, messages: list[dict[str, str]]) -> tuple[str, int, int, int]:
-        """Call LLM, return (response_text, total_tokens, input_tokens, output_tokens)."""
+        """Call LLM with retry logic for rate limits. Returns (response_text, total_tokens, input_tokens, output_tokens)."""
+        import time
+
         # Build kwargs dynamically - only include params when they have valid values
         # (some providers reject null values for optional params)
         kwargs: dict[str, Any] = {
@@ -564,22 +568,66 @@ class RLM:
         if self.temperature is not None and not is_reasoning_model:
             kwargs["temperature"] = self.temperature
 
-        # Limit output tokens to reduce latency (skip for reasoning models)
-        if self.max_output_tokens and not is_reasoning_model:
-            kwargs["max_tokens"] = self.max_output_tokens
+        # Limit output tokens to reduce latency
+        # Use appropriate parameter based on model type
+        if self.max_output_tokens:
+            if is_reasoning_model:
+                # Reasoning models (o1, o3, gpt-5) use max_completion_tokens
+                kwargs["max_completion_tokens"] = self.max_output_tokens
+            else:
+                # Standard models use max_tokens
+                kwargs["max_tokens"] = self.max_output_tokens
 
         # Use reasoning_effort for reasoning models to control token cost
         if is_reasoning_model and self.reasoning_effort:
             kwargs["reasoning_effort"] = self.reasoning_effort
 
-        resp = self.client.chat.completions.create(**kwargs)
-        usage = resp.usage
-        return (
-            resp.choices[0].message.content or "",
-            usage.total_tokens if usage else 0,
-            usage.prompt_tokens if usage else 0,
-            usage.completion_tokens if usage else 0,
-        )
+        # Retry logic with exponential backoff for rate limits
+        max_retries = 5
+        base_delay = 1.0  # Start with 1 second
+
+        for attempt in range(max_retries):
+            try:
+                resp = self.client.chat.completions.create(**kwargs)
+                usage = resp.usage
+                return (
+                    resp.choices[0].message.content or "",
+                    usage.total_tokens if usage else 0,
+                    usage.prompt_tokens if usage else 0,
+                    usage.completion_tokens if usage else 0,
+                )
+            except Exception as e:
+                # Check if it's a rate limit error (429)
+                error_str = str(e)
+                is_rate_limit = "429" in error_str or "rate_limit" in error_str.lower()
+
+                if is_rate_limit and attempt < max_retries - 1:
+                    # Extract wait time from error message if available
+                    wait_time = base_delay * (2 ** attempt)  # Exponential backoff
+
+                    # Try to parse wait time from error message (e.g., "try again in 133ms")
+                    import re
+                    match = re.search(r'try again in (\d+)ms', error_str)
+                    if match:
+                        suggested_ms = int(match.group(1))
+                        wait_time = max(wait_time, suggested_ms / 1000.0)
+
+                    match = re.search(r'try again in ([\d.]+)s', error_str)
+                    if match:
+                        suggested_s = float(match.group(1))
+                        wait_time = max(wait_time, suggested_s)
+
+                    self._log("rate_limit_retry", {
+                        "attempt": attempt + 1,
+                        "wait_seconds": wait_time,
+                        "error": error_str[:200]
+                    })
+
+                    time.sleep(wait_time)
+                    continue
+
+                # Not a rate limit error, or max retries exceeded
+                raise
 
     @staticmethod
     def _is_reasoning_model(model: str) -> bool:
@@ -961,7 +1009,7 @@ class RLM:
         saved_data_accessed = None
         if self._repl:
             saved_input_0 = self._repl._namespace.get("input_0")
-            saved_data_accessed = self._repl._data_accessed
+            saved_data_accessed = getattr(self._repl, '_data_accessed', None)
 
         if self.max_sub_llm_calls is not None:
             if self._sub_llm_calls >= self.max_sub_llm_calls:
@@ -980,7 +1028,7 @@ class RLM:
                 # Restore parent context + access flag to avoid subcall pollution
                 if saved_input_0 is not None:
                     self._repl.set_variable("input_0", saved_input_0, allow_override=True)
-                if saved_data_accessed is not None:
+                if saved_data_accessed is not None and hasattr(self._repl, '_data_accessed'):
                     self._repl._data_accessed = saved_data_accessed
 
     def _handle_sub_llm_batch(self, tasks: list[tuple[str, str]]) -> list[str]:

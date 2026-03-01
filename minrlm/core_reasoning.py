@@ -145,16 +145,29 @@ class RLMReasoning(RLM):
             messages.append({"role": "assistant", "content": response_text})
 
             if not code:
-                self._log("no_code", {"response": response_text})
-                return RLMReasoningResult(
-                    response="",
-                    iterations=iteration,
-                    total_tokens=total_tokens,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    history=messages,
-                    reasoning=self._reasoning,
-                )
+                # Try fallback: accept raw Python code without code fences
+                # (Some models like gpt-5-mini generate code directly without ```python markers)
+                cleaned = response_text.strip()
+                if cleaned and "FINAL(" in cleaned:
+                    # Response contains FINAL() call - treat as raw Python code
+                    code = cleaned
+                    self._log("code_auto_wrapped", {"note": "Accepted raw Python without code fences"})
+
+                if not code:
+                    # Still no code - return error
+                    self._log("no_code", {"response": response_text})
+                    error_msg = "ERROR: LLM response did not contain executable Python code"
+                    if len(response_text) > 1900:  # Likely truncated
+                        error_msg += f" (response may be truncated at {len(response_text)} chars)"
+                    return RLMReasoningResult(
+                        response=error_msg,
+                        iterations=iteration,
+                        total_tokens=total_tokens,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                        history=messages,
+                        reasoning=self._reasoning,
+                    )
 
             # Execute code - log full code for debugging (not truncated)
             self._log("code_exec", {"code": code, "code_length": len(code)})
@@ -223,7 +236,7 @@ class RLMReasoning(RLM):
             },
         )
 
-        # Return last stdout or empty
+        # Return last stdout or error message (never empty)
         last_stdout = ""
         if messages and messages[-1]["role"] == "user":
             # Extract stdout from last continue prompt
@@ -231,6 +244,10 @@ class RLMReasoning(RLM):
             match = re.search(r"stdout: (.*?)(?:\n\nVariables:|$)", content, re.DOTALL)
             if match:
                 last_stdout = match.group(1).strip()
+
+        # If still empty, provide error message
+        if not last_stdout:
+            last_stdout = f"ERROR: Max iterations ({self.max_iterations}) reached without calling FINAL()"
 
         log_path = None
         if self.log_dir:

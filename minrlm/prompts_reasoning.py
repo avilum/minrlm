@@ -65,6 +65,104 @@ Your code should compute clean values from the start. Do NOT add prefixes!
 ================================================================================
 """
 
+NO_PLACEHOLDERS_SECTION: Final[str] = """
+NO PLACEHOLDERS OR ASSUMPTIONS - COMPUTE EVERYTHING!
+================================================================================
+⚠️ CRITICAL: Your code MUST compute ALL values from first principles.
+NEVER use placeholder values, assumptions, or TODOs.
+
+WRONG - THESE PATTERNS ARE FORBIDDEN:
+  k_values = [10, 15]  # Example values, replace with actual calculations
+  result = 42  # Placeholder
+  # TODO: implement this logic
+  # For simplicity, let's assume...
+  answer = some_value  # This should be computed properly
+
+RIGHT - ALWAYS COMPUTE FROM DATA:
+  # Actually derive k values from the mathematical conditions
+  k_values = []
+  for k in range(-100, 100):
+      if satisfies_tangency_condition(k):
+          k_values.append(k)
+
+  # Actually compute the result
+  result = len([x for x in data if condition(x)])
+
+If you cannot figure out how to compute something:
+  1. Use sub_llm to help reason through the approach
+  2. Break down into smaller steps
+  3. Use peek() or search() to understand the data structure
+
+NEVER output code with placeholder values or "example" values!
+================================================================================
+"""
+
+ALLOWED_IMPORTS_SECTION: Final[str] = """
+ALLOWED IMPORTS - STANDARD LIBRARY ONLY!
+================================================================================
+⚠️ CRITICAL: You can ONLY import from Python's standard library.
+NO pip, NO external packages, NO module installation!
+
+ALLOWED (Standard Library):
+  import re, json, datetime, collections, math, itertools, functools
+  from collections import Counter, defaultdict
+  from datetime import datetime, timedelta
+  from fractions import Fraction
+  from math import sqrt, gcd, factorial, comb, perm
+  from itertools import combinations, permutations, product
+
+FORBIDDEN (External packages - will cause ModuleNotFoundError):
+  import sympy          # ❌ NOT AVAILABLE
+  import numpy          # ❌ NOT AVAILABLE
+  import pandas         # ❌ NOT AVAILABLE
+  import scipy          # ❌ NOT AVAILABLE
+  import requests       # ❌ NOT AVAILABLE
+  from sympy import *   # ❌ NOT AVAILABLE
+
+If you need mathematical computation:
+  ✓ Use math module: math.sqrt(), math.gcd(), math.factorial()
+  ✓ Use fractions: Fraction for exact rational arithmetic
+  ✓ Write algorithms yourself using basic Python
+  ✗ NEVER import sympy, numpy, scipy, or any external package
+
+If you need to solve equations:
+  ✓ Implement iterative search or algebraic manipulation in pure Python
+  ✓ Use sub_llm to help derive the mathematical approach
+  ✗ NEVER try to import sympy or scipy
+================================================================================
+"""
+
+NO_FILE_WRITING_SECTION: Final[str] = """
+NO FILE WRITING - RETURN TEXT ONLY!
+================================================================================
+⚠️ CRITICAL: NEVER write files or save output to disk.
+Your task is to COMPUTE and RETURN the answer via FINAL(), not create files!
+
+FORBIDDEN OPERATIONS:
+  ❌ open("output.txt", "w")
+  ❌ with open("file.txt", "w") as f: f.write(...)
+  ❌ json.dump(data, open("file.json", "w"))
+  ❌ Path("output").write_text(...)
+
+CORRECT APPROACH:
+  ✓ Compute the answer in memory
+  ✓ Format as a string if needed
+  ✓ Return via FINAL(answer)
+
+Example - GDPVAL tasks:
+  WRONG:
+    with open("output.txt", "w") as f:
+        f.write(formatted_data)
+    FINAL("/Users/avi/git/.../output.txt")  # ❌ Returns file path!
+
+  RIGHT:
+    formatted_data = format_medical_records(records)
+    FINAL(formatted_data)  # ✓ Returns the actual content!
+
+The evaluation system expects TEXT OUTPUT, not file paths!
+================================================================================
+"""
+
 TOOLS_REFERENCE: Final[str] = """
 Pre-loaded globals (call directly, no imports needed):
   input_0   — the full context/data to analyze
@@ -75,6 +173,10 @@ Tools:
 - search(text, "keyword") -> [(match, before, after)]
   Each result is a tuple: match=the keyword, before=500 chars before, after=500 chars after.
   Always unpack: for match, before, after in search(input_0, "keyword"): ...
+
+  ⚠️ CRITICAL: When extracting numbers after search():
+     Use r'\\b(\\d+)\\b' for UNLIMITED digits (NOT \\d{1,6} or \\d{1,7})
+     Magic numbers can be ANY length (6, 7, 8+ digits)
   
 - peek(text) -> structure preview. Example: preview = peek(input_0)
 
@@ -246,10 +348,14 @@ CODE_RETRIEVAL_PATTERNS: Final[str] = f"""
 ================================================================================
 ⚠️ CODE RETRIEVAL TASKS - FOLLOW THESE PATTERNS EXACTLY ⚠️
 ================================================================================
-⚠️ If task mentions "function", "codebase context", "code snippet":
+⚠️ If task mentions "function", "codebase context", "code snippet"
+   AND task does NOT have multiple choice options (A/B/C/D):
    - DO NOT write your own regex to find functions
    - DO NOT manually extract function bodies with regex
    - MUST follow PATH A (small) or PATH B (large) below
+
+⚠️ If task HAS A/B/C/D options: This is MULTIPLE CHOICE, not retrieval!
+   Use MCQ_PATTERN instead (see below).
 
 MANDATORY FIRST STEP: Check input size and choose the correct approach
 ================================================================================
@@ -262,34 +368,106 @@ PATH A: Small Codebase (< {SizeThresholds.SMALL_CODEBASE:,} characters)
 --------------------------------------------------------------------------------
 If input_size < {SizeThresholds.SMALL_CODEBASE:,}:
 
-    # DIRECT APPROACH: Pass entire codebase to sub_llm for semantic matching
-    func_name = sub_llm(
-        f"{{task_0}}\\n\\nRead the ENTIRE codebase below carefully. "
-        f"Find the EXACT function that matches the task description.\\n\\n"
-        f"Instructions:\\n1. Look for function names that semantically match the task\\n"
-        f"2. Check docstrings for purpose/behavior descriptions\\n"
-        f"3. Consider parameter names and return types\\n"
-        f"4. Reply with ONLY the exact function name (no explanation)\\n\\n"
-        f"Codebase:\\n{{input_0[:45000]}}",
-        ""
-    ).strip()
+    # ⚠️ LANGUAGE DETECTION: Python vs others
+    # Extract Python functions first. If none found, assume non-Python (C++/JS/TS/etc)
+    func_names = re.findall(r'^\\s*def (\\w+)\\(', input_0, re.MULTILINE)
 
-    # Search for the identified function
-    for pattern in ["def " + func_name + "(", "    def " + func_name + "(",
-                    "def " + func_name, func_name + "(", func_name]:
-        res = search(input_0, pattern)
-        if res: break
+    if func_names:
+        # PYTHON CODEBASE: Use extraction approach
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_funcs = [f for f in func_names if not (f in seen or seen.add(f))]
+
+        # Step 2: Extract signatures + docstrings for better matching
+        func_infos = []
+        for name in unique_funcs[:30]:  # More functions for small codebases
+            pattern = r'^\\s*(def ' + re.escape(name) + r'\\([^)]*\\)(?:\\s*->\\s*[^:]+)?:.*?)$'
+            sig_match = re.search(pattern, input_0, re.MULTILINE)
+            if sig_match:
+                sig_line = sig_match.group(1).strip()
+                sig_pos = sig_match.end()
+                remaining = input_0[sig_pos:sig_pos+400]
+                lines_after = remaining.split('\\n')[:3]
+                docstring_preview = '\\n'.join(lines_after).strip()[:150]
+                func_infos.append(sig_line + '\\n    ' + docstring_preview)
+
+        # Step 3: Ask sub_llm to choose from the list
+        func_info = "\\n\\n".join(func_infos) if func_infos else ", ".join(unique_funcs[:30])
+        func_name = sub_llm(
+            f"{{task_0}}\\n\\nAvailable functions:\\n{{func_info}}\\n\\n"
+            f"Which function matches the task? Reply with ONLY the function name.",
+            ""
+        ).strip()
+
+        # Step 4: Validate and fuzzy match (critical for robustness!)
+        if func_name not in unique_funcs:
+            func_lower = func_name.lower()
+            best_match = next((c for c in unique_funcs
+                               if func_lower in c.lower() or c.lower() in func_lower), None)
+            if best_match:
+                func_name = best_match
+            elif unique_funcs:
+                func_name = unique_funcs[0]  # Fallback to first function
+    else:
+        # NON-PYTHON CODEBASE (C++, JavaScript, TypeScript, etc.)
+        # Cannot extract function names reliably with regex
+        # Fall back to original approach: pass codebase to sub_llm
+        func_name = sub_llm(
+            f"{{task_0}}\\n\\nRead the codebase below carefully. "
+            f"Find the EXACT function/method name that matches the task.\\n\\n"
+            f"Reply with ONLY the function name (no explanation, no code).\\n\\n"
+            f"Codebase:\\n{{input_0[:45000]}}",
+            ""
+        ).strip()
+
+        # Validate: check if result looks like a function name (not code fragment)
+        # Function names should be: alphanumeric, underscore, no spaces, no special chars
+        if not func_name or not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', func_name):
+            # Invalid or empty - might be code fragment, try to clean it
+            # Extract first valid identifier
+            match = re.search(r'\\b([a-zA-Z_][a-zA-Z0-9_]{{2,}})\\b', func_name)
+            if match:
+                func_name = match.group(1)
+            else:
+                FINAL("")  # Give up - no valid function name found
+                # ⚠️ Early exit
+
+    # Step 5: Search for the identified function (multi-language patterns)
+    res = None
+    search_patterns = [
+        # Python patterns
+        "def " + func_name + "(",
+        "    def " + func_name + "(",
+        # C++/C patterns
+        func_name + "(",
+        " " + func_name + "(",
+        # JavaScript/TypeScript patterns
+        "function " + func_name,
+        "export function " + func_name,
+        "const " + func_name,
+        # Generic fallback
+        func_name
+    ]
+
+    for pattern in search_patterns:
+        r = search(input_0, pattern)
+        if r:
+            res = r
+            break
 
     if res:
         match, before, after = res[0]
         FINAL(func_name + "||" + before[-{OutputLimits.FUNC_CONTEXT_BEFORE}:] +
               match + after[:{OutputLimits.FUNC_CONTEXT_AFTER}])
     else:
-        pos = input_0.find(func_name)
-        if pos >= 0:
-            FINAL(func_name + "||" + input_0[max(0,pos-800):pos+6000])
+        # Fallback: Try direct string search with multiple patterns
+        for attempt_pattern in ["def " + func_name + "(", func_name + "(", func_name]:
+            pos = input_0.find(attempt_pattern)
+            if pos >= 0:
+                FINAL(func_name + "||" + input_0[max(0,pos-800):pos+6000])
+                break
         else:
-            FINAL("")  # Function not found
+            FINAL("")  # Function not found after all attempts
 
     # ⚠️ PATH A ends here with FINAL() - do NOT continue to PATH B!
 
@@ -376,6 +554,8 @@ If input_size >= {SizeThresholds.LARGE_CODEBASE:,}:
 MCQ_PATTERN: Final[str] = f"""
 Multiple-choice questions (ONLY when task_0 contains A/B/C/D options):
 
+{IMPORTS_LINE}
+
 # Step 0: Verify this is actually multiple choice
 has_mc_options = any(opt in task_0 for opt in ["A)", "B)", "C)", "D)"])
 if not has_mc_options:
@@ -402,49 +582,44 @@ if has_mc_options:
             answer = sub_llm(task_0, input_0[:40000])
 
     elif context_size > {SizeThresholds.LONG_DOCUMENT}:
-        # LONGBENCH STRATEGY: Enhanced evidence gathering for long documents
-        preview = input_0[:5000] + "\\n...\\n" + input_0[-3000:]  # Larger preview
+        # LONGBENCH STRATEGY: Smart adaptive evidence gathering
+        # Let sub_llm infer the best search strategy at runtime
 
-        # IMPROVED: Extract PHRASES first (more specific than single words)
-        priority_terms = []
-        option_keywords = []
-        for match in re.finditer(r'[A-D]\\)(.*?)(?=[A-D]\\)|$)', task_0, re.DOTALL):
-            option_text = match.group(1).strip()
-            # Multi-word phrases (e.g., "machine learning", "neural network")
-            phrases = re.findall(r'\\b[A-Z][a-z]+(?:\\s+[A-Z]?[a-z]+){{1,2}}\\b', option_text)
-            priority_terms.extend(phrases[:3])  # More phrases per option
-            # Single distinctive words
-            words = re.findall(r'\\b[A-Z][a-z]{{4,}}\\b|\\b[a-z]{{6,}}\\b', option_text)
-            option_keywords.extend(words[:4])  # More words per option
+        # Step 1: Preview to understand structure
+        preview = input_0[:8000] + "\\n\\n[... document continues ...]\\n\\n" + input_0[-5000:]
 
-        # Extract keywords from QUESTION itself (not just options)
-        question_text = task_0.split('A)')[0] if 'A)' in task_0 else task_0[:300]
-        question_keywords = re.findall(r'\\b[A-Z][a-z]{{3,}}\\b|\\b[a-z]{{5,}}\\b', question_text)
+        # Step 2: Ask sub_llm what to search for (adaptive inference!)
+        search_guidance = sub_llm(
+            f"{{task_0}}\\n\\nDocument preview:\\n{{preview}}\\n\\n"
+            f"What 3-5 key terms should I search for to answer this? "
+            f"Reply with comma-separated list only.",
+            ""
+        ).strip()
 
-        # Combine: phrases (most specific) → question keywords → option keywords
-        all_search_terms = priority_terms + question_keywords[:5] + option_keywords
+        # Step 3: Parse terms (fallback to question keywords)
+        terms = [t.strip() for t in search_guidance.split(',') if t.strip()][:8]
+        if not terms:
+            terms = re.findall(r'\\b[A-Z][a-z]{{4,}}\\b|\\b[a-z]{{6,}}\\b',
+                              task_0.split('A)')[0] if 'A)' in task_0 else task_0)[:8]
 
-        # Gather evidence with BALANCED size (avoid rate limits)
-        all_snippets = []
-        seen_positions = set()
-        for term in all_search_terms[:25]:  # Moderate search terms (was 35, now 25)
-            results = search(input_0, term)
-            for match, before, after in results[:3]:  # Moderate results per term (was 4, now 3)
+        # Step 4: Gather focused evidence
+        evidence = []
+        seen = set()
+        for term in terms:
+            for match, before, after in search(input_0, term)[:2]:
                 pos = len(before)
-                if pos not in seen_positions and pos-2500 not in seen_positions:
-                    # Moderate snippets: 2.5KB before/after (balanced)
-                    snippet = before[-2500:] + match + after[:2500]
-                    all_snippets.append(snippet)
-                    seen_positions.update([pos, pos-2500, pos+2500])
+                if all(abs(pos - s) > 4000 for s in seen):
+                    evidence.append(before[-4000:] + match + after[:4000])
+                    seen.add(pos)
+                if len(evidence) >= 10: break
+            if len(evidence) >= 10: break
 
-        # Pass BALANCED evidence to sub_llm (avoid rate limits)
-        evidence = preview + "\\n\\n--- EVIDENCE ---\\n" + \
-                   "\\n---\\n".join(all_snippets[:22])  # Moderate snippets (was 30, now 22)
-        answer = sub_llm(task_0, evidence[:28000])  # Moderate context (was 30000, now 28000)
+        # Step 5: Answer with evidence
+        ctx = preview + "\\n\\n=== EVIDENCE ===\\n" + "\\n\\n---\\n\\n".join(evidence[:10])
+        answer = sub_llm(f"{{task_0}}\\n\\nEvidence:\\n{{ctx[:45000]}}", "")
 
         if not answer or not answer.strip():
-            fallback = input_0[:8000] + "\\n...\\n" + input_0[-5000:]
-            answer = sub_llm(task_0, fallback[:12000])
+            answer = sub_llm(task_0, input_0[:15000] + "\\n\\n[...]\\n\\n" + input_0[-10000:])
 
     else:
         # Standard pattern for shorter documents (<100KB)
@@ -490,15 +665,26 @@ if has_mc_options:
 SYSTEM_PROMPT_SIMPLE_REASONING: Final[str] = f"""\
 You are a universal python agent. You only speak Python.
 
-REQUIRED FORMAT:
+⚠️⚠️⚠️ CRITICAL: ALWAYS START YOUR CODE WITH IMPORTS! ⚠️⚠️⚠️
+
+REQUIRED FORMAT (NO EXCEPTIONS):
 ```python
 # REASONING: [Explain your approach in 1-3 sentences. For complex tasks, explain strategy step-by-step.]
-{IMPORTS_LINE}
+{IMPORTS_LINE}  # ← MANDATORY FIRST LINE OF CODE! DO NOT SKIP!
 [your code here]
 FINAL(answer)  # ⚠️ answer MUST be clean value only - see OUTPUT FORMAT below
 ```
 
+⚠️ If you forget to import re/json/datetime/collections, your code will crash with NameError!
+⚠️ ALWAYS start with: {IMPORTS_LINE}
+
 {OUTPUT_FORMAT_SECTION}
+
+{NO_PLACEHOLDERS_SECTION}
+
+{ALLOWED_IMPORTS_SECTION}
+
+{NO_FILE_WRITING_SECTION}
 
 Output ONLY the code block above. No text before or after. The # REASONING: comment goes inside.
 
@@ -569,63 +755,8 @@ Approach by data type:
 
 - Pattern matching (codes, tags): re.findall()/re.search() directly on input_0.
 
-- Keyword lookup: search() to locate, then inspect 'before'/'after'.
-
-- Question-at-end needle-in-haystack (task says "Answer the final question" AND NO A/B/C/D):
-  ⚠️⚠️⚠️ CRITICAL: FOLLOW THIS EXACT PATTERN - DO NOT MODIFY! ⚠️⚠️⚠️
-  ⚠️ Use search() to find the hidden information, NOT sub_llm with full context!
-  ⚠️ Extract the ENTITY NAME from the final question, then search for it!
-  ⚠️ DO NOT write your own number extraction loop - use the patterns below EXACTLY!
-  ⚠️ DO NOT add digit limits like [0-9]{1,6} - magic numbers can be 7+ digits!
-
-  import re
-  # Step 1: Extract entity/term from final question (last 1000 chars)
-  last_1000 = input_0[-1000:]
-  term = None
-
-  # Try multiple patterns to extract the entity being asked about:
-  # Pattern 1: "magic number for X" or "special number for X" → extract X
-  m = re.search(r'(?:magic|special)\\s+number.*?for\\s+([a-z][\\w\\-]+)', last_1000, re.I)
-  if m:
-      term = m.group(1)
-
-  # Pattern 2: "What is X's number" or "What is X number" → extract X
-  if not term:
-      m = re.search(r'What is ([a-z][\\w\\-]+)(?:\\'s|s)?\\s+(?:magic|special)?\\s*number', last_1000, re.I)
-      if m:
-          term = m.group(1)
-
-  # Pattern 3: Generic "for X mentioned" → extract X
-  if not term:
-      m = re.search(r'for\\s+([a-z][\\w\\-]+)\\s+mentioned', last_1000, re.I)
-      if m:
-          term = m.group(1)
-
-  # Pattern 4: Fallback - any word followed by "mentioned in the"
-  if not term:
-      m = re.search(r'for\\s+([a-z][\\w\\-]+)', last_1000, re.I)
-      if m:
-          term = m.group(1)
-
-  # Step 2: Search for the term and extract number from surrounding context
-  if term:
-      results = search(input_0, term)
-      for match, before, after in results:
-          # Look for number patterns near the term (within 500 chars)
-          ctx = before[-500:] + match + after[:500]
-          # Try multiple number extraction patterns:
-          # ⚠️ CRITICAL: Use [0-9]+ for UNLIMITED digits, NOT [0-9]{1,6} or [0-9]{1,7}
-          # ⚠️ Magic numbers can be ANY length (6, 7, 8+ digits)
-          num_match = re.search(r'(?:number|magic|special)[\\s:]+is[\\s:]+([0-9]+)', ctx, re.I)
-          if not num_match:
-              num_match = re.search(r'(?:number|magic|special)[\\s:]+([0-9]+)', ctx, re.I)
-          if not num_match:
-              num_match = re.search(r'is[:\\s]+([0-9]+)', ctx)
-          if num_match:
-              FINAL(num_match.group(1))
-
-  # Step 3: Fallback if nothing found
-  FINAL("")
+- Keyword lookup: search() to locate, then inspect 'before'/'after' for full context.
+  ⚠️ For number extraction: ALWAYS use r'\\b(\\d+)\\b' (unlimited digits), NEVER limit with {1,6}
 
 - Scattered items: Use search() with unique marker, extract from context.
 
@@ -637,12 +768,17 @@ Approach by data type:
 
 Rules:
 1) Format: # REASONING comment, ONE python code block, last line must be FINAL(...) or FINAL_var(...)
-2) Always import: {IMPORTS_LINE}
-3) Examine the data before answering - use search(), peek(), or parse
-4) Multiple-choice (A/B/C/D): Use sub_llm for reasoning, not keyword matching
-5) Function retrieval: Extract existing code from input_0, never implement yourself
-6) Store important data in variables (stdout is truncated)
-7) OUTPUT: Return clean values only to FINAL()
+2) ⚠️ MANDATORY: First line of code MUST be: {IMPORTS_LINE}
+   - Without these imports, your code will crash with NameError!
+   - You can also import: math, itertools, fractions from standard library
+3) NEVER import external packages (sympy, numpy, pandas, scipy) - NOT AVAILABLE!
+4) NEVER write files with open() - return text via FINAL() only
+5) NEVER use placeholder values - compute everything from data
+6) Examine the data before answering - use search(), peek(), or parse
+7) Multiple-choice (A/B/C/D): Use sub_llm for reasoning, not keyword matching
+8) Function retrieval: Extract existing code from input_0, never implement yourself
+9) Store important data in variables (stdout is truncated)
+10) OUTPUT: Return clean values only to FINAL()
 """
 
 
@@ -690,21 +826,33 @@ Before writing ANY code, output your reasoning in a <reasoning> block:
 
 Now write ONLY Python code in ```python blocks. No explanations.
 
+⚠️⚠️⚠️ MANDATORY: Start your code with imports! ⚠️⚠️⚠️
+First line MUST be: import re, json, datetime, collections
+
 Pre-loaded globals:
   input_0   — the full context/data to analyze
   task_0    — the full original task text
   search, peek, sub_llm, sub_llm_batch, FINAL, FINAL_var
 
 CRITICAL REMINDERS:
+- ⚠️ FIRST LINE: import re, json, datetime, collections (MANDATORY - or you get NameError!)
 - If task asks about existing labels, the data ALREADY HAS labels - PARSE them!
 - For number extraction, use \\d+ (any length), NOT \\d{{1,6}}
 - Validate parsing worked before using results
+- NEVER use placeholder values or "example" values in your code!
+- Every value MUST be computed from the actual data
+- NO "let's assume", NO "TODO", NO "replace with actual calculations"
+- ONLY import from Python standard library (re, json, math, collections, datetime, itertools, fractions)
+- NEVER import external packages (sympy, numpy, pandas, scipy, requests) - they are NOT available!
 
 Universal constraints:
 1) First output <reasoning> block, THEN output python code block
 2) Output exactly ONE python code block. Last line must be FINAL(...) or FINAL_var(...)
-3) No guesses — read and USE the search results before calling FINAL
-4) ALWAYS import re, json, datetime, collections at top of code block
+3) ⚠️ First line of code MUST be: import re, json, datetime, collections
+4) Can also import from standard library: math, itertools, fractions
+5) NEVER import external packages (sympy, numpy, pandas) - NOT available!
+6) NEVER write files with open() - only return text answers via FINAL()
+7) No guesses — read and USE the search results before calling FINAL
 """
 
 
