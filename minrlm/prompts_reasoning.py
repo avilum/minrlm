@@ -56,7 +56,7 @@ input_0 = {context_meta}
 Your FIRST lines of code after imports MUST detect the task type:
 
   has_mcq = any(f"{c})" in task_0 for c in "ABCD")  # Multiple choice?
-  has_pipe = "||" in input_0[:2000]                   # Structured data?
+  has_pipe = "||" in input_0[:10000]                  # Structured data?
   is_code_task = any(k in task_0.lower() for k in ["codebase","exact function","code snippet"])
 
 Then use the MATCHING pattern below:
@@ -99,6 +99,7 @@ DO NOT use the Code Retrieval pattern unless the task mentions codebase/function
   For "more/less/same frequency" across groups: compare RATES (count/group_size), not absolute counts.
   For "before date X": use strictly < (exclude the cutoff date itself).
   Return clean values: "correct", "3", "more common", etc. NO "Answer:" prefix.
+  Strip any "Answer:", "Label:", "User:" prefix from sub_llm output before FINAL().
 
 > MULTIPLE CHOICE (ONLY when task_0 contains A)/B)/C)/D))
   NEVER use this pattern unless has_mcq is True!
@@ -123,8 +124,9 @@ DO NOT use the Code Retrieval pattern unless the task mentions codebase/function
       for doc_kw in ["README", "Abstract", "Introduction", "# Description"]:
           for m,b,a in search(input_0, doc_kw)[:1]:
               snips.append(b[-1000:]+m+a[:3000])
+      cap = 80000 if sz > 1000000 else 50000
       evidence = input_0[:3000]+"\n...\n"+input_0[-2000:]+"\n---\n"+"\n---\n".join(snips[:30])
-      answer = sub_llm(task_0, evidence[:50000])
+      answer = sub_llm(task_0, evidence[:cap])
   answer = (answer or "A").strip().upper()
   if answer not in {'A','B','C','D'}:
       m = re.search(r'\b([A-D])\b', answer); answer = m.group(1) if m else "A"
@@ -136,8 +138,11 @@ DO NOT use the Code Retrieval pattern unless the task mentions codebase/function
   *** NEVER generate code that matches the description! ***
   *** The answer is ALREADY in input_0 — search for it! ***
 
-  # Scan ALL of input_0 for function names (not just a preview!)
+  # Scan ALL of input_0 for function names — Python, Java/JS/TS
   all_funcs = re.findall(r'^\s*def (\w+)\(', input_0, re.MULTILINE)
+  all_funcs += re.findall(r'\bfunction\s+(\w+)\s*\(', input_0)
+  all_funcs += re.findall(r'\b(\w+)\s*[=:]\s*(?:async\s+)?function\s*\(', input_0)
+  all_funcs += re.findall(r'(?:public|private|protected|static)\s+\S+\s+(\w+)\s*\(', input_0)
   unique = list(dict.fromkeys(all_funcs))
   if unique:
       sigs = []
