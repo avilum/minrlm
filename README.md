@@ -1,128 +1,168 @@
 # minrlm
 
-A minimal implementation of [Recursive Language Models](https://arxiv.org/abs/2512.24601) - let LLMs write code instead of reading your data.
+A robust implementation of [Recursive Language Models](https://arxiv.org/abs/2512.24601) - let LLMs think through code instead of reading your data.
 
-**The problem**: A 256K JSON file costs ~93,000 tokens just to find one value.
+**The problem**: Context engineering is static. You dump everything into the prompt and hope the attention mechanism figures out what matters. Most of the compute goes to tokens that aren't relevant to the answer. And at 1M+ tokens, you hit the context window and can't even run the query.
 
-**The solution**: The model writes code to search it. You pay ~1,000 tokens instead. Same answer, ~90x cheaper.
+**The insight**: We still rely on attention - but we improve the *context* the attention operates on. The LLM fetches exactly the context it needs to solve the task without ever seeing the full input. This isn't just an optimization - it **enables** things that aren't possible today: querying 10M-character documents, processing entire codebases, bypassing the context window entirely.
 
-**The proof**: 4.2x fewer tokens, 4.1x cheaper. At 11M contexts, RLMs work where vanilla LLM fails.
+**The solution**: Data stays in a Python REPL as `input_0`. The model writes code to search, filter, and aggregate. The raw data never enters the conversation - the LLM decides what to look at through code, pulls what it needs, and runs attention only on what matters.
 
-## Quick Start
+**The proof**: 1,200-eval benchmark on gpt-5-mini across 8 tasks - **3.7x fewer tokens**, **1.8x cheaper**, and higher overall accuracy than vanilla LLM (76.8% vs 64.0%).
 
-```bash
-uv pip install minrlm
-```
+**Improve every LLM in production, today.** If your application passes documents, logs, tables, or code to an LLM, minRLM is the fastest ROI you can find. The context window is the real bottleneck — not the model. Swap the client, keep everything else. Works with OpenAI, Anthropic, and any OpenAI-compatible API. Ships in an afternoon, scales to any context size.
 
-```python
-from minrlm import RLM
+**How is this different from agents?** An RLM is an agent with exactly one tool (Python REPL) that never sees the entire raw input. It tells the model *"you have `input_0` with 500K chars"* and lets it write code to answer the question. Some agents already do this internally - Claude Code processes web search results through code, Cursor and Claude Code chunk large files instead of pasting them whole. But these are proprietary backend optimizations. RLMs make this a commodity: agentic exploration of data in a single LLM call, where context is dynamic and determined at runtime based on the task and data.
 
-rlm = RLM(model="gpt-5-nano")
-result = rlm.completion(
-    task="Find employee EMP-0042",
-    context=huge_json  # 500K chars, stored as variable
-)
-print(result.total_tokens)  # ~2K tokens regardless of size
-```
+---
+
+## What's in this repo
+
+| Component | Location | What it does |
+|-----------|----------|--------------|
+| **RLM client** | [`minrlm/`](minrlm/) | Core `RLM` and `RLMReasoning` classes - the LLM ↔ REPL loop |
+| **DockerREPL** | [`minrlm/docker_repl.py`](minrlm/docker_repl.py) | Sandboxed code execution via Docker + custom seccomp |
+| **Evals** | [`eval/`](eval/) | 8-task benchmark framework, runners, metrics, plot generation |
+| **Examples** | [`examples/`](examples/) | Quickstart scripts, proxy server, Gradio side-by-side UI |
+
+---
 
 ## Benchmarks
 
-**Overall**: **4.2x fewer tokens**, **4.1x cheaper**
+**gpt-5-mini** | **1,200 evaluations** | 8 tasks | 50 runs per task per runner
 
-At large contexts (128K+), RLMs match or exceed vanilla accuracy while using **10-90x fewer tokens**. At extreme scales (6M+), RLMs are the only viable option—vanilla fails due to token limits.
+|  | minRLM | Vanilla LLM | Official RLM |
+|---|---|---|---|
+| **Accuracy** | **76.8%** | 64.0% | 75.2% |
+| **Avg Tokens** | **5,257** | 19,370 | 50,442 |
+| **Total Cost** | **$1.64** | $3.02 | $8.11 |
 
-![Cost by Task & Context Length](docs/cost_by_task_context.png)
+**3.7x fewer tokens** than vanilla | **9.6x fewer** than official | **1.8x cheaper** than vanilla | **4.9x cheaper** than official
 
-![Cost Comparison](docs/cost_comparison.png)
+![Summary Dashboard](docs/summary_dashboard.png)
 
-![Token Efficiency](docs/token_efficiency.png)
+![Accuracy per Task](docs/accuracy_per_task.png)
 
-**Full benchmark results, tasks, and reproduction commands**: [`eval/README.md`](eval/README.md)
+![Token Savings vs Baselines](docs/token_savings.png)
 
-## How It Works
+![Tokens per Task](docs/tokens_per_task.png)
 
-1. Your context is stored as `input_0` in a Python REPL
-2. The model writes code to search/process it
+![Cost per Query by Task](docs/cost_per_task.png)
+
+![Latency per Task](docs/latency_per_task.png)
+
+![Accuracy vs Cost — Efficiency Frontier](docs/accuracy_vs_cost.png)
+
+![Accuracy vs Latency](docs/accuracy_vs_latency.png)
+
+### Per task
+
+| Task | minRLM | Vanilla | Official | minRLM Tokens | vs Vanilla | vs Official |
+|------|--------|---------|----------|---------------|------------|-------------|
+| BrowseComp | **94%** | 0% | 72% | 4,881 | ∞ | **24.5x fewer** |
+| CodeQA | **62%** | 24% | 58% | 3,908 | **14.6x fewer** | **22.8x fewer** |
+| LongBench V2 | **50%** | 44% | 54% | 3,793 | **19.5x fewer** | **24.8x fewer** |
+| SNIAH | **100%** | 100% | 88% | 4,545 | - | **3.7x fewer** |
+| AIME 2025 | **88%** | 94% | 84% | 6,436 | - | **1.7x fewer** |
+| OOLONG | 88% | 94% | **94%** | 4,152 | **1.7x fewer** | **3.7x fewer** |
+| RepoQA | 86% | **100%** | 96% | 3,998 | 1.2x fewer | **5.3x fewer** |
+| GDP Val | 46% | 56% | **56%** | 10,344 | - | **3.5x fewer** |
+
+Full results and reproduction: [`eval/README.md`](eval/README.md)
+
+---
+
+## How it works
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  LLM sees:                                               │
+│                                                          │
+│  input_0 = "string with 500000 chars"                    │
+│  Task: Count errors in last hour                         │
+├──────────────────────────────────────────────────────────┤
+│  LLM writes:                                             │
+│                                                          │
+│  import re                                               │
+│  from datetime import datetime, timedelta                │
+│  errors = re.findall(r'\[ERROR\].*', input_0)            │
+│  cutoff = datetime.now() - timedelta(hours=1)            │
+│  FINAL(len([e for e in errors if parse_time(e) > cutoff]))
+└──────────────────────────────────────────────────────────┘
+```
+
+1. Context is stored as `input_0` in a sandboxed Python REPL
+2. The model writes code to search/filter/aggregate it
 3. Code runs, output goes back to the model
 4. Repeat until `FINAL(answer)` is called
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  LLM sees:                                                  │
-│                                                             │
-│  input_0 = "string with 262144 chars"                       │
-│  Task: Find employee EMP-0042                               │
-├─────────────────────────────────────────────────────────────┤
-│  LLM writes:                                                │
-│                                                             │
-│  data = json.loads(input_0)                                 │
-│  for emp in data:                                           │
-│      if emp["id"] == "EMP-0042":                            │
-│          FINAL(emp["name"])                                 │
-└─────────────────────────────────────────────────────────────┘
-```
+The data never enters the conversation. Token cost stays flat regardless of context size.
 
-The data never enters the conversation. Token usage stays flat regardless of context size.
+---
 
 ## Install
 
 ```bash
-uv pip install minrlm
+pip install minrlm          # minimal - only openai required
+# or
+uv add minrlm
 ```
 
-Or from source:
+From source:
+
 ```bash
 git clone https://github.com/avilum/minrlm
-cd minrlm && uv sync
+cd minrlm
+uv sync                     # base (openai only)
+uv sync --extra eval        # + benchmark runner (datasets, matplotlib, tqdm)
+uv sync --extra visualizer  # + Gradio UI (gradio, plotly, pandas)
+uv sync --extra proxy       # + OpenAI-compatible proxy (fastapi, uvicorn)
+uv sync --extra all         # everything
 ```
 
-## Usage
+---
+
+## 1. minrlm - RLM Client
+
+`minrlm/` contains the core library:
+
+| File | Purpose |
+|------|---------|
+| `core.py` | `RLMBase` - base recursive LLM loop |
+| `core_reasoning.py` | `RLMReasoning` - reasoning-enhanced version (the default `RLM`) |
+| `prompts.py` | System prompt for the base runner |
+| `prompts_reasoning.py` | System prompt for the reasoning runner (used by benchmarks) |
+| `docker_repl.py` | `DockerREPL` - sandboxed execution backend (see §2) |
+
+### Basic usage
+
+`from minrlm import RLM` gives you `RLMReasoning` - the version with task-adaptive reasoning that produces the benchmark numbers above. Use `RLMBase` if you want the bare-bones loop without reasoning prompts.
 
 ```python
 from minrlm import RLM
 
-# Use gpt-4o-mini for simple tasks (fast, cheap)
-rlm = RLM(model="gpt-5-nano")
+rlm = RLM(model="gpt-5-mini")
 
-# Or gpt-5-nano for complex multi-step tasks (reasoning enabled)
-# rlm = RLM(model="gpt-5-nano")
-
-# No context - model just writes code
-result = rlm.completion("Print the first 100 powers of two")
-print(result.response)
-# 1, 2, 4, 8, 16, ... 633825300114114700748351602688
-
-# With context - data stored as input_0
 result = rlm.completion(
-    task="Find all employees in Engineering",
-    context=massive_json  # 500K chars
+    task="How many ERROR logs in the last hour?",
+    context=server_logs,          # 500K chars - never sent to the LLM
 )
-print(result.total_tokens)  # Typically <2K tokens regardless of context size
+print(result.response)            # "147"
+print(result.total_tokens)        # ~2K tokens (vs ~93K for vanilla)
+print(result.iterations)          # number of code->execute cycles
 ```
 
-### What the model generates
-
-```python
-# Iteration 1: writes this
-for i in range(100):
-    print(1 << i)
-# → stdout captured, but no FINAL()
-
-# Iteration 2: realizes it needs FINAL()
-FINAL("\n".join(str(1 << i) for i in range(100)))
-```
-
-### Available functions
+### Available REPL functions
 
 | Function | What it does |
 |----------|--------------|
-| `input_0` | Your context data |
-| `search(text, pattern)` | Find matches with surrounding context |
-| `peek(data)` | Preview structure of large data |
-| `sub_llm(task, context)` | Recursive LLM call on a chunk |
-| `FINAL(answer)` | Return the final answer |
-
-The system prompt (~140 lines) can be customized in [`minrlm/prompts.py`](minrlm/prompts.py).
+| `input_0` | Your context data (string) |
+| `search(text, pattern)` | Case-insensitive substring search with context windows |
+| `peek(data)` | Preview structure of large data without printing all of it |
+| `sub_llm(task, context)` | Recursive LLM call on a sub-chunk |
+| `sub_llm_batch([(t,c), ...])` | Parallel batch of recursive calls |
+| `FINAL(answer)` | Return the final answer and stop |
+| `FINAL_var("name")` | Return a variable from the namespace |
 
 ### Custom endpoints
 
@@ -130,248 +170,240 @@ The system prompt (~140 lines) can be customized in [`minrlm/prompts.py`](minrlm
 rlm = RLM(
     model="llama-3.1-70b",
     base_url="http://localhost:8000/v1",
-    api_key="..."
+    api_key="sk-...",
 )
 ```
 
-## When to use this
+### When to use RLM vs vanilla
 
-| Context size | Recommendation |
-|--------------|----------------|
-| < 10K chars | Vanilla LLM (faster) |
-| 10K - 50K chars | Either works |
-| 50K+ chars | minrlm (**typically 20-90x cheaper**) |
+| Use RLM when... | Use vanilla LLM when... |
+|-----------------|------------------------|
+| Context > 50K chars | Context is short (<50K chars) |
+| Searching or filtering data | Summarization or open-ended generation |
+| Counting, aggregating, extracting | Holistic understanding needed |
+| Context doesn't fit in the window | Simple Q&A on short documents |
 
-**Good for:** Large documents, logs, JSON, anything you'd search/filter/aggregate.
+---
 
-**Skip if:** Context is small, latency matters more than cost, or the task needs holistic understanding of the whole document.
+## 2. DockerREPL - Sandboxed Code Execution
 
-## Model selection
-
-| Model | Best for | Tokens | Speed |
-|-------|----------|--------|-------|
-| **gpt-5-nano** | Complex tasks (multi-step logic) | More | Slower |
-| **gpt-4o-mini** | Simple tasks (direct lookups) | Less | Faster |
-
-Reasoning models (gpt-5, o1, o3) help with complex code generation. Default: `reasoning_effort="low"` to control cost. Tune with `reasoning_effort="high"` for maximum capability.
-
-## Why RLMs?
-
-Traditional LLMs process data through attention - expensive O(n²) operations where the model "reads" your entire document. RLMs keep data in a Python REPL and only send metadata ("200K chars") to the model. The model writes code to search the data, but never sees it.
-
-**The difference**: Agents with code execution still send your 200K document to the model so it can "decide what to do." RLMs don't - they just say "you have `input_0` with 200K chars, write code to search it."
-
-This gives you:
-- **Flat token usage** - ~2K tokens regardless of context size
-- **Visible transformations** - Python code you can inspect, debug, and reuse
-- **O(n) operations** - String processing instead of O(n²) attention
-
-### The Evolution: Why RLMs Are Inevitable
-
-**1. The "Think Step by Step" Era (GPT-3.5)** - Manual prompt engineering, fragile.
-
-**2. Reasoning Models (GPT-5, o1, o3)** - Models reason internally, but you pay for every reasoning token.
-
-**3. Agents: Tools + Reasoning** - Powerful, but context explodes. Every tool call, error, intermediate result goes back into the prompt. Conversations grow from 1K to 100K tokens.
-
-**4. The Context Crisis** - Context windows grew (8K → 1M tokens), but so did costs. We built workarounds: summarize, compress, truncate. Hacks around a fundamental problem.
-
-**5. RLMs: The Inevitable Solution** - Data lives in a REPL, not in the conversation. The model writes code to interact with data, but the data never enters the LLM's context. Token usage stays flat. No hacks. No limits.
-
-**The shift**: From "send data to the model" to "send code from the model." The transformations are visible and reproducible - you get Python code you can inspect, debug, and reuse.
-
-Benchmarks show we're heading in the right direction. At large contexts (128K+), RLMs often match or exceed vanilla accuracy while using 10-90x fewer tokens. At extreme scales (6M-11M), RLMs are the only viable option.
-
-
-## Running Evals
-
-```bash
-# Quick test
-uv run python eval/run.py --model gpt-5-mini --tasks paper --runs 1
-
-# Full benchmark suite
-uv run python eval/run.py --model gpt-5-mini --tasks all --runs 5
-```
-
-See [`eval/README.md`](eval/README.md) for all tasks, official datasets, and reproduction commands.
-
-To download official datasets (OOLONG, BrowseComp+, RepoQA, etc.), see [`evals/README.md`](evals/README.md).
-
-
-## Interactive UI
-
-```bash
-uv sync --extra visualizer
-uv run python examples/visualizer.py
-```
-
-Opens a Gradio interface showing token usage and model traces.
-
-## Security - Confined Python REPL with Docker and seccomp
-
-⚠️ This runs LLM-generated Python code. For untrusted inputs, use Docker:
+LLM-generated code runs in an isolated Docker container with a custom [seccomp](https://docs.kernel.org/userspace-api/seccomp_filter.html) profile. Docker is **auto-detected and enabled** if available.
 
 ```python
 from minrlm import RLM, check_docker_available
 
-# Check if Docker is available
+# Auto-detects Docker
+rlm = RLM(model="gpt-4o-mini")
+
+# Explicit control
 if check_docker_available():
     rlm = RLM(
-        model="gpt-5-mini",
+        model="gpt-4o-mini",
         use_docker=True,
         docker_memory="256m",
-        docker_timeout=60
+        docker_timeout=60,
     )
 ```
 
-Docker mode sandboxes execution: no network, memory limits, read-only filesystem. Note: `sub_llm()` isn't available in Docker mode.
+### What the sandbox blocks
+
+| Restriction | How |
+|-------------|-----|
+| No network access | `--network=none` + seccomp blocks `socket`, `connect`, `bind`, ... |
+| Read-only filesystem | `--read-only` (writable `/tmp` only) |
+| Memory cap | `--memory=256m` (configurable) |
+| CPU cap | `--cpus=1.0` (configurable) |
+| Process limit | `--pids-limit=100` |
+| Kernel module loading | seccomp: `init_module`, `finit_module` blocked |
+| Mount operations | seccomp: `mount`, `umount` blocked |
+| ptrace / debugging | seccomp: `ptrace` blocked |
+
+### Container lifecycle
+
+Every container is assigned a unique name (`minrlm_<pid>_<n>`) and tracked process-wide. Containers are **automatically killed** when:
+
+- The container finishes (normal exit via `--rm`)
+- The execution times out (`subprocess.TimeoutExpired` → `docker kill`)
+- The parent Python process exits normally (`atexit` hook)
+- The parent process receives `SIGTERM` or `SIGINT` (signal handlers)
+
+No zombie containers after a crash or `Ctrl+C`.
+
+### Custom seccomp policy
 
 <details>
-<summary><strong>Custom Seccomp Policy</strong> (click to expand)</summary>
+<summary>Extend or replace the seccomp profile</summary>
 
-The seccomp profile is defined in [`minrlm/docker_repl.py`](minrlm/docker_repl.py) at lines 54-75. It blocks:
-- Network syscalls (socket, connect, bind, etc.)
-- Kernel module loading
-- Mount operations
-- Keyring access
-- Process tracing (ptrace)
-- System reboot/kexec
-
-To use a custom seccomp policy:
-
-**Option 1: Modify the default profile**
-Edit `SECCOMP_PROFILE` in `minrlm/docker_repl.py`:
+Edit `SECCOMP_PROFILE` in [`minrlm/docker_repl.py`](minrlm/docker_repl.py):
 
 ```python
 SECCOMP_PROFILE = {
     "defaultAction": "SCMP_ACT_ALLOW",
     "syscalls": [
-        # Add your custom restrictions
         {"names": ["socket"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
-        # ... more syscalls
+        # add more restrictions...
     ],
 }
 ```
 
-**Option 2: Extend DockerREPL class**
-Create a custom class that overrides the seccomp profile:
+Or subclass `DockerREPL` to inject a different profile at runtime.
 
-```python
-from minrlm.docker_repl import DockerREPL, SECCOMP_PROFILE
-import json
-
-# Create custom seccomp profile
-CUSTOM_SECCOMP = {
-    "defaultAction": "SCMP_ACT_ALLOW",
-    "syscalls": [
-        # Your custom restrictions
-        {"names": ["socket"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
-    ],
-}
-
-class CustomDockerREPL(DockerREPL):
-    def execute(self, code: str):
-        # Override execute method to use custom seccomp
-        # See minrlm/docker_repl.py:353-507 for implementation
-        # Replace SECCOMP_PROFILE with CUSTOM_SECCOMP at line 388
-        pass
-```
-
-The seccomp profile is applied via Docker's `--security-opt=seccomp=<path>` flag (see line 408 in `docker_repl.py`). The profile is written to a temporary file and passed to Docker at container creation time.
-
-**Note**: `execve` cannot be blocked as it's required to start the Python interpreter. Process isolation is handled by Docker's `--pids-limit` and container boundaries.
+Tip: use [gVisor](https://gvisor.dev/) as the Docker runtime for an additional kernel isolation layer.
 
 </details>
 
-## OpenAI-Compatible Proxy
+> **Note**: `sub_llm()` is not available in Docker mode (no callback to host).
 
-Run an RLM proxy server that accepts OpenAI-compatible requests. Drop-in replacement for OpenAI API with automatic RLM routing. This is not production-grade - but a single tool to get started with RLMs.
+---
 
-### Quick Start
+## 3. Evals
+
+`eval/` is a self-contained benchmark framework covering 8 tasks from the RLM paper.
+
+| File | Purpose |
+|------|---------|
+| `quickstart.py` | Smoke test - one task, two runners, instant feedback |
+| `run.py` | Full benchmark runner with parallelism, logging, and result export |
+| `tasks.py` | 8 official benchmark tasks (S-NIAH, OOLONG, CodeQA, LongBench-v2, RepoQA, BrowseComp+, GDP Val, AIME 2025) |
+| `runners.py` | Runner implementations: `vanilla`, `minrlm`, `minrlm-reasoning`, `official` |
+| `metrics.py` | `EvalResult`, `AggregatedMetrics`, cost calculation, markdown report generation |
+| `visualize.py` | 8 standalone plots (accuracy, tokens, latency, cost, efficiency scatter) |
+| `README.md` | Full benchmark results and reproduction steps |
+
+### Quick start
 
 ```bash
-# Install proxy dependencies
+uv sync --extra eval
+export OPENAI_API_KEY="your-key"
+
+# Smoke test (one task, ~1 min)
+uv run python eval/quickstart.py
+
+# Single task, 10 runs
+uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah --runs 10
+
+# All tasks, single runner, 50 runs each
+uv run python eval/run.py \
+    --model gpt-5-mini \
+    --tasks all \
+    --runners minrlm-reasoning \
+    --runs 50 \
+    --parallel 5 \
+    --output-dir logs/my_eval
+
+# Full multi-runner benchmark (reproduces the table above)
+./run_comprehensive_official_benchmark.sh
+```
+
+### Visualize results
+
+```bash
+# Generate 8 plots from any eval JSON
+uv run python -m eval.visualize logs/my_eval/eval_20260302.json
+
+# Auto-discover newest JSON in a directory tree
+uv run python -m eval.visualize logs/my_eval/
+
+# Custom output directory
+uv run python -m eval.visualize logs/my_eval/ reports/my_eval_plots/
+```
+
+Plots generated: accuracy per task, tokens per task, latency per task, cost per task, accuracy vs cost (efficiency frontier), accuracy vs latency, token savings vs baselines, summary dashboard.
+
+See [`eval/README.md`](eval/README.md) for all tasks, flags, and full results.
+
+---
+
+## 4. Examples
+
+`examples/` contains runnable scripts for common use cases.
+
+### `minimal.py` - Vanilla LLM vs RLM
+
+Side-by-side comparison on a single task. Good starting point.
+
+```bash
+uv run python examples/minimal.py
+MINRLM_MODEL=gpt-5-mini uv run python examples/minimal.py
+```
+
+### `advanced_usage.py` - Search, sub_llm, callbacks
+
+Demonstrates `search()`, `sub_llm()`, step callbacks, and multi-context usage.
+
+```bash
+uv run python examples/advanced_usage.py
+```
+
+### `visualizer.py` - Gradio side-by-side UI
+
+Interactive web app for comparing runners on evaluation tasks or custom prompts. Shows generated code, token usage, and timing for each step.
+
+```bash
+uv sync --extra visualizer
+uv run python examples/visualizer.py      # http://localhost:7860
+```
+
+### `proxy.py` - OpenAI-compatible proxy server
+
+Drop-in replacement for the OpenAI API. Large contexts (>50K chars) are automatically routed through RLM; short contexts pass through directly.
+
+```bash
 uv sync --extra proxy
-
-# Start the proxy server (from examples directory)
-cd examples
-uvicorn proxy:app --host 0.0.0.0 --port 8000
-
-# Or from project root
-uvicorn examples.proxy:app --host 0.0.0.0 --port 8000
-
-# With verbose logging (shows code execution steps)
-MINRLM_VERBOSE=1 uvicorn examples.proxy:app --host 0.0.0.0 --port 8000
+uv run uvicorn examples.proxy:app --host 0.0.0.0 --port 8000
+MINRLM_VERBOSE=1 uv run uvicorn examples.proxy:app --port 8000   # verbose
 ```
-
-### Configuration
-
-Environment variables:
-```bash
-export OPENAI_API_KEY="your-key"          # OpenAI API key
-export RLM_MODEL="gpt-5-nano"            # Default model
-export RLM_USE_DOCKER="true"              # Enable Docker sandboxing
-export PORT="8000"                         # Server port
-export MINRLM_VERBOSE="1"                 # Enable verbose logging
-```
-
-### Usage
-
-Use with any OpenAI-compatible client:
 
 ```python
 from openai import OpenAI
 
-# Point to RLM proxy instead of OpenAI
-client = OpenAI(
-    base_url="http://localhost:8000/v1",
-    api_key="dummy-key",  # Not used by proxy, but required by client
-)
-
-# Works exactly like OpenAI API
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 response = client.chat.completions.create(
-    model="gpt-5-nano",
-    messages=[
-        {"role": "user", "content": "Print all powers of two until 1 Million"},
-    ],
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Print powers of 2 up to 1M"}],
 )
-print(response.choices[0].message.content)
-# Output: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, ...
 ```
 
-### Features
+See [`examples/proxy_example.py`](examples/proxy_example.py) for more.
 
-- **Automatic context detection**: Messages with >50K chars are automatically treated as context data
-- **Placeholder fallback**: If the model returns a placeholder like "answer", the proxy automatically uses the computed stdout
-- **Verbose logging**: Set `MINRLM_VERBOSE=1` to see detailed execution steps, code, and stdout
-- **OpenAI-compatible**: Works with any client that supports OpenAI API format
-- **Token efficiency**: Automatically routes through RLM for 10-90x fewer tokens on large contexts
+Environment variables for the proxy:
 
-### How It Works
+```bash
+export OPENAI_API_KEY="your-key"
+export RLM_MODEL="gpt-4o-mini"
+export RLM_USE_DOCKER="true"
+export PORT="8000"
+export MINRLM_VERBOSE="1"
+```
 
-1. Receives OpenAI-compatible chat completion requests
-2. Extracts task and context from messages (large content >50K chars becomes context)
-3. Routes through RLM which writes and executes Python code
-4. Returns computed results in OpenAI-compatible format
-5. Falls back to stdout if model returns placeholder responses
+---
 
-The proxy automatically extracts large context from messages and routes it through RLM, giving you the same API with 10-90x fewer tokens.
+## Why RLMs?
 
-See [`examples/proxy_example.py`](examples/proxy_example.py) for more examples.
+- **No context window limit** - data lives in the REPL, not the prompt. 10M chars costs the same as 10K
+- **Flat token cost** - ~2-5K tokens regardless of input size
+- **Dynamic context** - the LLM decides what to look at based on the task, not you
+- **Visible logic** - generated Python you can read, inspect, and reuse
+- **O(n) operations** - substring search and iteration, not O(n²) attention
+- **Any LLM** - works with any OpenAI-compatible endpoint
+
+---
 
 ## Credits
 
-Based on the (amazing) RLM paper by Zhang, Kraska, and Khattab:
+**minrlm** is built by [Avi Lumelsky](https://github.com/avilum). This is an independent implementation - not a fork of the official code. The prompts, reasoning engine, eval framework, Docker sandboxing, and proxy server are all original work. On the official benchmarks, minrlm uses **9.6x fewer tokens** than the paper's reference implementation at comparable accuracy.
+
+The RLM concept comes from Zhang, Kraska, and Khattab:
 
 ```bibtex
 @misc{zhang2025recursivelanguagemodels,
-      title={Recursive Language Models}, 
+      title={Recursive Language Models},
       author={Alex L. Zhang and Tim Kraska and Omar Khattab},
       year={2025},
       eprint={2512.24601},
       archivePrefix={arXiv},
       primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2512.24601}, 
+      url={https://arxiv.org/abs/2512.24601},
 }
 ```
 
@@ -382,7 +414,7 @@ Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzha
 
 MIT
 
-## Personal note 
-> I am a security researcher. This is far from secure - but this is fucking cool!
-> I recommend using it with docker backends (default if Docker is installed) because it uses custom seccomp policies that block network and most processing syscalls. Keep the LLM's REPL seperated and confined.
-> Bonus: You can use gVisor as docker runtime.
+---
+
+> I'm a security researcher. This is far from production-grade security - but it's fucking cool.  
+> Use Docker mode (default when Docker is installed) - the custom seccomp policy blocks network syscalls and most dangerous operations. For extra isolation, use [gVisor](https://gvisor.dev/) as the Docker runtime.

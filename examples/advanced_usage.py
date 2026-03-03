@@ -169,7 +169,7 @@ print("""
       rlm = RLM(
           model="gpt-5-nano",
           use_docker=True,          # Enable Docker mode
-          docker_image="python:3.11-slim",  # Custom image
+          docker_image="python:3.14-slim",  # Custom image
           docker_memory="256m",     # Memory limit
           docker_timeout=60,        # Execution timeout
       )

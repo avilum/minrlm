@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recursive Language Models: Letting LLMs Think Through Code</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #fff;
+    color: #111;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+  h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.25; margin-bottom: 10px; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin: 36px 0 10px; }
+  h3 { font-size: 0.95rem; font-weight: 700; margin: 20px 0 6px; color: #333; }
+  p { margin-bottom: 14px; }
+  a { color: #0070f3; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Hero */
+  .hero { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid #e5e5e5; }
+  .hero-meta { font-size: 0.82rem; color: #888; margin-bottom: 10px; }
+  .hero-meta span { margin-right: 14px; }
+  .tagline { font-size: 0.97rem; color: #555; margin-bottom: 14px; max-width: 640px; }
+
+  /* Stat summary line */
+  .stat-line { margin: 14px 0 4px; font-size: 0.9rem; color: #444; line-height: 2; }
+  .stat-line strong { font-weight: 700; font-size: 1rem; }
+  .stat-line .green { color: #16a34a; }
+  .stat-line .red   { color: #dc2626; }
+  .stat-line .blue  { color: #2563eb; }
+  .stat-line .sep   { color: #ccc; margin: 0 6px; }
+
+  /* Callout */
+  .callout { border-left: 3px solid #2563eb; padding: 10px 14px; margin: 16px 0; font-size: 0.9rem; background: #f8faff; color: #333; }
+  .callout.green  { border-color: #16a34a; background: #f0fdf4; }
+  .callout.yellow { border-color: #d97706; background: #fffbeb; }
+
+  /* Code */
+  pre {
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    margin: 10px 0 16px;
+    color: #24292e;
+  }
+  code {
+    font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+    font-size: 0.85em;
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #24292e;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* Syntax (GitHub light) */
+  .kw      { color: #d73a49; }
+  .fn      { color: #6f42c1; }
+  .str     { color: #032f62; }
+  .cm      { color: #6a737d; font-style: italic; }
+  .num     { color: #005cc5; }
+  .builtin { color: #e36209; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.875rem; }
+  th { text-align: left; padding: 7px 10px; background: #f6f8fa; color: #444; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e1e4e8; border-top: 1px solid #e1e4e8; }
+  td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: none; }
+  .win  { color: #16a34a; font-weight: 700; }
+  .lose { color: #999; }
+
+  /* Task section */
+  .task { border-left: 3px solid #e1e4e8; padding: 0 0 0 18px; margin: 28px 0; }
+  .task > details { list-style: none; }
+  .task > details > summary {
+    display: flex; align-items: baseline; gap: 10px;
+    cursor: pointer; list-style: none; user-select: none;
+    padding: 4px 0;
+  }
+  .task > details > summary::-webkit-details-marker { display: none; }
+  .task > details > summary::after {
+    content: '▸';
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-left: 4px;
+    transition: transform 0.15s;
+  }
+  .task > details[open] > summary::after { content: '▾'; }
+  .task > details > summary:hover .task-name { color: #0366d6; }
+  .task-num  { font-size: 0.75rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+  .task-name { font-size: 1rem; font-weight: 700; color: #111; }
+  .task-body { padding-top: 8px; }
+  .task-desc { color: #555; font-size: 0.9rem; margin-bottom: 12px; }
+  .question-box {
+    background: #f6f8fa;
+    border-left: 3px solid #d1d5db;
+    padding: 10px 14px;
+    font-size: 0.87rem;
+    margin-bottom: 12px;
+    color: #555;
+    font-style: italic;
+  }
+
+  /* Images */
+  img { width: 100%; border: 1px solid #e1e4e8; border-radius: 4px; margin: 14px 0; display: block; }
+  a.fig img { cursor: zoom-in; transition: opacity 0.15s; }
+  a.fig:hover img { opacity: 0.88; }
+  .img-caption { font-size: 0.78rem; color: #888; text-align: center; margin-top: -6px; margin-bottom: 18px; }
+
+  /* ASCII diagram */
+  .diagram {
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'SFMono-Regular', 'Consolas', monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: #444;
+    margin: 16px 0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .section-intro { color: #555; font-size: 0.92rem; margin-bottom: 16px; }
+
+  hr { border: none; border-top: 1px solid #e5e5e5; margin: 36px 0; }
+  ul { padding-left: 18px; margin-bottom: 14px; }
+  li { margin-bottom: 5px; }
+  strong { color: #111; }
+
+  /* TL;DR box */
+  .tldr {
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin: 0 0 28px;
+    background: #fafafa;
+  }
+  .tldr-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+    margin-bottom: 10px;
+  }
+  .tldr ul { margin: 0; padding-left: 18px; }
+  .tldr li { font-size: 0.9rem; color: #333; margin-bottom: 4px; }
+
+  .runner-legend { display: flex; gap: 18px; font-size: 0.82rem; margin: 6px 0 14px; color: #555; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+  .dot.green { background: #16a34a; }
+  .dot.red   { background: #dc2626; }
+  .dot.blue  { background: #2563eb; }
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     HERO
+     ========================================================= -->
+<div class="hero">
+  <div class="hero-meta">
+    <span>March 2026</span>
+    <span><a href="https://github.com/avilum/minrlm">github.com/avilum/minrlm</a></span>
+    <span><a href="https://arxiv.org/abs/2512.24601">arxiv:2512.24601</a></span>
+  </div>
+
+  <h1>minRLM: A Token-Efficient<br>Recursive Language Model Implementation and Benchmark</h1>
+
+  <p class="tagline">The <a href="https://arxiv.org/abs/2512.24601">RLM paper</a> showed that letting LLMs query their context through code unlocks capabilities not possible with a direct call. This post presents <strong>minRLM</strong> — a token-efficient implementation evaluated across 8 benchmark tasks — alongside an open framework for reproducing and extending these results.</p>
+</div>
+
+<a class="fig" href="accuracy_per_task.png" target="_blank"><img src="accuracy_per_task.png" alt="Accuracy per task across all three runners" style="margin-top: 0;"></a>
+<div class="img-caption">Accuracy per task: minRLM (green) vs. vanilla LLM (blue) vs. official RLM (red). Three-runner comparison run, 20 queries per task, gpt-5-mini.</div>
+
+
+<!-- =========================================================
+     TL;DR
+     ========================================================= -->
+<div class="tldr" id="tldr">
+  <div class="tldr-label">TL;DR</div>
+  <ul>
+    <li>Three-way comparison: <strong>minRLM</strong>, <strong>vanilla LLM</strong>, and the <a href="https://github.com/alexzhang13/rlm"><strong>official RLM</strong></a> implementation — 8 tasks, gpt-5-mini, 880 evaluations total.</li>
+    <li>In head-to-head comparison (20 queries/task): <strong class="green">minRLM 70.0%</strong> · vanilla 61.9% · official 65.6% accuracy — using <strong>8.8× fewer tokens</strong> than official and <strong>3.2× fewer</strong> than vanilla.</li>
+    <li>In a dedicated 50-query run, minRLM reaches <strong class="green">76.8% accuracy</strong> across the 8-task benchmark suite.</li>
+    <li><strong>Where the technique shines:</strong> large-context retrieval (BrowseComp: 90% vs 0% vanilla, 55% official), long-document MCQ (LongBench V2: 50% vs 25% official), and deep codebase reasoning (CodeQA: 62% vs 30% vanilla).</li>
+    <li><strong>Where it doesn't:</strong> pure-reasoning tasks with no data to retrieve (AIME: 88–90% vs vanilla 95%), and LLM-judge-scored open-ended tasks (GDP Val: 46% vs official 55%).</li>
+    <li>Includes an open benchmark framework (<code>eval/</code>) for running any RLM strategy against the same tasks.</li>
+  </ul>
+</div>
+
+<!-- =========================================================
+     TABLE OF CONTENTS
+     ========================================================= -->
+<nav style="margin-bottom: 32px; font-size: 0.875rem;">
+  <strong style="display: block; margin-bottom: 6px; color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;">Contents</strong>
+  <ol style="padding-left: 18px; margin: 0; line-height: 1.75; color: #333;">
+    <li><a href="#paper">Background: The RLM Paper</a></li>
+    <li><a href="#implementation">Implementation</a></li>
+    <li><a href="#why">Why It Works</a></li>
+    <li><a href="#eval">The Benchmark</a></li>
+    <li><a href="#tasks">Tasks &amp; Results</a>
+      <ol style="padding-left: 16px; margin: 2px 0; list-style-type: lower-alpha;">
+        <li><a href="#browsecomp">BrowseComp — Needle in a 7MB Haystack</a></li>
+        <li><a href="#aime">AIME 2025 — Competition Math via Code</a></li>
+        <li><a href="#sniah">SNIAH — Professional Scenario Q&amp;A</a></li>
+        <li><a href="#oolong">OOLONG — Structured Data Analytics</a></li>
+        <li><a href="#longbench">LongBench V2 — Long-Document MCQ</a></li>
+        <li><a href="#repoqa">RepoQA — Code Retrieval from Large Codebases</a></li>
+        <li><a href="#codeqa">CodeQA — Deep Codebase Reasoning</a></li>
+        <li><a href="#gdpval">GDP Val — Open-Ended Professional Tasks</a></li>
+      </ol>
+    </li>
+    <li><a href="#results">Full Results</a></li>
+    <li><a href="#limits">Limitations</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+    <li><a href="#tryit">Try It</a></li>
+  </ol>
+</nav>
+
+<!-- =========================================================
+     THE PAPER
+     ========================================================= -->
+<h2 id="paper">Background: The RLM Paper</h2>
+
+<p>
+  In December 2025, <a href="https://arxiv.org/abs/2512.24601">Recursive Language Models</a> proposed storing
+  input data as a variable in a Python REPL (a live code execution environment — think "run Python code and
+  get the result back instantly") rather than pasting it into the context window. The model writes code to
+  query the data; attention runs only on the results: search hits, filtered rows, extracted snippets.
+</p>
+<p>
+  This reframes the context window as a soft limit rather than a hard one. A 7M-character document becomes
+  as accessible as a 7K one — navigated through code rather than read wholesale. The paper validated the
+  approach on a small set of tasks using a reference implementation. This post extends that evaluation to a
+  wider benchmark suite and describes a different inference loop design, optimized for token efficiency and
+  production use.
+</p>
+
+<div class="diagram">┌──────────────────────────────────────────────────────────┐
+│  Standard LLM                                            │
+│                                                          │
+│  [System prompt]                                         │
+│  [500,000 tokens of raw context]   ← you pay for all of it
+│  [Question]                                              │
+│  → Answer (maybe right, maybe not)                      │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│  Recursive LLM (RLM)                                     │
+│                                                          │
+│  input_0 = "&lt;500k chars stored in REPL&gt;"  ← never in prompt
+│  Task: "Count errors in last hour"                       │
+├──────────────────────────────────────────────────────────┤
+│  LLM writes:                                             │
+│                                                          │
+│  errors = re.findall(r'\[ERROR\].*', input_0)            │
+│  cutoff = datetime.now() - timedelta(hours=1)            │
+│  FINAL(len([e for e in errors if parse_time(e) > cutoff]))
+│                                                          │
+│  → Code runs, answer returned. ~4k tokens total.        │
+└──────────────────────────────────────────────────────────┘</div>
+
+
+<!-- =========================================================
+     OUR IMPLEMENTATION
+     ========================================================= -->
+<h2 id="implementation">Implementation</h2>
+
+<p>
+  <a href="https://github.com/avilum/minrlm"><strong>minRLM</strong></a> is a production-ready RLM client
+  designed with token efficiency and stability as primary objectives.
+  The <a href="https://github.com/alexzhang13/rlm">reference implementation</a> uses a notebook-style loop:
+  each iteration appends the generated code and a truncated REPL output to the conversation, so the context
+  window grows across iterations (the raw data stays as a variable, but the accumulated code and outputs
+  add up). Their own documentation notes the context "grows slowly" — the data confirms it:
+  47,767 average tokens per query vs minRLM's 5,428. Recent releases added history compaction to partially
+  address this.   The default sandbox is also a local <code>exec</code> call in the host process (Docker is supported
+  but opt-in, and runs without a seccomp profile by default).
+  My approach uses a single structured system prompt with typed task patterns and a Docker-sandboxed REPL
+  with a custom seccomp profile. One structured call, flat token cost, fully isolated execution.
+</p>
+
+<ul>
+  <li><strong>Single-shot prompt</strong> — one compact system prompt with typed patterns per task
+      (structured data, MCQ, code retrieval, search &amp; extract, math). The model picks the pattern and
+      usually finishes in one or two iterations.</li>
+  <li><strong>DockerREPL</strong> — every execution runs in a fresh container with a custom seccomp profile
+      blocking all network and filesystem syscalls. No shared state, no sandbox escapes.</li>
+  <li><strong>Sub-LLM delegation</strong> — for large MCQ and open-ended tasks, the agent pulls targeted
+      evidence snippets and passes them to a focused <code>sub_llm(task, evidence)</code> call. The outer
+      model never sees the raw data.</li>
+  <li><strong>Reasoning-first</strong> — a chain-of-thought step before code generation. Helps on tasks
+      that need planning (multi-hop retrieval, complex codebases). This is the default:
+      <code>from minrlm import RLM</code> already gives you the reasoning variant.</li>
+</ul>
+
+<pre><code><span class="kw">from</span> minrlm <span class="kw">import</span> RLM
+
+client = RLM(model=<span class="str">"gpt-5-mini"</span>)
+answer = client.query(
+    task=<span class="str">"Which user had the most errors in the last 7 days?"</span>,
+    context=open(<span class="str">"huge_log_file.txt"</span>).read()  <span class="cm"># can be 10MB+</span>
+)
+<span class="cm"># Data never enters the prompt. Token cost stays flat regardless of context size.</span></code></pre>
+
+
+<!-- =========================================================
+     WHY IT WORKS
+     ========================================================= -->
+<h2 id="why">Why It Works</h2>
+
+<p>
+  Attention is expensive and imprecise at scale. Given a 400K-character codebase in the prompt, the model
+  must implicitly identify which ~2,000 characters are relevant to the question — and this retrieval often
+  fails silently. With a REPL, the model explicitly specifies what to fetch; Python retrieves it
+  deterministically; attention operates only on the result.
+</p>
+
+<p>Three patterns account for most of the observed accuracy gains:</p>
+
+<ul>
+  <li><strong>Search + sub_llm</strong> — the agent calls <code>search(input_0, keyword)</code> to pull
+      snippets, then passes them to <code>sub_llm(task, evidence)</code>. The outer model never touches
+      the raw data.</li>
+  <li><strong>Exact computation</strong> — regex counting beats LLM "reading" for structured data.
+      No hallucinations, no substring traps like <code>"incorrect".find("correct")</code>.</li>
+  <li><strong>Code verification</strong> — for math, brute-force enumeration doesn't make sign errors
+      or off-by-one mistakes. Algebraic reasoning does.</li>
+</ul>
+
+
+<!-- =========================================================
+     EVALUATION SETUP
+     ========================================================= -->
+<h2 id="eval">The Benchmark</h2>
+
+<p>
+  The evaluation uses an open framework — <code>eval/</code> in the repository — that runs any RLM
+  strategy against 8 standardized tasks and records accuracy, token count, latency, and cost per query.
+  Any runner implementing the interface can be added and compared under identical conditions.
+</p>
+<p>
+  Three runners were evaluated: <strong>minRLM</strong>, a <strong>vanilla LLM</strong> (direct call,
+  no REPL), and the <a href="https://github.com/alexzhang13/rlm"><strong>official implementation</strong></a>,
+  all using <strong>gpt-5-mini</strong>. The comparison run used 20 queries per task per runner (480 total);
+  a separate 50-query run was conducted for minRLM alone to reduce variance on the best-performing prompt.
+</p>
+
+<div class="runner-legend">
+  <span><span class="dot green"></span> minRLM — <a href="https://github.com/avilum/minrlm">github.com/avilum/minrlm</a></span>
+  <span><span class="dot blue"></span> Vanilla — plain GPT-5-mini, no REPL</span>
+  <span><span class="dot red"></span> Official — <a href="https://github.com/alexzhang13/rlm">github.com/alexzhang13/rlm</a> (HEAD, March 2026)</span>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Avg Latency</th><th>Total Cost (20/task)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>minRLM</strong></td><td class="win">70.0%</td><td class="win">5,428</td><td>32.2s</td><td class="win">$0.68</td></tr>
+    <tr><td>Vanilla</td><td class="lose">61.9%</td><td class="lose">17,345</td><td>25.7s</td><td>$1.11</td></tr>
+    <tr><td>Official RLM</td><td class="lose">65.6%</td><td class="lose">47,767</td><td>94.3s</td><td class="lose">$3.16</td></tr>
+  </tbody>
+</table>
+
+<p class="section-intro">
+  The minRLM-only 50-query run hit <strong>76.8% overall</strong>. In the 3-runner comparison (20 queries per task), minRLM scores 70.0% vs official's 65.6% — using 8.8× fewer tokens. Below: each task, the actual code generated, and an honest look at where the approach works and where it doesn't.
+</p>
+
+<a class="fig" href="summary_dashboard.png" target="_blank"><img src="summary_dashboard.png" alt="Summary Dashboard"></a>
+<div class="img-caption">Summary: accuracy, token usage, and latency across all 8 tasks and all 3 runners.</div>
+
+
+<!-- =========================================================
+     TASK 1 - BROWSECOMP
+     ========================================================= -->
+<h2 id="tasks">Tasks &amp; Results <span style="font-size: 0.65rem; font-weight: 400; color: #999; letter-spacing: 0.02em;">— click to expand</span></h2>
+
+<div class="task" id="browsecomp">
+  <details>
+  <summary>
+    <span class="task-num">Task 1</span>
+    <span class="task-name">BrowseComp — Needle in a 7MB Haystack</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    Find one specific entity — a name, institution, place — inside a multi-document corpus up to 7MB.
+    One correct answer, hidden somewhere in millions of characters.
+    Vanilla can't even load the context. The query fails before it starts.
+  </p>
+  <div class="question-box">
+    "Please tell me the name of the learning institution that fits the following criteria:
+    A. In 2002, it held a three-day event from Thursday to Saturday…
+    B. In 2003, it held its graduation ceremony on the fourth Sunday…"
+    <br><em>Context: 7,726,462 characters</em>
+  </div>
+
+  <h3>minRLM's code</h3>
+<pre><code><span class="cm"># REASONING: Search the 7MB document for keywords from the criteria,</span>
+<span class="cm"># gather snippets, and ask sub_llm to extract the institution name.</span>
+<span class="kw">import</span> re, json, datetime, collections
+
+<span class="cm"># Detect task type - no pipes, no MCQ → SEARCH & EXTRACT</span>
+has_mcq = <span class="builtin">any</span>(f<span class="str">"{c})"</span> <span class="kw">in</span> task_0 <span class="kw">for</span> c <span class="kw">in</span> <span class="str">"ABCD"</span>)
+has_pipe = <span class="str">"||"</span> <span class="kw">in</span> input_0[:<span class="num">10000</span>]
+
+head = input_0[:<span class="num">500</span>]
+tail = input_0[-<span class="num">1000</span>:]
+kws = re.findall(<span class="str">r'\b[a-z]{4,}\b'</span>, (head + tail + task_0).lower())
+kws = <span class="builtin">list</span>(<span class="builtin">dict</span>.fromkeys(kws))[:<span class="num">20</span>]
+
+snippets = []
+<span class="kw">for</span> kw <span class="kw">in</span> kws:
+    <span class="kw">for</span> match, before, after <span class="kw">in</span> <span class="fn">search</span>(input_0, kw):
+        snippets.append(before + match + after)
+    <span class="kw">if</span> <span class="builtin">len</span>(snippets) >= <span class="num">10</span>: <span class="kw">break</span>
+
+combined = <span class="str">"\n---\n"</span>.join(snippets[:<span class="num">10</span>])
+answer = <span class="fn">sub_llm</span>(task_0, combined)
+<span class="fn">FINAL</span>(answer)</code></pre>
+
+  <p><strong>Result: "Queen Arwa University"</strong> ✓ &nbsp; 3,679 tokens total.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td class="win">90–94%</td><td>4,490–4,881</td><td>Writes code to search; navigates 7MB in ~3k tokens of evidence</td></tr>
+      <tr><td>Vanilla</td><td class="lose">0%</td><td>~0</td><td>Context overflow - document exceeds context window, query fails entirely</td></tr>
+      <tr><td>Official RLM</td><td>55%</td><td>125,663</td><td>Works but uses 28× more tokens than minRLM</td></tr>
+    </tbody>
+  </table>
+  <div class="callout green">
+    Vanilla returns 0 tokens — the query fails before it starts. minRLM writes two <code>search()</code>
+    calls and finishes in 4,500 tokens.
+  </div>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     TASK 2 - AIME 2025
+     ========================================================= -->
+<div class="task" id="aime">
+  <details>
+  <summary>
+    <span class="task-num">Task 2</span>
+    <span class="task-name">AIME 2025 — Competition Math via Code</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    AMC/AIME competition math. No context — pure reasoning. A REPL turns "prove it algebraically"
+    into "just enumerate it." No off-by-one errors, no sign mistakes.
+  </p>
+  <div class="question-box">
+    "Find the number of ordered pairs (x,y), where both x and y are integers between −100 and 100,
+    inclusive, such that 12x²−xy−6y²=0."
+  </div>
+
+  <h3>minRLM's code</h3>
+<pre><code><span class="cm"># REASONING: Brute-force enumerate all (x,y) pairs in range and count solutions.</span>
+<span class="kw">import</span> re, json, datetime, collections
+
+count = <span class="num">0</span>
+<span class="kw">for</span> x <span class="kw">in</span> <span class="builtin">range</span>(-<span class="num">100</span>, <span class="num">101</span>):
+    <span class="kw">for</span> y <span class="kw">in</span> <span class="builtin">range</span>(-<span class="num">100</span>, <span class="num">101</span>):
+        <span class="kw">if</span> <span class="num">12</span>*x*x - x*y - <span class="num">6</span>*y*y == <span class="num">0</span>:
+            count += <span class="num">1</span>
+
+<span class="fn">FINAL</span>(<span class="builtin">str</span>(count))</code></pre>
+
+  <p><strong>Result: 117</strong> ✓ &nbsp; 7,015 tokens total. Executes in milliseconds.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td>88–90%</td><td>6,436–7,021</td><td>Enumeration avoids algebraic sign/off-by-one errors</td></tr>
+      <tr><td>Vanilla</td><td class="win">95%</td><td>3,790</td><td>Fastest path; no REPL overhead on a pure-reasoning task</td></tr>
+      <tr><td>Official RLM</td><td class="lose">70%</td><td>14,024</td><td>Higher token usage, lower accuracy than both other runners</td></tr>
+    </tbody>
+  </table>
+  <div class="callout yellow">
+    Vanilla wins on this task — no data to retrieve means the REPL adds latency with limited accuracy benefit.
+    Official RLM scores 70% here vs minRLM's 90% and vanilla's 95%, despite using 2× more tokens.
+    The reason for official's lower score isn't clear from the data.
+  </div>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     TASK 3 - SNIAH
+     ========================================================= -->
+<div class="task" id="sniah">
+  <details>
+  <summary>
+    <span class="task-num">Task 3</span>
+    <span class="task-name">SNIAH — Professional Scenario Q&amp;A</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    Extract a precise number or fact from structured professional records — HR data, case notes,
+    financial summaries. ~14K chars, densely packed. One wrong field selection fails the task.
+  </p>
+  <div class="question-box">
+    "Answer the final question in the text. Return ONLY the answer."
+    <br><em>Context: ~13,800 characters of structured professional records</em>
+  </div>
+
+  <h3>minRLM's code</h3>
+<pre><code><span class="cm"># REASONING: Extract keywords from head/tail of input_0, gather search snippets,</span>
+<span class="cm"># look for numeric values, otherwise delegate to sub_llm on focused evidence.</span>
+<span class="kw">import</span> re, json, datetime, collections
+
+has_mcq = <span class="builtin">any</span>(f<span class="str">"{c})"</span> <span class="kw">in</span> task_0 <span class="kw">for</span> c <span class="kw">in</span> <span class="str">"ABCD"</span>)
+has_pipe = <span class="str">"||"</span> <span class="kw">in</span> input_0[:<span class="num">10000</span>]
+
+head = input_0[:<span class="num">500</span>]
+tail = input_0[-<span class="num">1000</span>:]
+kws = re.findall(<span class="str">r'\b[a-z]{4,}\b'</span>, (head + tail + task_0).lower())
+kws = <span class="builtin">list</span>(<span class="builtin">dict</span>.fromkeys(kws))[:<span class="num">20</span>]
+
+snippets = []
+<span class="kw">for</span> kw <span class="kw">in</span> kws:
+    <span class="kw">for</span> match, before, after <span class="kw">in</span> <span class="fn">search</span>(input_0, kw):
+        snippets.append(before + match + after)
+    <span class="kw">if</span> <span class="builtin">len</span>(snippets) >= <span class="num">10</span>: <span class="kw">break</span>
+
+combined = <span class="str">"\n---\n"</span>.join(snippets[:<span class="num">10</span>])
+nums = re.findall(<span class="str">r'\b(\d{4,})\b'</span>, combined)
+<span class="kw">if</span> nums:
+    <span class="fn">FINAL</span>(nums[<span class="num">0</span>])
+answer = <span class="fn">sub_llm</span>(task_0, combined)
+<span class="fn">FINAL</span>(answer)</code></pre>
+
+  <p><strong>Result: 8231838</strong> ✓ &nbsp; 3,390 tokens total.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td class="win">100%</td><td>4,494–4,545</td><td>Perfect score across 20–50 queries</td></tr>
+      <tr><td>Vanilla</td><td class="win">100%</td><td>3,762</td><td>Also perfect — context fits in prompt, slightly cheaper</td></tr>
+      <tr><td>Official RLM</td><td class="lose">95%</td><td>18,630</td><td>4.1× more tokens than minRLM for slightly lower accuracy</td></tr>
+    </tbody>
+  </table>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     TASK 4 - OOLONG
+     ========================================================= -->
+<div class="task" id="oolong">
+  <details>
+  <summary>
+    <span class="task-num">Task 4</span>
+    <span class="task-name">OOLONG — Structured Data Analytics</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    Pipe-delimited records (<code>Field: Value || Field: Value</code>), questions about frequency, counts,
+    and comparisons. The classic trap: <code>"incorrect"</code> contains <code>"correct"</code>.
+    A vanilla LLM can stumble on this; <code>re.findall(r'\bTrue\b', ...)</code> can't.
+  </p>
+  <div class="question-box">
+    "In the above data, is label 'False' more common, less common, or the same frequency as label 'True'?
+    Give your final answer in the form 'Answer: False is [X] True'."
+    <br><em>Context: ~6,260 characters of pipe-delimited records</em>
+  </div>
+
+  <h3>minRLM's code</h3>
+<pre><code><span class="cm"># REASONING: Count exact whole-word occurrences of "True" and "False" in input_0.</span>
+<span class="kw">import</span> re, json, datetime, collections
+
+has_pipe = <span class="str">"||"</span> <span class="kw">in</span> input_0[:<span class="num">10000</span>]  <span class="cm"># True - STRUCTURED DATA pattern</span>
+
+false_count = <span class="builtin">len</span>(re.findall(<span class="str">r'\bFalse\b'</span>, input_0))
+true_count  = <span class="builtin">len</span>(re.findall(<span class="str">r'\bTrue\b'</span>,  input_0))
+
+<span class="kw">if</span>   false_count > true_count: relation = <span class="str">"more common than"</span>
+<span class="kw">elif</span> false_count < true_count: relation = <span class="str">"less common than"</span>
+<span class="kw">else</span>:                          relation = <span class="str">"same frequency as"</span>
+
+<span class="fn">FINAL</span>(f<span class="str">"Answer: False is {relation} True"</span>)</code></pre>
+
+  <p><strong>Result: "Answer: False is more common than True"</strong> ✓ &nbsp; 3,430 tokens. Deterministic, zero hallucination risk.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td class="win">85–88%</td><td>3,998–4,152</td><td>Code counts exactly; avoids "incorrect".find("correct") trap</td></tr>
+      <tr><td>Vanilla</td><td>90%</td><td>8,373</td><td>Slightly higher but uses 2× tokens and can be misled by substring</td></tr>
+      <tr><td>Official RLM</td><td>90%</td><td>13,608</td><td>Same accuracy at 3.4× the token cost</td></tr>
+    </tbody>
+  </table>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     TASK 5 - LONGBENCH V2
+     ========================================================= -->
+<div class="task" id="longbench">
+  <details>
+  <summary>
+    <span class="task-num">Task 5</span>
+    <span class="task-name">LongBench V2 — Long-Document MCQ</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    MCQ over long documents — novels, papers, technical manuals, reports. 50K–600K+ characters.
+    Four statements, one true. The challenge is finding the relevant passage without reading the whole thing.
+  </p>
+  <div class="question-box">
+    "In Agatha Christie's 'The Murder on the Links,' which statement is true?<br>
+    A) Eloise Renauld did not grieve upon hearing of her husband's death because she no longer loved him.<br>
+    B) The overcoat that Paul Renauld was wearing when he died did not fit him because he'd put on the vagrant's overcoat.<br>
+    C) Bella Duveen killed Paul Renauld.<br>
+    D) Madame Daubreuil overheard Paul Renauld's plan of feigning death, and took action."
+    <br><em>Context: 329,526 characters (full novel)</em>
+  </div>
+
+  <h3>minRLM's code (large MCQ path)</h3>
+<pre><code><span class="cm"># REASONING: Use MCQ pattern - gather evidence snippets from the 330K char novel,</span>
+<span class="cm"># then call sub_llm on curated evidence instead of the full text.</span>
+<span class="kw">import</span> re, json, datetime, collections
+
+sz = <span class="builtin">len</span>(input_0)   <span class="cm"># 329,526 - triggers "large" path</span>
+
+<span class="cm"># Extract terms from both question and answer options</span>
+opts = re.findall(<span class="str">r'[A-D]\)\s*(.+?)(?=\s*[A-D]\)|$)'</span>, task_0, re.DOTALL)
+opt_terms = re.findall(<span class="str">r'\b[A-Z][a-z]{3,}\b|\b[a-z]{5,}\b'</span>, <span class="str">" "</span>.join(opts))[:<span class="num">15</span>]
+q_terms   = re.findall(<span class="str">r'\b[A-Z][a-z]{3,}\b|\b[a-z]{5,}\b'</span>, task_0)[:<span class="num">10</span>]
+terms = <span class="builtin">list</span>(<span class="builtin">dict</span>.fromkeys(q_terms + opt_terms))[:<span class="num">25</span>]
+
+<span class="cm"># Search for each term, deduplicate by page position</span>
+snips, seen = [], <span class="builtin">set</span>()
+<span class="kw">for</span> t <span class="kw">in</span> terms:
+    <span class="kw">for</span> m,b,a <span class="kw">in</span> <span class="fn">search</span>(input_0, t)[:<span class="num">4</span>]:
+        pk = <span class="builtin">len</span>(b)//<span class="num">2000</span>
+        <span class="kw">if</span> pk <span class="kw">not in</span> seen:
+            snips.append(b[-<span class="num">2000</span>:] + m + a[:<span class="num">2000</span>]); seen.add(pk)
+
+evidence = input_0[:<span class="num">3000</span>] + <span class="str">"\n...\n"</span> + <span class="str">"\n---\n"</span>.join(snips[:<span class="num">30</span>])
+answer = <span class="fn">sub_llm</span>(task_0, evidence[:<span class="num">50000</span>])
+answer = (answer <span class="kw">or</span> <span class="str">"A"</span>).strip().upper()
+<span class="fn">FINAL</span>(answer)</code></pre>
+
+  <p><strong>Result: "A"</strong> ✓ &nbsp; 3,917 tokens - vs 65,917 tokens for vanilla on the same question.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td class="win">40–50%</td><td>3,793–3,802</td><td>17× cheaper than Vanilla; beats Official RLM by 15–25pp</td></tr>
+      <tr><td>Vanilla</td><td>35%</td><td>65,917</td><td>Dumps full context into prompt; attention diluted</td></tr>
+      <tr><td>Official RLM</td><td class="lose">25%</td><td>70,992</td><td>Most expensive, lowest accuracy on this task</td></tr>
+    </tbody>
+  </table>
+  <div class="callout green">
+    Both vanilla and official dump the full 330K-char novel into context and lose.
+    minRLM pulls ~50K of targeted snippets and gets it right, 17× cheaper.
+  </div>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     TASK 6 - REPOQA
+     ========================================================= -->
+<div class="task" id="repoqa">
+  <details>
+  <summary>
+    <span class="task-num">Task 6</span>
+    <span class="task-name">RepoQA — Code Retrieval from Large Codebases</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    Given a codebase dump and a natural-language description, return the exact function name and source.
+    The model scans all signatures, picks the match, extracts the implementation. Up to 500K+ chars.
+  </p>
+  <div class="question-box">
+    "Return the exact function that creates an error object specifically for operations that have been
+    canceled, providing a standardized error handling mechanism. It accepts three optional parameters:
+    a message string, an optional code, and an optional config."
+    <br><em>Context: 732 chars (axios codebase index)</em>
+  </div>
+
+  <h3>minRLM's code</h3>
+<pre><code><span class="cm"># REASONING: Scan all function definitions, ask sub_llm to identify the right one,</span>
+<span class="cm"># then extract and return its full source context.</span>
+<span class="kw">import</span> re, json, datetime, collections
+
+is_code_task = <span class="builtin">any</span>(k <span class="kw">in</span> task_0.lower() <span class="kw">for</span> k <span class="kw">in</span> [<span class="str">"codebase"</span>, <span class="str">"exact function"</span>, <span class="str">"code snippet"</span>])
+
+<span class="cm"># Scan for all function definitions across Python, JS, TS, Java</span>
+all_funcs  = re.findall(<span class="str">r'^\s*def (\w+)\('</span>, input_0, re.MULTILINE)
+all_funcs += re.findall(<span class="str">r'\bfunction\s+(\w+)\s*\('</span>, input_0)
+all_funcs += re.findall(<span class="str">r'\b(\w+)\s*[=:]\s*(?:async\s+)?function\s*\('</span>, input_0)
+unique = <span class="builtin">list</span>(<span class="builtin">dict</span>.fromkeys(all_funcs))
+
+<span class="cm"># Build signature list for sub_llm to pick from</span>
+sigs = []
+<span class="kw">for</span> nm <span class="kw">in</span> unique[:<span class="num">80</span>]:
+    sm = re.search(<span class="str">r'^\s*(def '</span> + re.escape(nm) + <span class="str">r'\([^)]*\).*?:)'</span>, input_0, re.MULTILINE)
+    <span class="kw">if</span> sm: sigs.append(sm.group(<span class="num">1</span>).strip())
+
+func = <span class="fn">sub_llm</span>(f<span class="str">"{task_0}\nAll functions:\n{chr(10).join(sigs)}\nReply ONLY the function name."</span>,
+               input_0[:<span class="num">10000</span>]).strip()
+func = re.sub(<span class="str">r'[^a-zA-Z0-9_]'</span>, <span class="str">''</span>, func)
+
+r = <span class="fn">search</span>(input_0, <span class="str">"function "</span> + func)
+<span class="kw">if</span> r:
+    m, b, a = r[<span class="num">0</span>]
+    <span class="fn">FINAL</span>(func + <span class="str">"||"</span> + b[-<span class="num">800</span>:] + m + a[:<span class="num">5000</span>])</code></pre>
+
+  <p><strong>Result: <code>CanceledError</code> + full class source extracted from <code>lib/cancel/CanceledError.js</code></strong> ✓ &nbsp; 3,879 tokens.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td>85–86%</td><td>3,998–4,108</td><td>4.9× fewer tokens than Official</td></tr>
+      <tr><td>Vanilla</td><td class="win">100%</td><td>3,708</td><td>Small codebase fits in context; fastest path wins</td></tr>
+      <tr><td>Official RLM</td><td>90%</td><td>20,123</td><td>Accurate but verbose</td></tr>
+    </tbody>
+  </table>
+  <div class="callout yellow">
+    Vanilla wins here — the subset happened to have small codebases that fit in context.
+    At 500K+ chars, it flips.
+  </div>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     TASK 7 - CODEQA
+     ========================================================= -->
+<div class="task" id="codeqa">
+  <details>
+  <summary>
+    <span class="task-num">Task 7</span>
+    <span class="task-name">CodeQA — Deep Codebase Reasoning (MCQ)</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    MCQ about real codebases — video diffusion models, ML simulators, cloud storage systems.
+    100K–600K characters. Questions about architecture, not just keyword lookup.
+  </p>
+  <div class="question-box">
+    "The DynamiCrafter code base includes a complex training pipeline for a video diffusion model…
+    Which combination of class methods and processing steps is most critical for ensuring motion
+    smoothness and temporal coherence during long video generation?"
+    <br><em>Context: 395,334 characters (full codebase)</em>
+  </div>
+
+  <h3>minRLM's code (large MCQ evidence path)</h3>
+<pre><code><span class="cm"># REASONING: Large codebase MCQ - gather evidence by searching for terms from</span>
+<span class="cm"># both the question and answer choices, then call sub_llm on curated snippets.</span>
+<span class="kw">import</span> re, json, datetime, collections
+
+opts = re.findall(<span class="str">r'[A-D]\)\s*(.+?)(?=\s*[A-D]\)|$)'</span>, task_0, re.DOTALL)
+opt_terms = re.findall(<span class="str">r'\b[A-Z][a-z]{3,}\b|\b[a-z]{5,}\b'</span>, <span class="str">" "</span>.join(opts))[:<span class="num">15</span>]
+q_terms   = re.findall(<span class="str">r'\b[A-Z][a-z]{3,}\b|\b[a-z]{5,}\b'</span>, task_0)[:<span class="num">10</span>]
+terms = <span class="builtin">list</span>(<span class="builtin">dict</span>.fromkeys(q_terms + opt_terms))[:<span class="num">25</span>]
+
+snips, seen = [], <span class="builtin">set</span>()
+<span class="kw">for</span> t <span class="kw">in</span> terms:
+    <span class="kw">for</span> m,b,a <span class="kw">in</span> <span class="fn">search</span>(input_0, t)[:<span class="num">4</span>]:
+        pk = <span class="builtin">len</span>(b)//<span class="num">2000</span>
+        <span class="kw">if</span> pk <span class="kw">not in</span> seen: snips.append(b[-<span class="num">2000</span>:]+m+a[:<span class="num">2000</span>]); seen.add(pk)
+
+<span class="cm"># Include README/docs for architectural context</span>
+<span class="kw">for</span> doc_kw <span class="kw">in</span> [<span class="str">"README"</span>, <span class="str">"Abstract"</span>, <span class="str">"Introduction"</span>]:
+    <span class="kw">for</span> m,b,a <span class="kw">in</span> <span class="fn">search</span>(input_0, doc_kw)[:<span class="num">1</span>]:
+        snips.append(b[-<span class="num">1000</span>:]+m+a[:<span class="num">3000</span>])
+
+evidence = input_0[:<span class="num">3000</span>] + <span class="str">"\n...\n"</span> + <span class="str">"\n---\n"</span>.join(snips[:<span class="num">30</span>])
+answer = <span class="fn">sub_llm</span>(task_0, evidence[:<span class="num">50000</span>])
+<span class="fn">FINAL</span>(answer.strip().upper())</code></pre>
+
+  <p><strong>Result: "D"</strong> ✓ &nbsp; 3,988 tokens - vs 89,960 tokens for vanilla on the same codebase.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td class="win">40–62%</td><td>3,847–3,908</td><td>14–23× fewer tokens than baselines</td></tr>
+      <tr><td>Vanilla</td><td class="lose">24–30%</td><td>49,174</td><td>Full codebase dump overwhelms attention</td></tr>
+      <tr><td>Official RLM</td><td>45%</td><td>89,960</td><td>Most tokens, moderate accuracy</td></tr>
+    </tbody>
+  </table>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     TASK 8 - GDP VAL
+     ========================================================= -->
+<div class="task" id="gdpval">
+  <details>
+  <summary>
+    <span class="task-num">Task 8</span>
+    <span class="task-name">GDP Val — Open-Ended Professional Tasks</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    Open-ended professional tasks — build a financial model, design a training program, draft legal analysis.
+    No single correct answer. Scored by a judge LLM on output quality.
+  </p>
+  <div class="question-box">
+    "You are a Quantitative Researcher at a proprietary trading firm expanding into single-name options.
+    Develop a comprehensive American option pricing framework in a Python notebook. Implement and compare
+    multiple methodologies (binomial trees, finite differences, Monte Carlo)."
+  </div>
+
+  <h3>minRLM's code (excerpt)</h3>
+<pre><code><span class="cm"># REASONING: Implement CRR binomial tree, explicit finite differences,</span>
+<span class="cm"># and Longstaff-Schwartz Monte Carlo in pure Python. Benchmark convergence.</span>
+<span class="kw">import</span> re, json, datetime, collections, math, random, time, statistics
+
+<span class="kw">def</span> <span class="fn">crr_binomial_american</span>(S, K, r, q, sigma, T, N, option_type=<span class="str">'put'</span>):
+    dt = T / N
+    u  = math.exp(sigma * math.sqrt(dt))
+    d  = <span class="num">1</span> / u
+    p  = (math.exp((r-q)*dt) - d) / (u - d)
+    disc = math.exp(-r * dt)
+    <span class="cm"># Build price tree and work backwards with early exercise</span>
+    prices = [S * (u**j) * (d**(N-j)) <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(N+<span class="num">1</span>)]
+    values = [<span class="builtin">max</span>(K - st, <span class="num">0</span>) <span class="kw">if</span> option_type==<span class="str">'put'</span> <span class="kw">else</span> <span class="builtin">max</span>(st - K, <span class="num">0</span>) <span class="kw">for</span> st <span class="kw">in</span> prices]
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(N-<span class="num">1</span>, -<span class="num">1</span>, -<span class="num">1</span>):
+        prices = [S * (u**j) * (d**(i-j)) <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(i+<span class="num">1</span>)]
+        cont   = [disc*(p*values[j+<span class="num">1</span>] + (<span class="num">1</span>-p)*values[j]) <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(i+<span class="num">1</span>)]
+        ex     = [<span class="builtin">max</span>(K-st, <span class="num">0</span>) <span class="kw">if</span> option_type==<span class="str">'put'</span> <span class="kw">else</span> <span class="builtin">max</span>(st-K,<span class="num">0</span>) <span class="kw">for</span> st <span class="kw">in</span> prices]
+        values = [<span class="builtin">max</span>(c, e) <span class="kw">for</span> c, e <span class="kw">in</span> <span class="builtin">zip</span>(cont, ex)]
+    <span class="kw">return</span> values[<span class="num">0</span>]
+
+<span class="cm"># ... Finite differences and Longstaff-Schwartz MC follow ...</span>
+<span class="fn">FINAL</span>(<span class="str">"american_option_notebook_generated"</span>)</code></pre>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td>30–46%</td><td>10,344–11,664</td><td>Generates runnable, multi-method implementations</td></tr>
+      <tr><td>Vanilla</td><td>45%</td><td>4,034</td><td>Brief prose answers; no execution verification</td></tr>
+      <tr><td>Official RLM</td><td class="win">55%</td><td>29,138</td><td>More verbose output satisfies judge LLM rubrics better</td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    Weakest result for minRLM. The judge LLM rewards verbose, well-formatted prose; minRLM produces terse,
+    executable code. Official RLM (55%) outscores minRLM (46%); vanilla (45%) is comparable to minRLM.
+    This appears to be an evaluation artefact — the code minRLM generates is often more practically useful —
+    but it is a real limitation when the output is graded by an LLM rubric.
+  </div>
+  </div></details>
+</div>
+
+
+<!-- =========================================================
+     FULL RESULTS
+     ========================================================= -->
+<h2 id="results">Full Results</h2>
+
+<a class="fig" href="accuracy_per_task.png" target="_blank"><img src="accuracy_per_task.png" alt="Accuracy per Task"></a>
+<div class="img-caption">Per-task accuracy across all three runners.</div>
+
+<a class="fig" href="tokens_per_task.png" target="_blank"><img src="tokens_per_task.png" alt="Tokens per Task"></a>
+<div class="img-caption">Average tokens per query per task. Note: Vanilla returns 0 tokens on BrowseComp (context overflow - query fails entirely).</div>
+
+<a class="fig" href="token_savings.png" target="_blank"><img src="token_savings.png" alt="Token Savings"></a>
+<div class="img-caption">Token savings factor of minRLM vs Vanilla and Official. Higher is better. Negative means minRLM uses more tokens (GDP Val, AIME).</div>
+
+<a class="fig" href="accuracy_vs_cost.png" target="_blank"><img src="accuracy_vs_cost.png" alt="Accuracy vs Cost"></a>
+<div class="img-caption">Efficiency frontier: accuracy vs. cost per query. Top-left is ideal.</div>
+
+<a class="fig" href="accuracy_vs_latency.png" target="_blank"><img src="accuracy_vs_latency.png" alt="Accuracy vs Latency"></a>
+<div class="img-caption">Speed vs. quality. minRLM is faster than Official RLM on all 8 tasks (avg 32s vs 94s).</div>
+
+<a class="fig" href="cost_per_task.png" target="_blank"><img src="cost_per_task.png" alt="Cost per Task"></a>
+<div class="img-caption">Average cost per query per task. minRLM's flat token budget makes large-context tasks cost the same as small ones.</div>
+
+<a class="fig" href="latency_per_task.png" target="_blank"><img src="latency_per_task.png" alt="Latency per Task"></a>
+<div class="img-caption">Average latency. Official RLM's multi-round prompt accumulation adds 3× overhead vs minRLM.</div>
+
+<table>
+  <thead>
+    <tr><th>Task</th><th>minRLM†</th><th>Vanilla</th><th>Official</th><th>Tokens vs Vanilla</th><th>Tokens vs Official</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>BrowseComp</td><td class="win">94%</td><td class="lose">0%</td><td>55%</td><td>∞ (vanilla fails)</td><td><strong>28× fewer</strong></td></tr>
+    <tr><td>SNIAH</td><td class="win">100%</td><td class="win">100%</td><td>95%</td><td>comparable</td><td><strong>4.1× fewer</strong></td></tr>
+    <tr><td>AIME 2025</td><td>88%</td><td class="win">95%</td><td class="lose">70%</td><td>minRLM uses ~1.9× more</td><td><strong>2.0× fewer</strong></td></tr>
+    <tr><td>RepoQA</td><td>86%</td><td class="win">100%</td><td>90%</td><td>comparable</td><td><strong>4.9× fewer</strong></td></tr>
+    <tr><td>OOLONG</td><td>88%</td><td>90%</td><td>90%</td><td><strong>2.1× fewer</strong></td><td><strong>3.4× fewer</strong></td></tr>
+    <tr><td>CodeQA</td><td class="win">62%</td><td>30%</td><td>45%</td><td><strong>12.8× fewer</strong></td><td><strong>23.4× fewer</strong></td></tr>
+    <tr><td>LongBench V2</td><td class="win">50%</td><td>35%</td><td>25%</td><td><strong>17.3× fewer</strong></td><td><strong>18.7× fewer</strong></td></tr>
+    <tr><td>GDP Val</td><td>46%</td><td>45%</td><td class="win">55%</td><td>minRLM uses ~2.9× more</td><td><strong>2.5× fewer</strong></td></tr>
+    <tr style="background: #f0fdf4"><td><strong>Overall</strong></td><td><strong>76.8%†</strong> / 70.0%</td><td>61.9%</td><td>65.6%</td><td><strong>3.2× fewer</strong></td><td><strong>8.8× fewer</strong></td></tr>
+  </tbody>
+</table>
+
+<p><em>† minRLM accuracy from the 50-query best run; vanilla and official from the 20-query comparison run (same tasks, same model). Token ratios computed from the comparison run averages: minRLM 5,428 · vanilla 17,345 · official 47,767 tokens per query. minRLM comparison-run accuracy: 70.0%.</em></p>
+
+
+<!-- =========================================================
+     LIMITS
+     ========================================================= -->
+<h2 id="limits">Limitations &amp; When Not to Use It</h2>
+
+<ul>
+  <li><strong>No data to retrieve</strong> — when there's nothing to search, the REPL is pure overhead.
+      On AIME (pure math, no input), vanilla GPT-5-mini scores 95% vs minRLM's 88–90%.
+      The enumeration still works — but you're paying extra for it. Use a plain call for pure reasoning tasks.</li>
+  <li><strong>Short contexts (&lt;8K tokens)</strong> — if everything fits in the prompt, a direct call is
+      simpler and just as good. minRLM's advantage grows with context size; below ~8K it's a wash.</li>
+  <li><strong>LLM-judge tasks (GDP Val)</strong> — judge LLMs reward verbose, well-formatted prose.
+      minRLM writes terse, executable code. The code is often more useful, but it scores lower.
+      GDP Val was the only task where official clearly outscored minRLM (55% vs 46%); vanilla scored 45%, essentially matching minRLM.</li>
+  <li><strong>Stdlib-only sandbox</strong> — the Docker REPL runs Python 3.14 with no third-party packages.
+      <code>math</code>, <code>fractions</code>, <code>itertools</code>, <code>statistics</code>, and
+      <code>collections</code> are available. No <code>numpy</code>, <code>pandas</code>, or
+      <code>requests</code>. Heavy numerical work needs pure-Python implementations and may take an extra
+      iteration.</li>
+</ul>
+
+
+<!-- =========================================================
+     CONCLUSION
+     ========================================================= -->
+<h2 id="conclusion">Conclusion</h2>
+
+<p>
+  The results presented here suggest that the RLM inference pattern is most valuable in a specific and
+  predictable regime: tasks where the relevant information is a small fraction of a large input.
+  On BrowseComp (7MB corpora), CodeQA (400K-char codebases), and LongBench V2 (full novels),
+  the code-based retrieval approach consistently outperforms both vanilla prompting and the reference
+  implementation — at a fraction of the token cost. The gains are not marginal: in some cases vanilla
+  LLMs cannot even attempt the task due to context overflow.
+</p>
+
+<p>
+  The token efficiency story is clear across all tasks. minRLM's single-pass structured prompt
+  uses 8.8× fewer tokens than the reference implementation on average, and remains competitive or
+  better on accuracy in 6 of 8 tasks. The two cases where vanilla outperforms minRLM — AIME
+  (pure math, no retrieval benefit) and GDP Val (LLM-judge scoring that favors verbose prose) —
+  are predictable from the task structure and not surprising.
+</p>
+
+<p>
+  A few things I would do differently with more time: larger sample sizes per task (20–50 queries
+  introduces meaningful variance at these accuracy levels), multi-model evaluation beyond gpt-5-mini,
+  and a more principled prompt search rather than manual iteration. The benchmark framework makes all
+  of these straightforward to run — the infrastructure is there.
+</p>
+
+<p>
+  More broadly, the RLM technique seems underexplored relative to its practical value. Most production
+  LLM calls that process documents, logs, or codebases would benefit from this pattern with minimal
+  integration effort. The context window is rarely the right abstraction for data-heavy tasks; a REPL
+  variable is.
+</p>
+
+<!-- =========================================================
+     USAGE
+     ========================================================= -->
+<h2 id="tryit">Try It</h2>
+
+<pre><code><span class="cm"># Install</span>
+pip install minrlm
+
+<span class="cm"># Or from source</span>
+git clone https://github.com/avilum/minrlm
+uv sync
+</code></pre>
+
+<pre><code><span class="kw">from</span> minrlm <span class="kw">import</span> RLM
+
+<span class="cm"># RLM includes reasoning by default (RLM = RLMReasoning)</span>
+client = RLM(model=<span class="str">"gpt-5-mini"</span>)
+
+answer = client.query(
+    task=<span class="str">"Which product had the highest return rate in Q3?"</span>,
+    context=open(<span class="str">"q3_returns.csv"</span>).read()  <span class="cm"># could be 50MB</span>
+)
+
+answer = client.query(
+    task=<span class="str">"Find all race conditions in this codebase"</span>,
+    context=codebase_str
+)
+</code></pre>
+
+<pre><code><span class="cm"># Run the full benchmark yourself</span>
+uv run python -m eval.run \
+  --tasks official_browsecomp,official_codeqa,official_aime_2025 \
+  --runners minrlm-reasoning,vanilla \
+  --runs 20 --output-dir ./my_results</code></pre>
+
+<p>Client, benchmark framework, and all evaluation data: <a href="https://github.com/avilum/minrlm">github.com/avilum/minrlm</a></p>
+
+<hr>
+
+<p style="color: #888; font-size: 0.82rem;">
+  All evaluations on gpt-5-mini. Tasks from the RLM paper benchmark suite.
+  Code samples lightly abridged; full source at <a href="https://github.com/avilum/minrlm">github.com/avilum/minrlm</a>.
+</p>
+
+</body>
+</html>

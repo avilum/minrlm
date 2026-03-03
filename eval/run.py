@@ -10,34 +10,27 @@ A reproducible benchmark comparing:
 2. Our minimal RLM implementation
 3. Official RLM implementation (optional)
 
-Paper Tasks:
-- S-NIAH: Single needle-in-a-haystack (basic retrieval)
-- OOLONG: Information aggregation (Bertsch et al., 2025)
-- OOLONG-Pairs: Pairwise matching (hardest task)
-- CodeQA: Code repository understanding (Bai et al., 2025)
-- BrowseComp+: Deep research / multi-hop (Chen et al., 2025)
+Official Datasets:
+- official_sniah: Needle-in-a-haystack (basic retrieval)
+- official_oolong: Information aggregation
+- official_repoqa: Code repository search
+- official_codeqa: Code repository understanding
+- official_browsecomp: Multi-hop research
+- official_gdpval: Professional work tasks
+- official_aime_2025: Competition math
 
 Usage:
     # Quick start
-    uv run python eval/run.py --model gpt-4o-mini
+    uv run python eval/quickstart.py
 
-    # Full evaluation with multiple runs
-    uv run python eval/run.py --model gpt-4o-mini --runs 3 --tasks all
+    # Single task
+    uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah --runs 3
 
-    # Paper benchmarks (all core tasks from the RLM paper)
-    uv run python eval/run.py --model gpt-4o-mini --tasks paper
+    # Multiple official tasks
+    uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah,official_oolong --runs 5
 
-    # Paper scaling test (8K to 1M, Figure 1)
-    uv run python eval/run.py --model gpt-4o-mini --tasks scaling --paper-scale
-
-    # Skip official RLM (if not installed)
-    uv run python eval/run.py --model gpt-4o-mini --skip-official
-
-    # Custom context sizes for scaling test
-    uv run python eval/run.py --model gpt-4o-mini --tasks scaling --context-sizes 8192,16384,32768
-
-    # Extended evaluation (8K to 256K contexts)
-    uv run python eval/run.py --model gpt-4o-mini --tasks scaling --extended
+    # Comprehensive benchmark (all official datasets)
+    ./run_comprehensive_official_benchmark.sh
 
     # Output to specific directory
     uv run python eval/run.py --model gpt-4o-mini --output-dir my_results/
@@ -53,6 +46,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+import shutil
 
 
 def get_memory_mb() -> float:
@@ -115,19 +109,18 @@ Examples:
     parser.add_argument(
         "--tasks",
         "-t",
-        default="sniah,multi_needle,pairs",
+        default="official_sniah,official_oolong",
         help=(
             f"Tasks to run (comma-separated). Options: {', '.join(TASK_REGISTRY.keys())}, "
-            "all, paper (core paper tasks: sniah, oolong, pairs, codeqa, browsecomp), "
-            "official (official datasets: official_sniah, official_oolong, official_codeqa, "
-            "official_longbench_v2, official_repoqa, official_browsecomp)"
+            "official (all official datasets), "
+            "or specific tasks like official_sniah, official_oolong, official_repoqa, etc."
         ),
     )
 
     parser.add_argument(
         "--runners",
         "-r",
-        default="vanilla,ours,official",
+        default="vanilla,minrlm,minrlm-reasoning,official",
         help=f"Runners to compare (comma-separated). Options: {', '.join(RUNNER_REGISTRY.keys())}, all",
     )
 
@@ -295,7 +288,7 @@ def run_evaluation(
     for runner_name in runners:
         try:
             # Pass log_dir to RLM runners
-            kwargs = {"log_dir": log_dir} if runner_name in ("ours", "ours_reasoning") and log_dir else {}
+            kwargs = {"log_dir": log_dir} if runner_name in ("minrlm", "minrlm-reasoning") and log_dir else {}
             runner = get_runner(runner_name, model, **kwargs)
             if runner.warmup():
                 active_runners[runner_name] = runner
@@ -897,6 +890,38 @@ def main():
         f.write("# Run from: " + str(Path.cwd()) + "\n")
         f.write("# Date: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n\n")
         f.write(" ".join(sys.argv) + "\n")
+
+    # Backup minrlm/ folder for reproducibility (prompts, core logic, etc.)
+    try:
+        minrlm_src = Path(__file__).parent.parent / "minrlm"
+        minrlm_backup = output_dir / "minrlm_backup"
+
+        if minrlm_src.exists():
+            # Copy entire minrlm folder
+            shutil.copytree(minrlm_src, minrlm_backup, dirs_exist_ok=True)
+            # Try to show relative path, fallback to absolute if not in cwd
+            try:
+                display_path = minrlm_backup.relative_to(Path.cwd())
+            except ValueError:
+                display_path = minrlm_backup
+            log.info(f"✓ Backed up minrlm/ to {display_path}")
+
+            # Create a snapshot info file
+            snapshot_file = minrlm_backup / "SNAPSHOT_INFO.txt"
+            with open(snapshot_file, "w") as f:
+                f.write(f"# minrlm/ snapshot taken at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"# Original path: {minrlm_src}\n")
+                f.write(f"# Evaluation run: {output_dir.name}\n\n")
+                f.write("This backup captures the exact prompts and code used for this evaluation.\n")
+                f.write("Key files:\n")
+                f.write("  - prompts_reasoning.py: Reasoning-enhanced prompts\n")
+                f.write("  - prompts.py: Standard prompts\n")
+                f.write("  - core.py: RLM implementation\n")
+                f.write("  - core_reasoning.py: Reasoning RLM wrapper\n")
+        else:
+            log.warning(f"⚠️  minrlm/ folder not found at {minrlm_src}")
+    except Exception as e:
+        log.warning(f"⚠️  Failed to backup minrlm/: {e}")
 
     verbose = not args.quiet
 

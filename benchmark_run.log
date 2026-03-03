@@ -1,650 +1,0 @@
-==========================================================
-COMPREHENSIVE OFFICIAL BENCHMARK - PAPER SCALE (PARALLEL)
-==========================================================
-Model: gpt-5-mini
-Output: evals/comprehensive_official_20260220_140811
-Runs per config: 10
-Max samples per official dataset: 50
-
-Parallelization (for maximum speed):
-  - Parallel runners: 10
-  - Parallel tasks: 4
-  - Expected speedup: ~40x
-
-Official datasets being tested:
-  - official_sniah (Needle-in-haystack)
-  - official_oolong (Aggregation)
-  - official_repoqa (Code retrieval)
-  - official_codeqa (Code reasoning)
-  - official_longbench_v2 (Long context QA)
-  - official_browsecomp (Multi-hop research)
-
-Runners:
-  - ours (minRLM - our implementation)
-  - vanilla (Standard LLM)
-  - official (Official RLM baseline)
-==========================================================
-======================================================================
-RLM EVALUATION SUITE
-======================================================================
-Model: gpt-5-mini
-Tasks: ['official_sniah', 'official_oolong', 'official_repoqa', 'official_codeqa', 'official_longbench_v2', 'official_browsecomp']
-Runners: ['ours', 'vanilla']
-Runs per config: 10
-======================================================================
-✓ Runner 'ours' ready
-✓ Runner 'vanilla' ready
-Tasks:   0%|          | 0/6 [00:00<?, ?it/s]
-============================================================
-TASK: OFFICIAL_SNIAH (task_parallel: 4, runner_parallel: 2)
-============================================================
-
-official_sniah:   0%|          | 0/10 [00:00<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                      [A    vanilla: ✓ | 3,699+12 tokens | 1.8s | 1 iters
-Tasks:   0%|          | 0/6 [00:02<?, ?it/s]
-official_sniah:   0%|          | 0/10 [00:01<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                      [A    vanilla: ✓ | 3,699+12 tokens | 2.0s | 1 iters
-Tasks:   0%|          | 0/6 [00:02<?, ?it/s]
-official_sniah:   0%|          | 0/10 [00:02<?, ?it/s][A                                            
-                                                      [A    vanilla: ✓ | 3,699+12 tokens | 2.0s | 1 iters
-Tasks:   0%|          | 0/6 [00:02<?, ?it/s]
-official_sniah:   0%|          | 0/10 [00:02<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                      [A    vanilla: ✓ | 3,702+76 tokens | 3.1s | 1 iters
-Tasks:   0%|          | 0/6 [00:03<?, ?it/s]
-official_sniah:   0%|          | 0/10 [00:03<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                      [A    ours: ✓ | 2,737+501 tokens | 7.1s | 1 iters
-Tasks:   0%|          | 0/6 [00:07<?, ?it/s]
-official_sniah:   0%|          | 0/10 [00:07<?, ?it/s][A
-official_sniah:  10%|█         | 1/10 [00:07<01:04,  7.16s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✓ | 2,737+385 tokens | 8.6s | 1 iters
-Tasks:   0%|          | 0/6 [00:09<?, ?it/s]
-official_sniah:  10%|█         | 1/10 [00:08<01:04,  7.16s/it][A
-official_sniah:  20%|██        | 2/10 [00:08<00:30,  3.85s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    vanilla: ✓ | 3,699+12 tokens | 1.5s | 1 iters
-Tasks:   0%|          | 0/6 [00:09<?, ?it/s]
-official_sniah:  20%|██        | 2/10 [00:08<00:30,  3.85s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✓ | 2,734+538 tokens | 8.9s | 1 iters
-Tasks:   0%|          | 0/6 [00:09<?, ?it/s]
-official_sniah:  20%|██        | 2/10 [00:08<00:30,  3.85s/it][A
-official_sniah:  30%|███       | 3/10 [00:08<00:15,  2.20s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✓ | 2,737+497 tokens | 10.1s | 1 iters
-Tasks:   0%|          | 0/6 [00:10<?, ?it/s]
-official_sniah:  30%|███       | 3/10 [00:10<00:15,  2.20s/it][A
-official_sniah:  40%|████      | 4/10 [00:10<00:10,  1.81s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    vanilla: ✓ | 3,696+76 tokens | 1.6s | 1 iters
-Tasks:   0%|          | 0/6 [00:10<?, ?it/s]
-official_sniah:  40%|████      | 4/10 [00:10<00:10,  1.81s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    vanilla: ✓ | 3,699+76 tokens | 2.7s | 1 iters
-Tasks:   0%|          | 0/6 [00:12<?, ?it/s]
-official_sniah:  40%|████      | 4/10 [00:11<00:10,  1.81s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    vanilla: ✓ | 3,708+140 tokens | 3.7s | 1 iters
-Tasks:   0%|          | 0/6 [00:14<?, ?it/s]
-official_sniah:  40%|████      | 4/10 [00:13<00:10,  1.81s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✓ | 2,742+381 tokens | 7.2s | 1 iters
-Tasks:   0%|          | 0/6 [00:14<?, ?it/s]
-official_sniah:  40%|████      | 4/10 [00:14<00:10,  1.81s/it][A
-official_sniah:  50%|█████     | 5/10 [00:14<00:13,  2.68s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✓ | 2,741+332 tokens | 6.7s | 1 iters
-Tasks:   0%|          | 0/6 [00:16<?, ?it/s]
-official_sniah:  50%|█████     | 5/10 [00:15<00:13,  2.68s/it][A
-official_sniah:  60%|██████    | 6/10 [00:15<00:08,  2.21s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    vanilla: ✓ | 3,702+76 tokens | 2.4s | 1 iters
-Tasks:   0%|          | 0/6 [00:17<?, ?it/s]
-official_sniah:  60%|██████    | 6/10 [00:16<00:08,  2.21s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✓ | 2,736+450 tokens | 8.7s | 1 iters
-Tasks:   0%|          | 0/6 [00:17<?, ?it/s]
-official_sniah:  60%|██████    | 6/10 [00:17<00:08,  2.21s/it][A
-official_sniah:  70%|███████   | 7/10 [00:17<00:06,  2.05s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    vanilla: ✓ | 3,699+76 tokens | 1.9s | 1 iters
-Tasks:   0%|          | 0/6 [00:17<?, ?it/s]
-official_sniah:  70%|███████   | 7/10 [00:17<00:06,  2.05s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✓ | 2,744+436 tokens | 8.0s | 1 iters
-Tasks:   0%|          | 0/6 [00:18<?, ?it/s]
-official_sniah:  70%|███████   | 7/10 [00:18<00:06,  2.05s/it][A
-official_sniah:  80%|████████  | 8/10 [00:18<00:03,  1.65s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✗ | 2,740+520 tokens | 8.3s | 1 iters
-Tasks:   0%|          | 0/6 [00:23<?, ?it/s]
-official_sniah:  80%|████████  | 8/10 [00:22<00:03,  1.65s/it][A
-official_sniah:  90%|█████████ | 9/10 [00:22<00:02,  2.54s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                            
-                                                              [A    ours: ✗ | 2,739+731 tokens | 10.9s | 1 iters
-Tasks:   0%|          | 0/6 [00:26<?, ?it/s]
-official_sniah:  90%|█████████ | 9/10 [00:26<00:02,  2.54s/it][A
-official_sniah: 100%|██████████| 10/10 [00:26<00:00,  2.95s/it][A
-                                                               [ATasks:  17%|█▋        | 1/6 [00:26<02:14, 26.93s/it]
-============================================================
-TASK: OFFICIAL_OOLONG (task_parallel: 4, runner_parallel: 2)
-============================================================
-
-official_oolong:   0%|          | 0/10 [00:00<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [A    vanilla: ✓ | 649+269 tokens | 5.5s | 1 iters
-Tasks:  17%|█▋        | 1/6 [00:54<02:14, 26.93s/it]
-official_oolong:   0%|          | 0/10 [00:27<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [A    vanilla: ✗ | 651+652 tokens | 9.4s | 1 iters
-Tasks:  17%|█▋        | 1/6 [00:58<02:14, 26.93s/it]
-official_oolong:   0%|          | 0/10 [00:31<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [A    vanilla: ✓ | 655+1,037 tokens | 16.1s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:05<02:14, 26.93s/it]
-official_oolong:   0%|          | 0/10 [00:38<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [A    ours: ✓ | 2,793+1,214 tokens | 18.6s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:07<02:14, 26.93s/it]
-official_oolong:   0%|          | 0/10 [00:41<?, ?it/s][A
-official_oolong:  10%|█         | 1/10 [00:41<06:09, 41.03s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  17%|█▋        | 1/6 [01:12<02:14, 26.93s/it]
-official_oolong:  10%|█         | 1/10 [00:45<06:09, 41.03s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    ours: ✓ | 2,772+1,270 tokens | 23.3s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:12<02:14, 26.93s/it]
-official_oolong:  10%|█         | 1/10 [00:45<06:09, 41.03s/it][A
-official_oolong:  20%|██        | 2/10 [00:45<02:37, 19.68s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    vanilla: ✗ | 683+1,752 tokens | 26.3s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:15<02:14, 26.93s/it]
-official_oolong:  20%|██        | 2/10 [00:48<02:37, 19.68s/it][A
-official_oolong:  30%|███       | 3/10 [00:48<01:24, 12.04s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    vanilla: ✓ | 635+270 tokens | 4.5s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:17<02:14, 26.93s/it]
-official_oolong:  30%|███       | 3/10 [00:50<01:24, 12.04s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    ours: ✓ | 5,967+890 tokens | 14.8s | 2 iters
-Tasks:  17%|█▋        | 1/6 [01:27<02:14, 26.93s/it]
-official_oolong:  30%|███       | 3/10 [01:00<01:24, 12.04s/it][A
-official_oolong:  40%|████      | 4/10 [01:00<01:11, 11.99s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    ours: ✗ | 10,395+2,798 tokens | 47.8s | 3 iters
-Tasks:  17%|█▋        | 1/6 [01:37<02:14, 26.93s/it]
-official_oolong:  40%|████      | 4/10 [01:10<01:11, 11.99s/it][A
-official_oolong:  50%|█████     | 5/10 [01:10<00:55, 11.12s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    vanilla: ✓ | 662+657 tokens | 10.8s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:38<02:14, 26.93s/it]
-official_oolong:  50%|█████     | 5/10 [01:11<00:55, 11.12s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    ours: ✗ | 2,785+665 tokens | 10.9s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:38<02:14, 26.93s/it]
-official_oolong:  50%|█████     | 5/10 [01:11<00:55, 11.12s/it][A
-official_oolong:  60%|██████    | 6/10 [01:11<00:31,  7.79s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    vanilla: ✓ | 658+1,549 tokens | 31.5s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:39<02:14, 26.93s/it]
-official_oolong:  60%|██████    | 6/10 [01:12<00:31,  7.79s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    vanilla: ✓ | 621+525 tokens | 7.4s | 1 iters
-Tasks:  17%|█▋        | 1/6 [01:44<02:14, 26.93s/it]
-official_oolong:  60%|██████    | 6/10 [01:17<00:31,  7.79s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  17%|█▋        | 1/6 [01:49<02:14, 26.93s/it]
-official_oolong:  60%|██████    | 6/10 [01:22<00:31,  7.79s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  17%|█▋        | 1/6 [01:51<02:14, 26.93s/it]
-official_oolong:  60%|██████    | 6/10 [01:24<00:31,  7.79s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  17%|█▋        | 1/6 [01:53<02:14, 26.93s/it]
-official_oolong:  60%|██████    | 6/10 [01:26<00:31,  7.79s/it][A
-official_oolong:  70%|███████   | 7/10 [01:26<00:30, 10.05s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  17%|█▋        | 1/6 [01:56<02:14, 26.93s/it]
-official_oolong:  70%|███████   | 7/10 [01:29<00:30, 10.05s/it][A
-official_oolong:  80%|████████  | 8/10 [01:29<00:15,  7.98s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [A    ours: ✗ | 10,119+2,776 tokens | 53.1s | 3 iters
-Tasks:  17%|█▋        | 1/6 [02:01<02:14, 26.93s/it]
-official_oolong:  80%|████████  | 8/10 [01:34<00:15,  7.98s/it][A
-official_oolong:  90%|█████████ | 9/10 [01:34<00:06,  6.86s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  17%|█▋        | 1/6 [02:02<02:14, 26.93s/it]
-official_oolong:  90%|█████████ | 9/10 [01:35<00:06,  6.86s/it][A
-official_oolong: 100%|██████████| 10/10 [01:35<00:00,  5.08s/it][A
-                                                                [ATasks:  33%|███▎      | 2/6 [02:02<04:28, 67.22s/it]
-============================================================
-TASK: OFFICIAL_REPOQA (task_parallel: 4, runner_parallel: 2)
-============================================================
-
-official_repoqa:   0%|          | 0/10 [00:00<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [ATasks:  33%|███▎      | 2/6 [02:12<04:28, 67.22s/it]
-official_repoqa:   0%|          | 0/10 [00:10<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [ATasks:  33%|███▎      | 2/6 [02:13<04:28, 67.22s/it]
-official_repoqa:   0%|          | 0/10 [00:11<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [ATasks:  33%|███▎      | 2/6 [02:14<04:28, 67.22s/it]
-official_repoqa:   0%|          | 0/10 [00:11<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [ATasks:  33%|███▎      | 2/6 [02:17<04:28, 67.22s/it]
-official_repoqa:   0%|          | 0/10 [00:15<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [ATasks:  33%|███▎      | 2/6 [02:25<04:28, 67.22s/it]
-official_repoqa:   0%|          | 0/10 [00:23<?, ?it/s][A
-official_repoqa:  10%|█         | 1/10 [00:23<03:30, 23.42s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:31<04:28, 67.22s/it]
-official_repoqa:  10%|█         | 1/10 [00:29<03:30, 23.42s/it][A
-official_repoqa:  20%|██        | 2/10 [00:29<01:43, 13.00s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:31<04:28, 67.22s/it]
-official_repoqa:  20%|██        | 2/10 [00:29<01:43, 13.00s/it][A
-official_repoqa:  30%|███       | 3/10 [00:29<00:50,  7.23s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:35<04:28, 67.22s/it]
-official_repoqa:  30%|███       | 3/10 [00:32<00:50,  7.23s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:37<04:28, 67.22s/it]
-official_repoqa:  30%|███       | 3/10 [00:34<00:50,  7.23s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:37<04:28, 67.22s/it]
-official_repoqa:  30%|███       | 3/10 [00:35<00:50,  7.23s/it][A
-official_repoqa:  40%|████      | 4/10 [00:35<00:40,  6.71s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:40<04:28, 67.22s/it]
-official_repoqa:  40%|████      | 4/10 [00:38<00:40,  6.71s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:43<04:28, 67.22s/it]
-official_repoqa:  40%|████      | 4/10 [00:41<00:40,  6.71s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:48<04:28, 67.22s/it]
-official_repoqa:  40%|████      | 4/10 [00:46<00:40,  6.71s/it][A
-official_repoqa:  50%|█████     | 5/10 [00:46<00:40,  8.12s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:49<04:28, 67.22s/it]
-official_repoqa:  50%|█████     | 5/10 [00:46<00:40,  8.12s/it][A
-official_repoqa:  60%|██████    | 6/10 [00:46<00:22,  5.64s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:51<04:28, 67.22s/it]
-official_repoqa:  60%|██████    | 6/10 [00:49<00:22,  5.64s/it][A
-official_repoqa:  70%|███████   | 7/10 [00:49<00:13,  4.52s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:57<04:28, 67.22s/it]
-official_repoqa:  70%|███████   | 7/10 [00:55<00:13,  4.52s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [02:58<04:28, 67.22s/it]
-official_repoqa:  70%|███████   | 7/10 [00:55<00:13,  4.52s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [03:04<04:28, 67.22s/it]
-official_repoqa:  70%|███████   | 7/10 [01:02<00:13,  4.52s/it][A
-official_repoqa:  80%|████████  | 8/10 [01:02<00:14,  7.23s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [03:08<04:28, 67.22s/it]
-official_repoqa:  80%|████████  | 8/10 [01:06<00:14,  7.23s/it][A
-official_repoqa:  90%|█████████ | 9/10 [01:06<00:06,  6.39s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  33%|███▎      | 2/6 [03:15<04:28, 67.22s/it]
-official_repoqa:  90%|█████████ | 9/10 [01:13<00:06,  6.39s/it][A
-official_repoqa: 100%|██████████| 10/10 [01:13<00:00,  6.51s/it][A
-                                                                [ATasks:  50%|█████     | 3/6 [03:15<03:30, 70.05s/it]
-============================================================
-TASK: OFFICIAL_CODEQA (task_parallel: 4, runner_parallel: 2)
-============================================================
-
-official_codeqa:   0%|          | 0/10 [00:00<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                       [ATasks:  50%|█████     | 3/6 [03:18<03:30, 70.05s/it]
-official_codeqa:   0%|          | 0/10 [00:02<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                       [ATasks:  50%|█████     | 3/6 [03:25<03:30, 70.05s/it]
-official_codeqa:   0%|          | 0/10 [00:09<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [ATasks:  50%|█████     | 3/6 [03:27<03:30, 70.05s/it]
-official_codeqa:   0%|          | 0/10 [00:10<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                       [ATasks:  50%|█████     | 3/6 [03:29<03:30, 70.05s/it]
-official_codeqa:   0%|          | 0/10 [00:13<?, ?it/s][A
-official_codeqa:  10%|█         | 1/10 [00:13<02:01, 13.56s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [03:36<03:30, 70.05s/it]
-official_codeqa:  10%|█         | 1/10 [00:20<02:01, 13.56s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [03:36<03:30, 70.05s/it]
-official_codeqa:  10%|█         | 1/10 [00:20<02:01, 13.56s/it][A
-official_codeqa:  20%|██        | 2/10 [00:20<01:17,  9.65s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [03:42<03:30, 70.05s/it]
-official_codeqa:  20%|██        | 2/10 [00:26<01:17,  9.65s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [03:43<03:30, 70.05s/it]
-official_codeqa:  20%|██        | 2/10 [00:27<01:17,  9.65s/it][A
-official_codeqa:  30%|███       | 3/10 [00:27<00:58,  8.39s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [03:44<03:30, 70.05s/it]
-official_codeqa:  30%|███       | 3/10 [00:28<00:58,  8.39s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [03:47<03:30, 70.05s/it]
-official_codeqa:  30%|███       | 3/10 [00:31<00:58,  8.39s/it][A
-official_codeqa:  40%|████      | 4/10 [00:31<00:39,  6.59s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [03:58<03:30, 70.05s/it]
-official_codeqa:  40%|████      | 4/10 [00:41<00:39,  6.59s/it][A
-official_codeqa:  50%|█████     | 5/10 [00:41<00:40,  8.10s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:01<03:30, 70.05s/it]
-official_codeqa:  50%|█████     | 5/10 [00:45<00:40,  8.10s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:03<03:30, 70.05s/it]
-official_codeqa:  50%|█████     | 5/10 [00:47<00:40,  8.10s/it][A
-official_codeqa:  60%|██████    | 6/10 [00:47<00:28,  7.20s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:08<03:30, 70.05s/it]
-official_codeqa:  60%|██████    | 6/10 [00:52<00:28,  7.20s/it][A                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:08<03:30, 70.05s/it]
-official_codeqa:  60%|██████    | 6/10 [00:52<00:28,  7.20s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:09<03:30, 70.05s/it]
-official_codeqa:  60%|██████    | 6/10 [00:53<00:28,  7.20s/it][A
-official_codeqa:  70%|███████   | 7/10 [00:53<00:20,  6.76s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:14<03:30, 70.05s/it]
-official_codeqa:  70%|███████   | 7/10 [00:58<00:20,  6.76s/it][A
-official_codeqa:  80%|████████  | 8/10 [00:58<00:12,  6.14s/it][A                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:18<03:30, 70.05s/it]
-official_codeqa:  80%|████████  | 8/10 [01:02<00:12,  6.14s/it][A
-official_codeqa:  90%|█████████ | 9/10 [01:02<00:05,  5.54s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:20<03:30, 70.05s/it]
-official_codeqa:  90%|█████████ | 9/10 [01:03<00:05,  5.54s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                               [ATasks:  50%|█████     | 3/6 [04:36<03:30, 70.05s/it]
-official_codeqa:  90%|█████████ | 9/10 [01:20<00:05,  5.54s/it][A
-official_codeqa: 100%|██████████| 10/10 [01:20<00:00,  9.50s/it][A
-                                                                [ATasks:  67%|██████▋   | 4/6 [04:36<02:28, 74.41s/it]
-============================================================
-TASK: OFFICIAL_LONGBENCH_V2 (task_parallel: 4, runner_parallel: 2)
-============================================================
-
-official_longbench_v2:   0%|          | 0/10 [00:00<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                             [ATasks:  67%|██████▋   | 4/6 [04:39<02:28, 74.41s/it]
-official_longbench_v2:   0%|          | 0/10 [00:02<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                             [ATasks:  67%|██████▋   | 4/6 [04:49<02:28, 74.41s/it]
-official_longbench_v2:   0%|          | 0/10 [00:12<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                             [ATasks:  67%|██████▋   | 4/6 [04:50<02:28, 74.41s/it]
-official_longbench_v2:   0%|          | 0/10 [00:13<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                             [ATasks:  67%|██████▋   | 4/6 [04:50<02:28, 74.41s/it]
-official_longbench_v2:   0%|          | 0/10 [00:13<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                             [ATasks:  67%|██████▋   | 4/6 [04:51<02:28, 74.41s/it]
-official_longbench_v2:   0%|          | 0/10 [00:14<?, ?it/s][A
-official_longbench_v2:  10%|█         | 1/10 [00:14<02:13, 14.87s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [04:53<02:28, 74.41s/it]
-official_longbench_v2:  10%|█         | 1/10 [00:16<02:13, 14.87s/it][A
-official_longbench_v2:  20%|██        | 2/10 [00:16<00:58,  7.29s/it][A                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [04:53<02:28, 74.41s/it]
-official_longbench_v2:  20%|██        | 2/10 [00:16<00:58,  7.29s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:05<02:28, 74.41s/it]
-official_longbench_v2:  30%|███       | 3/10 [00:28<00:51,  7.29s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:07<02:28, 74.41s/it]
-official_longbench_v2:  30%|███       | 3/10 [00:30<00:51,  7.29s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:10<02:28, 74.41s/it]
-official_longbench_v2:  30%|███       | 3/10 [00:33<00:51,  7.29s/it][A                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:10<02:28, 74.41s/it]
-official_longbench_v2:  30%|███       | 3/10 [00:33<00:51,  7.29s/it][A
-official_longbench_v2:  40%|████      | 4/10 [00:33<00:47,  7.92s/it][A                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:11<02:28, 74.41s/it]
-official_longbench_v2:  40%|████      | 4/10 [00:34<00:47,  7.92s/it][A
-official_longbench_v2:  50%|█████     | 5/10 [00:34<00:28,  5.69s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:14<02:28, 74.41s/it]
-official_longbench_v2:  50%|█████     | 5/10 [00:37<00:28,  5.69s/it][A
-official_longbench_v2:  60%|██████    | 6/10 [00:37<00:19,  4.97s/it][A                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:15<02:28, 74.41s/it]
-official_longbench_v2:  60%|██████    | 6/10 [00:38<00:19,  4.97s/it][A
-official_longbench_v2:  70%|███████   | 7/10 [00:38<00:11,  3.70s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:22<02:28, 74.41s/it]
-official_longbench_v2:  70%|███████   | 7/10 [00:45<00:11,  3.70s/it][A                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:22<02:28, 74.41s/it]
-official_longbench_v2:  70%|███████   | 7/10 [00:45<00:11,  3.70s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:24<02:28, 74.41s/it]
-official_longbench_v2:  70%|███████   | 7/10 [00:47<00:11,  3.70s/it][A
-official_longbench_v2:  80%|████████  | 8/10 [00:47<00:10,  5.44s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:25<02:28, 74.41s/it]
-official_longbench_v2:  80%|████████  | 8/10 [00:49<00:10,  5.44s/it][A
-official_longbench_v2:  90%|█████████ | 9/10 [00:49<00:04,  4.20s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:32<02:28, 74.41s/it]
-official_longbench_v2:  90%|█████████ | 9/10 [00:55<00:04,  4.20s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                     [ATasks:  67%|██████▋   | 4/6 [05:53<02:28, 74.41s/it]
-official_longbench_v2:  90%|█████████ | 9/10 [01:16<00:04,  4.20s/it][A
-official_longbench_v2: 100%|██████████| 10/10 [01:16<00:00, 11.24s/it][A
-                                                                      [ATasks:  83%|████████▎ | 5/6 [05:53<01:15, 75.21s/it]
-============================================================
-TASK: OFFICIAL_BROWSECOMP (task_parallel: 4, runner_parallel: 2)
-============================================================
-
-official_browsecomp:   0%|          | 0/10 [00:00<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                           [ATasks:  83%|████████▎ | 5/6 [05:56<01:15, 75.21s/it]
-official_browsecomp:   0%|          | 0/10 [00:03<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                           [ATasks:  83%|████████▎ | 5/6 [05:57<01:15, 75.21s/it]
-official_browsecomp:   0%|          | 0/10 [00:03<?, ?it/s][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                           [ATasks:  83%|████████▎ | 5/6 [05:59<01:15, 75.21s/it]
-official_browsecomp:   0%|          | 0/10 [00:06<?, ?it/s][A
-official_browsecomp:  10%|█         | 1/10 [00:06<00:54,  6.01s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:02<01:15, 75.21s/it]
-official_browsecomp:  10%|█         | 1/10 [00:08<00:54,  6.01s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:04<01:15, 75.21s/it]
-official_browsecomp:  10%|█         | 1/10 [00:10<00:54,  6.01s/it][A
-official_browsecomp:  20%|██        | 2/10 [00:10<00:42,  5.30s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:05<01:15, 75.21s/it]
-official_browsecomp:  20%|██        | 2/10 [00:11<00:42,  5.30s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:05<01:15, 75.21s/it]
-official_browsecomp:  20%|██        | 2/10 [00:11<00:42,  5.30s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:07<01:15, 75.21s/it]
-official_browsecomp:  20%|██        | 2/10 [00:13<00:42,  5.30s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:10<01:15, 75.21s/it]
-official_browsecomp:  20%|██        | 2/10 [00:16<00:42,  5.30s/it][A
-official_browsecomp:  30%|███       | 3/10 [00:16<00:38,  5.57s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:12<01:15, 75.21s/it]
-official_browsecomp:  30%|███       | 3/10 [00:19<00:38,  5.57s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:16<01:15, 75.21s/it]
-official_browsecomp:  30%|███       | 3/10 [00:22<00:38,  5.57s/it][A
-official_browsecomp:  40%|████      | 4/10 [00:22<00:34,  5.78s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:16<01:15, 75.21s/it]
-official_browsecomp:  40%|████      | 4/10 [00:23<00:34,  5.78s/it][A
-official_browsecomp:  50%|█████     | 5/10 [00:23<00:19,  3.86s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:17<01:15, 75.21s/it]
-official_browsecomp:  50%|█████     | 5/10 [00:24<00:19,  3.86s/it][A
-official_browsecomp:  60%|██████    | 6/10 [00:24<00:11,  2.80s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:19<01:15, 75.21s/it]
-official_browsecomp:  60%|██████    | 6/10 [00:25<00:11,  2.80s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:21<01:15, 75.21s/it]
-official_browsecomp:  60%|██████    | 6/10 [00:27<00:11,  2.80s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:28<01:15, 75.21s/it]
-official_browsecomp:  60%|██████    | 6/10 [00:35<00:11,  2.80s/it][A
-official_browsecomp:  70%|███████   | 7/10 [00:35<00:16,  5.62s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:29<01:15, 75.21s/it]
-official_browsecomp:  70%|███████   | 7/10 [00:36<00:16,  5.62s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:30<01:15, 75.21s/it]
-official_browsecomp:  70%|███████   | 7/10 [00:36<00:16,  5.62s/it][A
-official_browsecomp:  80%|████████  | 8/10 [00:36<00:08,  4.25s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:32<01:15, 75.21s/it]
-official_browsecomp:  80%|████████  | 8/10 [00:39<00:08,  4.25s/it][A
-official_browsecomp:  90%|█████████ | 9/10 [00:39<00:03,  3.68s/it][AHTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-                                                    
-                                                                   [ATasks:  83%|████████▎ | 5/6 [06:37<01:15, 75.21s/it]
-official_browsecomp:  90%|█████████ | 9/10 [00:43<00:03,  3.68s/it][A
-official_browsecomp: 100%|██████████| 10/10 [00:43<00:00,  3.91s/it][A
-                                                                    [ATasks: 100%|██████████| 6/6 [06:37<00:00, 64.47s/it]Tasks: 100%|██████████| 6/6 [06:37<00:00, 66.18s/it]
-
-Results saved to: evals/comprehensive_official_20260220_140811/eval_20260220_141449.json
-Summary saved to: evals/comprehensive_official_20260220_140811/summary_20260220_141449.md
-
-==========================================================
-BENCHMARK COMPLETE!
-==========================================================
-Results: evals/comprehensive_official_20260220_140811
-
-Next steps:
-  1. View summary:
-     cat evals/comprehensive_official_20260220_140811/summary_*.md
-
-  2. Generate plots:
-     uv run python -m eval.visualize evals/comprehensive_official_20260220_140811/eval_*.json --output-dir evals/comprehensive_official_20260220_140811/plots
-
-  3. View plots:
-     open evals/comprehensive_official_20260220_140811/plots/
-==========================================================

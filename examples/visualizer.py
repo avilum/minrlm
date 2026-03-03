@@ -49,8 +49,7 @@ from eval.metrics import calculate_cost
 
 # Import evaluation tasks
 from eval.tasks import TASK_REGISTRY, get_task
-from minrlm import RLM  # Our implementation
-from minrlm.core_reasoning import RLMReasoning
+from minrlm import RLM, RLMBase
 
 # =============================================================================
 # Build Benchmark Options from Eval Tasks
@@ -61,24 +60,16 @@ def get_benchmark_options() -> dict[str, dict]:
     """Build benchmark dropdown options from the eval task registry."""
     options = {}
 
-    sizes = {
-        "Small (20K)": 20000,
-        "Medium (50K)": 50000,
-        "Large (100K)": 100000,
-        "XL (200K)": 200000,
-    }
-
-    core_tasks = ["sniah", "multi_needle", "pairs", "qa_retrieval"]
+    # Official tasks (use actual tasks that exist)
+    core_tasks = ["official_sniah", "official_oolong", "official_repoqa", "official_codeqa"]
     for task_name in core_tasks:
         if task_name in TASK_REGISTRY:
             task_cls = TASK_REGISTRY[task_name]
-            for size_name, size_val in sizes.items():
-                display = f"{task_name.upper().replace('_', ' ')} - {size_name}"
-                options[display] = {
-                    "task": task_name,
-                    "context_size": size_val,
-                    "description": f"{task_cls.description} ({size_val:,} chars)",
-                }
+            display = f"{task_name.upper().replace('OFFICIAL_', '').replace('_', ' ')}"
+            options[display] = {
+                "task": task_name,
+                "description": f"{task_cls.description}",
+            }
 
     # Paper's scaling sizes: 8K to 1M (Figure 1), plus 10M for extreme testing
     scaling_sizes = [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 10485760]
@@ -126,13 +117,18 @@ def get_benchmark_options() -> dict[str, dict]:
                     "description": f"Needle at {pos} of {size_val:,} chars",
                 }
 
-    if "multi_needle_long" in TASK_REGISTRY:
-        for size_name, size_val in long_sizes.items():
-            options[f"MULTI-NEEDLE LONG - {size_name}"] = {
-                "task": "multi_needle_long",
-                "context_size": size_val,
-                "description": f"Find 10 needles in {size_val:,} chars",
-            }
+    # Additional official tasks
+    if "official_browsecomp" in TASK_REGISTRY:
+        options["BROWSECOMP"] = {
+            "task": "official_browsecomp",
+            "description": "Multi-hop research and reasoning",
+        }
+
+    if "official_gdpval" in TASK_REGISTRY:
+        options["GDPVAL"] = {
+            "task": "official_gdpval",
+            "description": "Professional work tasks",
+        }
 
     if "official_oolong" in TASK_REGISTRY:
         options["OOLONG (Aggregation)"] = {
@@ -359,7 +355,7 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
 
     start = time.time()
     try:
-        rlm = RLM(model=model, max_iterations=10, on_step=on_step)
+        rlm = RLMBase(model=model, max_iterations=10, on_step=on_step)
         if context:
             result = rlm.completion(task=task, context=context)
         else:
@@ -448,7 +444,7 @@ def run_reasoning_rlm(task: str, context: str, model: str, check_fn: callable = 
 
     start = time.time()
     try:
-        rlm = RLMReasoning(model=model, max_iterations=10, on_step=on_step)
+        rlm = RLM(model=model, max_iterations=10, on_step=on_step)
         if context:
             result = rlm.completion(task=task, context=context)
         else:

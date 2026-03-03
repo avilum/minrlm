@@ -12,7 +12,6 @@ wheels/
 # Generated outputs (not part of codebase)
 logs/
 benchmark_results/
-eval/
 eval/results/*.json
 eval/results/*.md
 eval/results/plots/
@@ -27,3 +26,4 @@ temp/
 *.swp
 .old/
 evals/
+BEST_EVALS/

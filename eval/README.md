@@ -1,275 +1,146 @@
-# RLM Evaluation Suite
+# Benchmark Results
 
-A reproducible benchmark suite implementing tasks from the **Recursive Language Model (RLM) paper** ([Zhang et al., 2025](https://arxiv.org/abs/2512.24601)).
+**Model**: gpt-5-mini | **Evaluations**: 1,200 | **Tasks**: 8 | **Iterations**: 50 per task per runner | **Date**: 2026-03-02
 
-Compares vanilla LLM, minRLM, and official RLM across the paper's core benchmarks.
+Three runners compared: **minRLM** (this implementation), **Vanilla** (direct LLM call), **Official RLM** (paper's reference implementation).
 
-## Paper Tasks Implemented
+## Summary
 
-| Paper Task | Our Task | Paper Reference | Status |
-|------------|----------|-----------------|--------|
-| **S-NIAH** | `sniah`, `scaling` | Figure 1 | ✅ |
-| **OOLONG** | `oolong` | Bertsch et al., 2025 | ✅ |
-| **OOLONG-Pairs** | `pairs` | Figure 1 (hardest) | ✅ |
-| **CodeQA** | `codeqa` | Bai et al., 2025 | ✅ |
-| **BrowseComp+** | `browsecomp` | Chen et al., 2025 | ✅ |
+| | minRLM | Vanilla LLM | Official RLM |
+|---|---|---|---|
+| **Accuracy** | **76.8%** | 64.0% | 75.2% |
+| **Avg Tokens** | **5,257** | 19,370 | 50,442 |
+| **Avg Latency** | 31.4s | 29.7s | 85.9s |
+| **Total Cost (400 evals)** | **$1.64** | $3.02 | $8.11 |
 
-Plus additional tasks: `multi_needle`, `json_extraction`, `json_aggregation`, `qa_retrieval`
+**minRLM vs Vanilla**: 3.7x fewer tokens, 1.8x cheaper
+**minRLM vs Official**: 9.6x fewer tokens, 4.9x cheaper
 
-## Quick Start
+![Summary Dashboard](../docs/summary_dashboard.png)
+
+## Accuracy by Task
+
+| Task | minRLM | Vanilla | Official | N |
+|------|--------|---------|----------|---|
+| BrowseComp | **94%** | 0% | 72% | 50 |
+| SNIAH | **100%** | 100% | 88% | 50 |
+| CodeQA | **62%** | 24% | 58% | 50 |
+| AIME 2025 | **88%** | 94% | 84% | 50 |
+| LongBench V2 | **50%** | 44% | 54% | 50 |
+| OOLONG | 88% | 94% | **94%** | 50 |
+| RepoQA | 86% | **100%** | 96% | 50 |
+| GDP Val | 46% | 56% | **56%** | 50 |
+
+minRLM is the top scorer on 3 of 8 tasks (BrowseComp, SNIAH, CodeQA) and beats Official RLM on 4 of 8.
+Vanilla fails completely on BrowseComp (0%) due to context exceeding token limits.
+
+![Accuracy per Task](../docs/accuracy_per_task.png)
+
+## Token Efficiency by Task
+
+Sorted by minRLM savings vs Official RLM.
+
+| Task | minRLM | Vanilla | Official | vs Vanilla | vs Official |
+|------|--------|---------|----------|------------|-------------|
+| BrowseComp | 4,881 | 0 | 119,449 | ∞ | **24.5x** |
+| LongBench V2 | 3,793 | 73,785 | 94,213 | **19.5x** | **24.8x** |
+| CodeQA | 3,908 | 57,127 | 89,297 | **14.6x** | **22.8x** |
+| RepoQA | 3,998 | 4,923 | 21,107 | 1.2x | **5.3x** |
+| OOLONG | 4,152 | 7,038 | 15,333 | **1.7x** | **3.7x** |
+| SNIAH | 4,545 | 3,760 | 16,944 | - | **3.7x** |
+| GDP Val | 10,344 | 4,290 | 36,303 | - | **3.5x** |
+| AIME 2025 | 6,436 | 4,035 | 10,891 | - | **1.7x** |
+
+"-" = vanilla uses fewer tokens on that task. minRLM uses fewer tokens than Official RLM on every task.
+
+![Tokens per Task](../docs/tokens_per_task.png)
+
+![Token Savings](../docs/token_savings.png)
+
+## Cost by Task
+
+50 evaluations per runner per task.
+
+| Task | minRLM | Vanilla | Official | vs Vanilla | vs Official |
+|------|--------|---------|----------|------------|-------------|
+| LongBench V2 | $0.14 | $1.03 | $1.78 | **7.4x** | **12.7x** |
+| BrowseComp | $0.18 | $0.00 | $2.17 | - | **12.1x** |
+| CodeQA | $0.15 | $0.76 | $1.59 | **5.1x** | **10.6x** |
+| RepoQA | $0.15 | $0.10 | $0.39 | - | **2.6x** |
+| OOLONG | $0.16 | $0.31 | $0.34 | **1.9x** | **2.1x** |
+| SNIAH | $0.17 | $0.05 | $0.36 | - | **2.1x** |
+| GDP Val | $0.39 | $0.38 | $1.07 | - | **2.7x** |
+| AIME 2025 | $0.24 | $0.38 | $0.42 | **1.6x** | **1.8x** |
+
+minRLM is cheaper than Official RLM on every task (1.8x–12.7x).
+minRLM is cheaper than Vanilla on 4 of 8 tasks.
+
+![Cost per Task](../docs/cost_per_task.png)
+
+![Accuracy vs Cost](../docs/accuracy_vs_cost.png)
+
+## Latency by Task
+
+| Task | minRLM | Vanilla | Official | Faster than Official |
+|------|--------|---------|----------|----------------------|
+| LongBench V2 | 19.5s | 23.8s | 112.7s | **5.8x** |
+| RepoQA | 19.9s | 7.8s | 25.1s | 1.3x |
+| CodeQA | 21.2s | 13.7s | 91.0s | **4.3x** |
+| OOLONG | 22.2s | 36.3s | 33.0s | 1.5x |
+| BrowseComp | 32.8s | 4.9s | 140.3s | **4.3x** |
+| AIME 2025 | 33.9s | 83.4s | 109.4s | **3.2x** |
+| SNIAH | 34.0s | 2.6s | 29.3s | - |
+| GDP Val | 67.4s | 65.0s | 146.4s | **2.2x** |
+
+minRLM is faster than Official RLM on 7 of 8 tasks.
+minRLM is faster than Vanilla on 3 of 8 tasks (LongBench V2, OOLONG, BrowseComp - all large-context tasks).
+
+![Latency per Task](../docs/latency_per_task.png)
+
+![Accuracy vs Latency](../docs/accuracy_vs_latency.png)
+
+## Iterations by Task
+
+| Task | minRLM Avg Iterations |
+|------|-----------------------|
+| OOLONG | 1.0 |
+| CodeQA | 1.0 |
+| LongBench V2 | 1.0 |
+| RepoQA | 1.0 |
+| SNIAH | 1.0 |
+| BrowseComp | 1.1 |
+| GDP Val | 1.5 |
+| AIME 2025 | 1.7 |
+
+GDP Val and AIME 2025 require multiple code-execution iterations, explaining the higher latency on those tasks.
+
+## Reproduction
 
 ```bash
-# Run paper's core benchmarks
-uv run python eval/run.py --model gpt-5-mini --tasks paper
+# Install eval dependencies
+uv sync --extra eval
 
-# Run scaling test with paper's context sizes (8K to 1M)
-uv run python eval/run.py --model gpt-5-mini --tasks scaling --paper-scale
+export OPENAI_API_KEY="your-key"
 
-# Run all tasks
-uv run python eval/run.py --model gpt-5-mini --tasks all
+# Quick smoke test (3 tasks, 3 runs each)
+uv run python eval/quickstart.py
 
-# Multiple runs for statistical significance
-uv run python eval/run.py --model gpt-5-mini --runs 5 --parallel 5 --task-parallel 2
+# Single task
+uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah --runs 10
+
+# All tasks - single runner
+uv run python eval/run.py \
+    --model gpt-4o-mini \
+    --tasks all \
+    --runners minrlm-reasoning \
+    --runs 50 \
+    --parallel 5 \
+    --output-dir logs/my_eval
+
+# Full multi-runner benchmark (reproduces the table above)
+./run_comprehensive_official_benchmark.sh
 ```
 
-## Official Datasets
-
-Official benchmark datasets (OOLONG, BrowseComp+, RepoQA, etc.) are stored in `evals/data/`. See [`evals/README.md`](../evals/README.md) for dataset sources and licenses.
-
-### Download Datasets
-
-```bash
-# Install deps
-uv pip install datasets huggingface_hub
-
-# List available presets
-uv run python evals/download_official.py --list
-
-# Download official datasets (with sample limit)
-uv run python evals/download_official.py \
-  --dataset oolong --dataset longbench_v2 --dataset repoqa --dataset browsecomp_plus \
-  --dataset browsecomp_plus_corpus --dataset ruler_full_mirror \
-  --max-samples 100
-```
-
-### Run Official Benchmarks
-
-```bash
-# Run all official datasets (OOLONG, LongBench-v2, RepoQA, BrowseComp+, RULER NIAH)
-uv run python eval/run.py --model gpt-5-mini --tasks official --runs 100
-
-# Limit dataset size or change data location
-uv run python eval/run.py --model gpt-5-mini --tasks official --runs 50 --official-data-dir evals/data --official-max-samples 50
-
-# Cap documents per BrowseComp+ query (optional)
-uv run python eval/run.py --model gpt-5-mini --tasks official_browsecomp --browsecomp-max-docs 200
-
-# Restrict OOLONG contexts to fit a model's input size (optional)
-uv run python eval/run.py --model gpt-5-nano --tasks official_oolong --official-oolong-max-context-tokens 272000 --official-oolong-max-context-chars 10000000
-```
-
-**Notes:**
-- BrowseComp-Plus is **obfuscated** until you run the official deobfuscation script.
-- `--runs` controls how many dataset examples are evaluated per task.
-
-## What This Evaluates
-
-### Methods Compared
-
-| Method | Description |
-|--------|-------------|
-| **Vanilla LLM** | Direct API call with full context |
-| **minRLM** | Minimal recursive implementation (~400 LOC) |
-| **Official RLM** | Official implementation from the paper |
-
-### Tasks
-
-#### Core Paper Tasks (Table 1)
-
-| Task | Description | Paper Context | Our Context | Difficulty |
-|------|-------------|---------------|-------------|------------|
-| **S-NIAH** (`sniah`) | Single needle in haystack | 8K-1M | 8K-1M | Easy |
-| **OOLONG** (`oolong`) | Information aggregation | 131K | 131K | Hard |
-| **OOLONG-Pairs** (`pairs`) | Pairwise matching | 32K | 50K | Very Hard |
-| **CodeQA** (`codeqa`) | Code repository understanding | 23K-4.2M | 100K-500K | Hard |
-| **BrowseComp+** (`browsecomp`) | Deep research / multi-hop | 6M-11M | 500K-1M | Very Hard |
-
-#### Additional Tasks
-
-| Task | Description | Context Sizes | Difficulty |
-|------|-------------|---------------|------------|
-| **Scaling** (`scaling`) | S-NIAH across context lengths | 8K-1M | Variable |
-| **Multi-Needle** | Find 5 hidden secrets | 50K | Medium |
-| **Long Context** | Needle at start/middle/end | 128K-256K | Medium |
-| **Multi-Needle Long** | Find 10 needles at scale | 128K-256K | Hard |
-| **JSON Extraction** | Find data in JSON records | 50K-200K | Medium |
-| **JSON Aggregation** | Count/sum from JSON data | 50K-200K | Hard |
-| **QA Retrieval** | Answer questions from facts | 50K | Medium |
-
-## Metrics Collected
-
-- **Accuracy**: Task success rate (%)
-- **Latency**: Wall-clock time (seconds)
-- **Input Tokens**: Tokens in prompts
-- **Output Tokens**: Tokens in completions
-- **Total Tokens**: Input + Output
-- **Iterations**: Number of RLM loops (for RLM methods)
-- **Cost (USD)**: API cost calculated via `tokencost`
-
-## Output Structure
-
-```
-eval/
-├── results/
-│   ├── eval_YYYYMMDD_HHMMSS.json     # Raw results
-│   ├── summary_YYYYMMDD_HHMMSS.md    # Human-readable report
-│   └── plots/
-│       ├── accuracy_comparison.png
-│       ├── token_efficiency.png
-│       ├── latency_comparison.png
-│       ├── scaling_analysis.png
-│       ├── cost_comparison.png
-│       └── summary_dashboard.png
-```
-
-## Extending the Benchmark
-
-### Adding a New Task
-
-```python
-# In eval/tasks.py
-
-@register_task("my_task")
-class MyTask(BaseTask):
-    """Description of your task."""
-    
-    def generate(self, seed: int = 42, **kwargs) -> TaskInstance:
-        # Generate task, context, and expected answer
-        return TaskInstance(
-            task="Find the answer...",
-            context="...",
-            expected="answer",
-        )
-    
-    def check(self, response: str, expected: str) -> bool:
-        # Return True if response is correct
-        return expected.lower() in response.lower()
-```
-
-### Adding a New Runner
-
-```python
-# In eval/runners.py
-
-@register_runner("my_method")
-class MyRunner(BaseRunner):
-    """My custom RLM implementation."""
-    
-    def run(self, task: str, context: str, model: str) -> RunResult:
-        # Run your method
-        return RunResult(
-            response="...",
-            total_tokens=100,
-            input_tokens=80,
-            output_tokens=20,
-            time_seconds=1.5,
-            iterations=3,
-        )
-```
-
-## Reproducing Results
-
-To reproduce our benchmark results:
-
-1. **Set up environment**:
-   ```bash
-   cd recursive-language-model
-   uv sync
-   export OPENAI_API_KEY="your-key"
-   ```
-
-2. **Run evaluation**:
-   ```bash
-   uv run python eval/run.py --model gpt-5-mini --runs 1
-   ```
-
-3. **View results**:
-   ```bash
-   open eval/results/plots/
-   cat eval/results/summary_*.md
-   ```
-
-## Benchmark Results
-
-**Note**: The original RLM paper authors report that RLMs *improve* accuracy on long-context tasks (e.g., CodeQA: 24% → 62%, OOLONG: RLM outperforms GPT-5 by 2x+). The results below are from **this minrlm implementation** tested on gpt-5-nano across 162 evaluations.
-
-### Overall Performance
-
-| Metric | minRLM | Vanilla | Official |
-|--------|--------|---------|----------|
-| **Accuracy** | 87.0% | 92.6% | 79.6% |
-| **Token Efficiency** | 2,247 avg | 9,441 avg | 13,602 avg |
-| **Token Savings** | - | **4.20x fewer** | **6.1x fewer** |
-| **Cost** | $0.001750 | $0.007099 | $0.018924 |
-| **Cost Savings** | - | **4.1x cheaper** | **10.8x cheaper** |
-| **Speed** | 5.0s | 15.3s | 53.2s |
-| **Avg Iterations** | 1.1 | 1.0 | 1.0 |
-
-### Where RLMs Excel
-
-- **Large contexts (128K+)**: RLMs often outperform vanilla (JSON_AGGREGATION_131K: 100% vs 0%, OOLONG_128K: 100% vs 0%)
-- **Extreme contexts (6M-11M)**: minRLM achieves 100% accuracy where vanilla fails (token limit exceeded)
-- **JSON tasks**: 100% accuracy, massive savings (e.g., 131K JSON extraction: 1,993 vs 46,890 tokens = **23.5x**)
-- **Token usage stays flat**: ~2K tokens regardless of context size (vs vanilla's linear growth)
-- **Scaling tasks**: Consistent performance across all sizes (8K to 131K+), while vanilla token usage grows linearly
-- **Multi-hop reasoning**: BrowseComp+ at 11M contexts - minRLM succeeds where vanilla cannot even attempt the task
-
-### Where RLMs Trade Accuracy for Efficiency
-
-- **Small contexts (<64K)**: Vanilla often has higher accuracy (better for simple tasks where token cost is negligible)
-- **Some code understanding (CODEQA)**: Mixed results, depends on context size and task complexity
-
-### Detailed Task Results
-
-| Task | Context | Vanilla | minrlm | Savings | Notes |
-|------|---------|---------|--------|---------|-------|
-| JSON Extraction | 131K | 46,890 tokens | 1,993 tokens | **23.5x** | 100% accuracy both |
-| JSON Aggregation | 131K | 38,746 tokens (0%) | 1,975 tokens (100%) | **19.6x** | RLM wins on accuracy |
-| OOLONG | 128K | 37,873 tokens (0%) | 1,917 tokens (100%) | **19.7x** | RLM wins on accuracy |
-| Multi-needle | 128K | 17,059 tokens | 1,848 tokens | **9.2x** | 100% accuracy both |
-| Long context | 128K | 16,576 tokens | 1,827 tokens | **9.1x** | 100% accuracy both |
-| BrowseComp+ | 11M | ❌ Fails | ✅ 100% (~2K tokens) | **∞** | Vanilla hits token limit |
-
-### Analysis
-
-**The takeaway**: This implementation trades a small accuracy drop (5.6%) for massive token savings (4.20x) and cost reduction (4.1x). The approach shines on structured data and large contexts where token costs dominate. At extreme scales (6M-11M), RLMs are the only viable option.
-
-**Why the accuracy difference?** The original paper shows RLMs *improve* accuracy on long-context tasks (e.g., CodeQA: 24% → 62%). Our results differ likely due to:
-- **Context sizes**: Paper tests up to 1M-10M tokens; our tests include up to 11M for BrowseComp+
-- **Model choice**: Paper uses GPT-5-mini; we tested with GPT-5-nano (weaker reasoning)
-- **Task focus**: Paper emphasizes complex aggregation tasks where RLMs excel; our mix includes simpler tasks
-
-**Key insight**: At large contexts (128K+), RLMs often match or exceed vanilla accuracy while using 10-90x fewer tokens. At extreme scales (6M-11M), RLMs are the only viable option - vanilla fails due to token limits.
-
-## Citation
-
-If you use this evaluation suite, please cite the original RLM paper:
-
-```bibtex
-@misc{zhang2025recursivelanguagemodels,
-      title={Recursive Language Models}, 
-      author={Alex L. Zhang and Tim Kraska and Omar Khattab},
-      year={2025},
-      eprint={2512.24601},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2512.24601}, 
-}
-```
-
-- **Paper**: [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601)
-- **Official Implementation**: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm)
-
-## License
-
-MIT License - See repository root.
+Raw data:
+- minRLM: [`BEST_EVALS/BEST_e2e_gpt5-mini-all-tasks-new-prompts6-newer5-50/eval_20260302_185227.json`](../BEST_EVALS/BEST_e2e_gpt5-mini-all-tasks-new-prompts6-newer5-50/eval_20260302_185227.json)
+- Vanilla + Official: [`BEST_EVALS/BEST_e2e_gpt5-mini-all-tasks/eval_20260302_143412.json`](../BEST_EVALS/BEST_e2e_gpt5-mini-all-tasks/eval_20260302_143412.json)

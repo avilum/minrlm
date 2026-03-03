@@ -30,12 +30,17 @@ If Docker is not available, RLM will fall back to the local PythonREPL
 with a warning message.
 """
 
+import atexit
+import itertools
 import json
 import logging
+import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -43,10 +48,70 @@ from typing import Any
 log = logging.getLogger(__name__)
 
 # Enable debug logging if MINRLM_VERBOSE is set
-import os
-
 if os.environ.get("MINRLM_VERBOSE"):
     logging.basicConfig(level=logging.DEBUG, format="[DockerREPL] %(message)s", stream=sys.stderr)
+
+# ---------------------------------------------------------------------------
+# Process-wide container registry — ensures all containers spawned by this
+# process are killed when the process exits, even on SIGTERM / SIGKILL-induced
+# parent death, crash, or KeyboardInterrupt.
+# ---------------------------------------------------------------------------
+
+_REGISTRY: set[str] = set()          # container names (minrlm_<pid>_<n>)
+_REGISTRY_LOCK = threading.Lock()
+_CONTAINER_COUNTER = itertools.count(1)
+
+
+def _register_container(name: str) -> None:
+    with _REGISTRY_LOCK:
+        _REGISTRY.add(name)
+
+
+def _unregister_container(name: str) -> None:
+    with _REGISTRY_LOCK:
+        _REGISTRY.discard(name)
+
+
+def _kill_container(name: str) -> None:
+    """Best-effort docker kill + rm for a single container."""
+    try:
+        subprocess.run(["docker", "kill", name], capture_output=True, timeout=10)
+    except Exception:
+        pass
+    try:
+        subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
+def _cleanup_all_containers() -> None:
+    """Kill every container this process ever started.  Called via atexit."""
+    with _REGISTRY_LOCK:
+        names = list(_REGISTRY)
+    if names:
+        log.debug(f"[DockerREPL] atexit: killing {len(names)} container(s): {names}")
+    for name in names:
+        _kill_container(name)
+    with _REGISTRY_LOCK:
+        _REGISTRY.clear()
+
+
+def _signal_handler(signum: int, frame) -> None:
+    """Kill containers then re-raise the signal so the process exits normally."""
+    _cleanup_all_containers()
+    signal.signal(signum, signal.SIG_DFL)
+    os.kill(os.getpid(), signum)
+
+
+# Register atexit hook (handles normal exit, sys.exit, unhandled exceptions)
+atexit.register(_cleanup_all_containers)
+
+# Register signal handlers for graceful and forced termination
+for _sig in (signal.SIGTERM, signal.SIGINT):
+    try:
+        signal.signal(_sig, _signal_handler)
+    except (OSError, ValueError):
+        pass  # can't set signal handlers in non-main threads; atexit still covers it
 
 # Strict seccomp profile - blocks networking and dangerous syscalls
 # NOTE: We cannot block execve as it's needed to start the Python interpreter.
@@ -267,7 +332,7 @@ class DockerREPL:
 
     def __init__(
         self,
-        image: str = "python:3.11-slim",
+        image: str = "python:3.14-slim",
         memory_limit: str = "256m",
         cpu_limit: float = 1.0,
         timeout: int = 60,
@@ -279,7 +344,7 @@ class DockerREPL:
         Initialize DockerREPL.
 
         Args:
-            image: Docker image to use (default: python:3.11-slim)
+            image: Docker image to use (default: python:3.14-slim)
             memory_limit: Memory limit (e.g., "256m", "1g")
             cpu_limit: CPU limit (1.0 = 1 CPU core)
             timeout: Execution timeout in seconds
@@ -413,12 +478,17 @@ class DockerREPL:
                     f.write(DOCKER_WRAPPER_SCRIPT)
                 log.debug(f"Wrote wrapper script to {wrapper_path}")
 
+                # Unique container name — tracked for cleanup on process exit
+                container_name = f"minrlm_{os.getpid()}_{next(_CONTAINER_COUNTER)}"
+                _register_container(container_name)
+
                 # Build Docker command
                 cmd = [
                     "docker",
                     "run",
                     "--rm",  # Remove container after execution
                     "-i",  # Interactive (for stdin)
+                    f"--name={container_name}",  # Named for reliable kill-on-exit
                     f"--memory={self.memory_limit}",
                     f"--cpus={self.cpu_limit}",
                     "--pids-limit=100",  # Limit processes
@@ -443,7 +513,7 @@ class DockerREPL:
                 )
 
                 log.debug(f"Docker command: {' '.join(cmd)}")
-                log.debug(f"Running with timeout={self.timeout}s...")
+                log.debug(f"Running with timeout={self.timeout}s, container={container_name}...")
 
                 try:
                     result = subprocess.run(
@@ -543,7 +613,8 @@ class DockerREPL:
                         }
 
                 except subprocess.TimeoutExpired:
-                    log.debug(f"Docker execution timed out after {self.timeout}s")
+                    log.debug(f"Docker timed out after {self.timeout}s — killing {container_name}")
+                    _kill_container(container_name)
                     return {
                         "stdout": "",
                         "output": None,
@@ -552,12 +623,16 @@ class DockerREPL:
                     }
                 except Exception as e:
                     log.debug(f"Docker execution failed with exception: {e}")
+                    _kill_container(container_name)
                     return {
                         "stdout": "",
                         "output": None,
                         "error": f"Docker execution failed: {e}",
                         "state": {},
                     }
+                finally:
+                    # Container exited cleanly (--rm handles removal); drop from registry
+                    _unregister_container(container_name)
 
         # If we exhausted retries (too many sub_llm calls)
         return {

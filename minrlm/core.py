@@ -392,7 +392,7 @@ class RLM:
         max_sub_llm_calls: int = 100,  # Guardrail for recursive sub_llm usage
         # Docker options
         use_docker: bool = False,  # Run code in Docker container
-        docker_image: str = "python:3.11-slim",
+        docker_image: str = "python:3.14-slim",
         docker_memory: str = "256m",
         docker_timeout: int = 60,
     ):

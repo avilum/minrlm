@@ -1,905 +1,764 @@
 """
-Visualization Utilities for RLM Evaluation
+Visualization for RLM Evaluation Results
 
-Generates publication-quality plots:
-- Accuracy comparison bar charts
-- Token efficiency analysis
-- Latency comparison
-- Scaling analysis (context length vs accuracy)
-- Cost by task and context length
-- Comprehensive summary dashboard
+One concept per figure.  No crammed subplots.  No overlapping text.
+
+Plots generated
+---------------
+1.  accuracy_per_task          - Grouped horizontal bars, sorted by task
+2.  tokens_per_task            - Grouped bars (log scale) per task & runner
+3.  latency_per_task           - Grouped bars per task & runner
+4.  cost_per_task              - Grouped bars per task & runner (if cost available)
+5.  accuracy_vs_cost           - Scatter: accuracy vs avg cost per query
+6.  accuracy_vs_latency        - Scatter: accuracy vs avg latency per task
+7.  token_savings              - Token savings factor vs Vanilla & Official per task
+8.  summary_dashboard          - One-page headline numbers
+
+Usage
+-----
+    # From a JSON results file
+    uv run python -m eval.visualize path/to/eval.json [output_dir]
+
+    # Auto-discovers the newest JSON in a directory tree
+    uv run python -m eval.visualize logs/my_eval/ [output_dir]
 """
 
+from __future__ import annotations
+
 import json
+import sys
 from pathlib import Path
+from typing import Any
+
+import warnings
 
 import matplotlib
 
-matplotlib.use("Agg")  # Use non-GUI backend before importing pyplot
+matplotlib.use("Agg")
+warnings.filterwarnings("ignore", message="Tight layout not applied.*")
+warnings.filterwarnings("ignore", message="This figure includes Axes.*tight_layout.*")
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 
 from .metrics import EvalResult, aggregate_results, compute_statistics
 
 # =============================================================================
-# Style Configuration
+# Style & identity
 # =============================================================================
 
-STYLE = {
-    "figure.figsize": (12, 8),
-    "font.size": 11,
-    "axes.titlesize": 13,
-    "axes.labelsize": 11,
-    "xtick.labelsize": 10,
-    "ytick.labelsize": 10,
-    "legend.fontsize": 10,
-    "lines.linewidth": 2,
-    "lines.markersize": 8,
-    "axes.grid": True,
-    "grid.alpha": 0.3,
+plt.rcParams.update(
+    {
+        "figure.dpi": 150,
+        "font.size": 12,
+        "axes.titlesize": 14,
+        "axes.labelsize": 12,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.fontsize": 11,
+        "axes.grid": True,
+        "grid.alpha": 0.25,
+        "lines.linewidth": 2,
+        "lines.markersize": 9,
+    }
+)
+
+# Runner display metadata — handles all known name variants
+_RUNNER_META: dict[str, dict[str, Any]] = {
+    "vanilla":          {"label": "Vanilla LLM",   "color": "#2980B9", "marker": "o", "zorder": 2},
+    "official":         {"label": "Official RLM",  "color": "#E74C3C", "marker": "^", "zorder": 3},
+    "minrlm":           {"label": "minRLM",        "color": "#27AE60", "marker": "s", "zorder": 4},
+    "ours":             {"label": "minRLM",        "color": "#27AE60", "marker": "s", "zorder": 4},
+    "minrlm-reasoning": {"label": "minRLM",        "color": "#27AE60", "marker": "D", "zorder": 5},
 }
 
-# Color scheme - designed for clarity and accessibility
-COLORS = {
-    "vanilla": "#E74C3C",  # Red - baseline
-    "ours": "#2ECC71",  # Green - our implementation
-    "official": "#3498DB",  # Blue - official implementation
-}
-
-LABELS = {
-    "vanilla": "Vanilla LLM",
-    "ours": "minRLM",
-    "official": "Official RLM",
-}
-
-MARKERS = {
-    "vanilla": "o",
-    "ours": "s",
-    "official": "^",
-}
+_PREFERRED_ORDER = ["vanilla", "official", "minrlm", "ours", "minrlm-reasoning"]
 
 
-def apply_style():
-    """Apply consistent plot styling."""
-    plt.rcParams.update(STYLE)
+def _meta(runner: str) -> dict[str, Any]:
+    return _RUNNER_META.get(runner, {"label": runner, "color": "#95A5A6", "marker": "P", "zorder": 1})
+
+
+def _label(runner: str) -> str:
+    return _meta(runner)["label"]
+
+
+def _color(runner: str) -> str:
+    return _meta(runner)["color"]
+
+
+def _sort_runners(runners: list[str]) -> list[str]:
+    order = {r: i for i, r in enumerate(_PREFERRED_ORDER)}
+    return sorted(runners, key=lambda r: order.get(r, 99))
+
+
+def _task_label(name: str) -> str:
+    return (
+        name.upper()
+        .replace("OFFICIAL_", "")
+        .replace("_LONGBENCH_V2", " LONGBENCH V2")
+        .replace("_V2", " V2")
+        .replace("_2025", " 2025")
+        .replace("_", " ")
+        .strip()
+    )
+
+
+def _save(fig: plt.Figure, path: Path) -> None:
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
 
 
 # =============================================================================
-# Individual Plot Functions
+# 1. Accuracy per task  (horizontal grouped bars)
 # =============================================================================
 
 
-def plot_accuracy_comparison(
-    results: list[EvalResult], output_path: Path | None = None, title: str = "Accuracy Comparison"
+def plot_accuracy_per_task(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "Accuracy by Task & Runner",
 ) -> plt.Figure:
-    """
-    Bar chart comparing accuracy across methods and tasks.
-    """
-    apply_style()
+    """Horizontal grouped bar chart — tasks on Y, one bar per runner."""
+    agg = aggregate_results(results)
+    tasks = sorted(agg.keys(), key=_task_label)
+    runners = _sort_runners({r.runner_name for r in results})
 
-    aggregated = aggregate_results(results)
-    tasks = sorted(aggregated.keys())
-    runners = sorted({r.runner_name for r in results})
+    n_tasks = len(tasks)
+    n_runners = len(runners)
+    bar_h = 0.65 / n_runners
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig_h = max(5, n_tasks * 0.7 + 2)
+    fig, ax = plt.subplots(figsize=(11, fig_h))
 
-    x = np.arange(len(tasks))
-    width = 0.25
+    y = np.arange(n_tasks)
 
     for i, runner in enumerate(runners):
-        accuracies = []
-        errors = []
-        for task in tasks:
-            if runner in aggregated[task]:
-                metrics = aggregated[task][runner]
-                accuracies.append(metrics.accuracy)
-                errors.append(metrics.accuracy_std)
-            else:
-                accuracies.append(0)
-                errors.append(0)
+        accs = [agg[t][runner].accuracy if runner in agg[t] else 0 for t in tasks]
+        errs = [agg[t][runner].accuracy_std if runner in agg[t] else 0 for t in tasks]
+        offsets = y + (i - (n_runners - 1) / 2) * bar_h
 
-        bars = ax.bar(
-            x + i * width,
-            accuracies,
-            width,
-            label=LABELS.get(runner, runner),
-            color=COLORS.get(runner, f"C{i}"),
-            yerr=errors if max(errors) > 0 else None,
+        bars = ax.barh(
+            offsets, accs, bar_h * 0.85,
+            label=_label(runner),
+            color=_color(runner),
+            xerr=errs if max(errs) > 0 else None,
             capsize=3,
-            alpha=0.85,
+            alpha=0.88,
+            error_kw={"elinewidth": 1.2},
         )
-
-        # Add value labels
-        for bar, val in zip(bars, accuracies):
-            if val > 0:
+        for bar, val in zip(bars, accs):
+            if val > 2:
                 ax.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + 2,
+                    min(val + 1.5, 103),
+                    bar.get_y() + bar.get_height() / 2,
                     f"{val:.0f}%",
-                    ha="center",
-                    va="bottom",
-                    fontsize=9,
+                    va="center", ha="left", fontsize=9,
                 )
 
-    ax.set_ylabel("Accuracy (%)")
-    ax.set_title(title, fontweight="bold")
-    ax.set_xticks(x + width * (len(runners) - 1) / 2)
-    ax.set_xticklabels([t.upper().replace("_", " ") for t in tasks])
-    ax.legend(loc="lower right")
-    ax.set_ylim(0, 115)
-    ax.axhline(y=100, color="gray", linestyle="--", alpha=0.5)
-
+    ax.set_xlabel("Accuracy (%)")
+    ax.set_title(title, fontweight="bold", pad=12)
+    ax.set_yticks(y)
+    ax.set_yticklabels([_task_label(t) for t in tasks])
+    ax.set_xlim(0, 115)
+    ax.axvline(x=100, color="gray", linestyle="--", alpha=0.4, linewidth=1)
+    ax.legend(loc="lower right", framealpha=0.9)
     plt.tight_layout()
-
     if output_path:
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
-
+        _save(fig, output_path)
     return fig
 
 
-def plot_token_efficiency(
-    results: list[EvalResult], output_path: Path | None = None, title: str = "Token Usage Comparison"
+# =============================================================================
+# 2. Tokens per task  (grouped bars, log scale)
+# =============================================================================
+
+
+def plot_tokens_per_task(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "Avg Tokens per Task",
 ) -> plt.Figure:
-    """
-    Stacked bar chart showing input vs output tokens.
-    """
-    apply_style()
+    """Grouped vertical bars, log-scale Y, one group per task."""
+    agg = aggregate_results(results)
+    tasks = sorted(agg.keys(), key=_task_label)
+    runners = _sort_runners({r.runner_name for r in results})
 
-    aggregated = aggregate_results(results)
-    tasks = sorted(aggregated.keys())
-    runners = sorted({r.runner_name for r in results})
+    n_tasks = len(tasks)
+    n_runners = len(runners)
+    bar_w = 0.65 / n_runners
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig_w = max(10, n_tasks * 1.1 + 2)
+    fig, ax = plt.subplots(figsize=(fig_w, 6))
 
-    # Left: Total tokens by task and method
-    ax1 = axes[0]
-    x = np.arange(len(tasks))
-    width = 0.25
+    x = np.arange(n_tasks)
+
+    # Collect (runner_idx, x_pos, label) for zero-value annotations — placed after yscale is set
+    na_annotations: list[tuple[float, str]] = []
 
     for i, runner in enumerate(runners):
-        tokens = []
-        for task in tasks:
-            if runner in aggregated[task]:
-                tokens.append(aggregated[task][runner].avg_total_tokens)
-            else:
-                tokens.append(0)
-
-        bars = ax1.bar(
-            x + i * width,
-            tokens,
-            width,
-            label=LABELS.get(runner, runner),
-            color=COLORS.get(runner, f"C{i}"),
-            alpha=0.85,
-        )
-
-        for bar, val in zip(bars, tokens):
+        toks = [agg[t][runner].avg_total_tokens if runner in agg[t] else 0 for t in tasks]
+        xs = x + (i - (n_runners - 1) / 2) * bar_w
+        # Skip zero-value bars (log(0) = -inf breaks the axis); record them for N/A annotation
+        valid_xs   = [xi for xi, v in zip(xs, toks) if v > 0]
+        valid_toks = [v  for v in toks if v > 0]
+        ax.bar(valid_xs, valid_toks, bar_w * 0.85,
+               label=_label(runner), color=_color(runner), alpha=0.88)
+        for xi, val in zip(xs, toks):
             if val > 0:
-                ax1.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar.get_height(),
-                    f"{val:.0f}",
-                    ha="center",
-                    va="bottom",
-                    fontsize=8,
-                    rotation=45,
-                )
+                ax.text(xi, val * 1.08, f"{int(val):,}",
+                        ha="center", va="bottom", fontsize=8, rotation=45)
+            else:
+                na_annotations.append((xi, _color(runner)))
 
-    ax1.set_ylabel("Total Tokens")
-    ax1.set_title("Token Usage by Task", fontweight="bold")
-    ax1.set_xticks(x + width * (len(runners) - 1) / 2)
-    ax1.set_xticklabels([t.upper().replace("_", " ") for t in tasks])
-    ax1.legend()
-    ax1.set_yscale("log")
+    ax.set_ylabel("Avg Tokens (log scale)")
+    ax.set_title(title, fontweight="bold", pad=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels([_task_label(t) for t in tasks], rotation=30, ha="right")
+    ax.set_yscale("log")
 
-    # Right: Input vs Output breakdown
-    ax2 = axes[1]
-
-    # Calculate totals per runner
-    runner_totals = {}
-    for runner in runners:
-        runner_results = [r for r in results if r.runner_name == runner]
-        runner_totals[runner] = {
-            "input": sum(r.input_tokens for r in runner_results),
-            "output": sum(r.output_tokens for r in runner_results),
-        }
-
-    x = np.arange(len(runners))
-    width = 0.6
-
-    input_vals = [runner_totals[r]["input"] for r in runners]
-    output_vals = [runner_totals[r]["output"] for r in runners]
-
-    ax2.bar(x, input_vals, width, label="Input Tokens", color="#1976D2", alpha=0.8)
-    ax2.bar(x, output_vals, width, bottom=input_vals, label="Output Tokens", color="#FFC107", alpha=0.8)
-
-    for i, (inp, out) in enumerate(zip(input_vals, output_vals)):
-        total = inp + out
-        ax2.text(i, total, f"{total:,.0f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
-
-    ax2.set_ylabel("Total Tokens")
-    ax2.set_title("Input vs Output Breakdown", fontweight="bold")
-    ax2.set_xticks(x)
-    ax2.set_xticklabels([LABELS.get(r, r) for r in runners])
-    ax2.legend()
-
-    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.02)
+    # Place N/A labels using axes-fraction transform so they sit just above the x-axis
+    # regardless of the log-scale y limits (avoids canvas expansion)
+    for xi, color in na_annotations:
+        ax.annotate("N/A", xy=(xi, 0), xycoords=("data", "axes fraction"),
+                    xytext=(0, 4), textcoords="offset points",
+                    ha="center", va="bottom", fontsize=7,
+                    color=color, style="italic")
+    ax.legend(framealpha=0.9)
     plt.tight_layout()
-
     if output_path:
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
-
+        _save(fig, output_path)
     return fig
 
 
-def plot_latency_comparison(
-    results: list[EvalResult], output_path: Path | None = None, title: str = "Latency Comparison"
+# =============================================================================
+# 3. Latency per task  (grouped bars)
+# =============================================================================
+
+
+def plot_latency_per_task(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "Avg Latency per Task",
 ) -> plt.Figure:
-    """
-    Bar chart showing execution time across methods.
-    """
-    apply_style()
+    """Grouped vertical bars, one group per task, with std-dev error bars."""
+    agg = aggregate_results(results)
+    tasks = sorted(agg.keys(), key=_task_label)
+    runners = _sort_runners({r.runner_name for r in results})
 
-    aggregated = aggregate_results(results)
-    tasks = sorted(aggregated.keys())
-    runners = sorted({r.runner_name for r in results})
+    n_tasks = len(tasks)
+    n_runners = len(runners)
+    bar_w = 0.65 / n_runners
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig_w = max(10, n_tasks * 1.1 + 2)
+    fig, ax = plt.subplots(figsize=(fig_w, 6))
 
-    # Left: Time by task
-    ax1 = axes[0]
-    x = np.arange(len(tasks))
-    width = 0.25
+    x = np.arange(n_tasks)
 
     for i, runner in enumerate(runners):
-        times = []
-        errors = []
-        for task in tasks:
-            if runner in aggregated[task]:
-                metrics = aggregated[task][runner]
-                times.append(metrics.avg_time_seconds)
-                errors.append(metrics.std_time_seconds)
-            else:
-                times.append(0)
-                errors.append(0)
-
-        bars = ax1.bar(
-            x + i * width,
-            times,
-            width,
-            label=LABELS.get(runner, runner),
-            color=COLORS.get(runner, f"C{i}"),
-            yerr=errors if max(errors) > 0 else None,
-            capsize=3,
-            alpha=0.85,
+        times = [agg[t][runner].avg_time_seconds if runner in agg[t] else 0 for t in tasks]
+        errs = [agg[t][runner].std_time_seconds if runner in agg[t] else 0 for t in tasks]
+        xs = x + (i - (n_runners - 1) / 2) * bar_w
+        bars = ax.bar(
+            xs, times, bar_w * 0.85,
+            label=_label(runner), color=_color(runner), alpha=0.88,
+            yerr=errs if max(errs) > 0 else None,
+            capsize=3, error_kw={"elinewidth": 1.2},
         )
-
         for bar, val in zip(bars, times):
             if val > 0:
-                ax1.text(
+                ax.text(
                     bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + 0.5,
-                    f"{val:.1f}s",
-                    ha="center",
-                    va="bottom",
-                    fontsize=8,
+                    bar.get_height() + max(errs) * 0.1 + 0.5,
+                    f"{val:.0f}s",
+                    ha="center", va="bottom", fontsize=8,
                 )
 
-    ax1.set_ylabel("Time (seconds)")
-    ax1.set_title("Execution Time by Task", fontweight="bold")
-    ax1.set_xticks(x + width * (len(runners) - 1) / 2)
-    ax1.set_xticklabels([t.upper().replace("_", " ") for t in tasks])
-    ax1.legend()
-
-    # Right: Iterations (for RLM methods)
-    ax2 = axes[1]
-
-    for i, runner in enumerate(runners):
-        iters = []
-        for task in tasks:
-            if runner in aggregated[task]:
-                iters.append(aggregated[task][runner].avg_iterations)
-            else:
-                iters.append(0)
-
-        bars = ax2.bar(
-            x + i * width,
-            iters,
-            width,
-            label=LABELS.get(runner, runner),
-            color=COLORS.get(runner, f"C{i}"),
-            alpha=0.85,
-        )
-
-    ax2.set_ylabel("Iterations")
-    ax2.set_title("RLM Iterations by Task", fontweight="bold")
-    ax2.set_xticks(x + width * (len(runners) - 1) / 2)
-    ax2.set_xticklabels([t.upper().replace("_", " ") for t in tasks])
-    ax2.legend()
-
-    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.02)
+    ax.set_ylabel("Avg Latency (seconds)")
+    ax.set_title(title, fontweight="bold", pad=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels([_task_label(t) for t in tasks], rotation=30, ha="right")
+    ax.legend(framealpha=0.9)
     plt.tight_layout()
-
     if output_path:
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
-
+        _save(fig, output_path)
     return fig
 
 
-def plot_scaling_analysis(
-    results: list[EvalResult], output_path: Path | None = None, title: str = "Context Scaling Analysis"
+# =============================================================================
+# 4. Cost per task  (grouped bars)
+# =============================================================================
+
+
+def plot_cost_per_task(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "Avg Cost per Query by Task",
+) -> plt.Figure | None:
+    """Grouped bars showing avg cost per query (USD) per task."""
+    if not any(r.cost_usd is not None for r in results):
+        return None
+
+    agg = aggregate_results(results)
+    tasks = sorted(agg.keys(), key=_task_label)
+    runners = _sort_runners({r.runner_name for r in results})
+
+    n_tasks = len(tasks)
+    n_runners = len(runners)
+    bar_w = 0.65 / n_runners
+
+    fig_w = max(10, n_tasks * 1.1 + 2)
+    fig, ax = plt.subplots(figsize=(fig_w, 6))
+    x = np.arange(n_tasks)
+
+    for i, runner in enumerate(runners):
+        costs_milli = []
+        for t in tasks:
+            m = agg[t].get(runner)
+            costs_milli.append((m.avg_cost_usd or 0) * 1000 if m else 0)
+        xs = x + (i - (n_runners - 1) / 2) * bar_w
+        bars = ax.bar(xs, costs_milli, bar_w * 0.85, label=_label(runner), color=_color(runner), alpha=0.88)
+        for bar, val in zip(bars, costs_milli):
+            if val > 0.01:
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.02,
+                    f"${val:.2f}",
+                    ha="center", va="bottom", fontsize=8,
+                )
+
+    ax.set_ylabel("Cost per Query  (milli-USD = $/1000 queries)")
+    ax.set_title(title, fontweight="bold", pad=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels([_task_label(t) for t in tasks], rotation=30, ha="right")
+    ax.legend(framealpha=0.9)
+    plt.tight_layout()
+    if output_path:
+        _save(fig, output_path)
+    return fig
+
+
+# =============================================================================
+# 5. Accuracy vs Cost  (scatter, efficiency frontier)
+# =============================================================================
+
+
+def plot_accuracy_vs_cost(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "Accuracy vs Cost — Efficiency Frontier",
+) -> plt.Figure | None:
+    """Scatter plot: each point = (task, runner).  Better = up-left corner."""
+    if not any(r.cost_usd is not None for r in results):
+        return None
+
+    agg = aggregate_results(results)
+    tasks = sorted(agg.keys())
+    runners = _sort_runners({r.runner_name for r in results})
+
+    # Per-runner label offsets to reduce overlap
+    _label_offsets = [
+        (6, 4), (6, -14), (-70, 4), (-70, -14), (6, 14),
+    ]
+
+    fig, ax = plt.subplots(figsize=(11, 7))
+
+    for ri, runner in enumerate(runners):
+        xs, ys, labels_pt = [], [], []
+        for task in tasks:
+            m = agg[task].get(runner)
+            if m and m.avg_cost_usd is not None and m.avg_cost_usd > 0:
+                xs.append(m.avg_cost_usd * 1000)
+                ys.append(m.accuracy)
+                labels_pt.append(_task_label(task))
+        if not xs:
+            continue
+        meta = _meta(runner)
+        ax.scatter(xs, ys, s=110, color=meta["color"], marker=meta["marker"],
+                   label=_label(runner), zorder=meta["zorder"], alpha=0.9,
+                   edgecolors="white", linewidths=0.7)
+        ox, oy = _label_offsets[ri % len(_label_offsets)]
+        for x_pt, y_pt, lbl in zip(xs, ys, labels_pt):
+            ax.annotate(lbl, (x_pt, y_pt),
+                        textcoords="offset points", xytext=(ox, oy),
+                        fontsize=8, color=meta["color"], alpha=0.85,
+                        arrowprops={"arrowstyle": "-", "color": meta["color"],
+                                    "alpha": 0.3, "lw": 0.7})
+
+    ax.set_xlabel("Avg Cost per Query (milli-USD)")
+    ax.set_ylabel("Accuracy (%)")
+    ax.set_title(title, fontweight="bold", pad=12)
+    ax.set_ylim(-5, 110)
+    ax.annotate("← cheaper + more accurate →\n(ideal: top-left)",
+                xy=(0.02, 0.97), xycoords="axes fraction",
+                fontsize=9, color="gray", va="top")
+    ax.legend(framealpha=0.9)
+    plt.tight_layout()
+    if output_path:
+        _save(fig, output_path)
+    return fig
+
+
+# =============================================================================
+# 6. Accuracy vs Latency  (scatter)
+# =============================================================================
+
+
+def plot_accuracy_vs_latency(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "Accuracy vs Latency",
+) -> plt.Figure:
+    """Scatter: accuracy (y) vs avg latency in seconds (x) per (task, runner)."""
+    agg = aggregate_results(results)
+    tasks = sorted(agg.keys())
+    runners = _sort_runners({r.runner_name for r in results})
+
+    _label_offsets = [
+        (6, 4), (6, -14), (-70, 4), (-70, -14), (6, 14),
+    ]
+
+    fig, ax = plt.subplots(figsize=(11, 7))
+
+    for ri, runner in enumerate(runners):
+        xs, ys, labels_pt = [], [], []
+        for task in tasks:
+            m = agg[task].get(runner)
+            if m and m.avg_time_seconds > 0:
+                xs.append(m.avg_time_seconds)
+                ys.append(m.accuracy)
+                labels_pt.append(_task_label(task))
+        if not xs:
+            continue
+        meta = _meta(runner)
+        ax.scatter(xs, ys, s=110, color=meta["color"], marker=meta["marker"],
+                   label=_label(runner), zorder=meta["zorder"], alpha=0.9,
+                   edgecolors="white", linewidths=0.7)
+        ox, oy = _label_offsets[ri % len(_label_offsets)]
+        for x_pt, y_pt, lbl in zip(xs, ys, labels_pt):
+            ax.annotate(lbl, (x_pt, y_pt),
+                        textcoords="offset points", xytext=(ox, oy),
+                        fontsize=8, color=meta["color"], alpha=0.85,
+                        arrowprops={"arrowstyle": "-", "color": meta["color"],
+                                    "alpha": 0.3, "lw": 0.7})
+
+    ax.set_xlabel("Avg Latency (seconds)")
+    ax.set_ylabel("Accuracy (%)")
+    ax.set_title(title, fontweight="bold", pad=12)
+    ax.set_ylim(-5, 110)
+    ax.annotate("← faster + more accurate →\n(ideal: top-left)",
+                xy=(0.02, 0.97), xycoords="axes fraction",
+                fontsize=9, color="gray", va="top")
+    ax.legend(framealpha=0.9)
+    plt.tight_layout()
+    if output_path:
+        _save(fig, output_path)
+    return fig
+
+
+# =============================================================================
+# 7. Token savings vs baselines  (bar chart)
+# =============================================================================
+
+
+def plot_token_savings(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "Token Savings vs Baselines",
+) -> plt.Figure | None:
+    """
+    For each task show how many × fewer tokens minRLM used vs Vanilla and Official.
+    Bars > 1 mean we are cheaper.  Only shown when at least one baseline is present.
+    """
+    agg = aggregate_results(results)
+    tasks = sorted(agg.keys(), key=_task_label)
+    all_runners = {r.runner_name for r in results}
+
+    rlm_runners = [r for r in _PREFERRED_ORDER if r in all_runners and r not in ("vanilla", "official")]
+    baselines = [b for b in ("vanilla", "official") if b in all_runners]
+
+    if not rlm_runners or not baselines:
+        return None
+
+    # For each (rlm_runner, baseline, task) compute ratio
+    combos = [(rlm, base) for rlm in rlm_runners for base in baselines]
+    n_combos = len(combos)
+    if n_combos == 0:
+        return None
+
+    bar_w = 0.65 / n_combos
+    x = np.arange(len(tasks))
+
+    fig_w = max(10, len(tasks) * 1.2 + 2)
+    fig, ax = plt.subplots(figsize=(fig_w, 6))
+
+    palette = ["#2ECC71", "#1A8745", "#3498DB", "#1F618D"]
+    for idx, (rlm, base) in enumerate(combos):
+        ratios = []
+        for t in tasks:
+            rlm_m = agg[t].get(rlm)
+            base_m = agg[t].get(base)
+            if rlm_m and base_m and rlm_m.avg_total_tokens > 0:
+                ratios.append(base_m.avg_total_tokens / rlm_m.avg_total_tokens)
+            else:
+                ratios.append(0)
+
+        label = f"{_label(rlm)} vs {_label(base)}"
+        color = palette[idx % len(palette)]
+        xs = x + (idx - (n_combos - 1) / 2) * bar_w
+        bars = ax.bar(xs, ratios, bar_w * 0.85, label=label, color=color, alpha=0.85)
+        for bar, val in zip(bars, ratios):
+            bx = bar.get_x() + bar.get_width() / 2
+            if val >= 1.1:
+                ax.text(bx, bar.get_height() + 0.05, f"{val:.1f}×",
+                        ha="center", va="bottom", fontsize=9, fontweight="bold")
+            elif 0 < val < 1.0:
+                # minRLM uses MORE tokens on this task (e.g. GDPVAL infrastructure overhead)
+                ax.text(bx, bar.get_height() + 0.05, f"⬆ {1/val:.1f}×\noverhead",
+                        ha="center", va="bottom", fontsize=7, color="#C0392B",
+                        linespacing=1.3)
+
+    ax.axhline(1.0, color="gray", linestyle="--", alpha=0.5, linewidth=1.5, label="Break-even (1×)")
+    ax.set_ylabel("Token savings factor (higher = fewer tokens)")
+    ax.set_title(title, fontweight="bold", pad=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels([_task_label(t) for t in tasks], rotation=30, ha="right")
+    ax.legend(framealpha=0.9)
+    plt.tight_layout()
+    if output_path:
+        _save(fig, output_path)
+    return fig
+
+
+# =============================================================================
+# 8. Summary dashboard  (one-page headline numbers, clean layout)
+# =============================================================================
+
+
+def plot_summary_dashboard(
+    results: list[EvalResult],
+    output_path: Path | None = None,
+    title: str = "RLM Evaluation Summary",
 ) -> plt.Figure:
     """
-    Line chart showing accuracy vs context size.
-    Replicates Figure 1 from the RLM paper.
+    3-col top row (accuracy | tokens | latency) + full-width stats row.
     """
-    apply_style()
+    stats = compute_statistics(results)
+    runners = _sort_runners(list(stats.get("by_runner", {}).keys()))
+    by_r = stats.get("by_runner", {})
 
-    # Group by runner and context size
-    scaling_data: dict[str, dict[int, list[EvalResult]]] = {}
+    fig = plt.figure(figsize=(15, 9))
+    fig.suptitle(title, fontsize=16, fontweight="bold", y=0.99)
 
-    for r in results:
-        if r.runner_name not in scaling_data:
-            scaling_data[r.runner_name] = {}
-        size = r.context_size
-        if size not in scaling_data[r.runner_name]:
-            scaling_data[r.runner_name][size] = []
-        scaling_data[r.runner_name][size].append(r)
+    # GridSpec: 2 rows — top row 3 equal cols, bottom row full width
+    from matplotlib.gridspec import GridSpec
+    gs = GridSpec(2, 3, figure=fig, hspace=0.45, wspace=0.35,
+                  height_ratios=[1.6, 1])
 
-    # Check if we have scaling data
-    has_multiple_sizes = any(len(sizes) > 1 for sizes in scaling_data.values())
+    ax_acc = fig.add_subplot(gs[0, 0])
+    ax_tok = fig.add_subplot(gs[0, 1])
+    ax_lat = fig.add_subplot(gs[0, 2])
+    ax_txt = fig.add_subplot(gs[1, :])   # spans all 3 columns
+    ax_txt.axis("off")
 
-    if not has_multiple_sizes:
-        # Fallback: just show accuracy comparison
-        return plot_accuracy_comparison(results, output_path, title)
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    for runner, sizes in scaling_data.items():
-        sorted_sizes = sorted(sizes.keys())
-        x_vals = sorted_sizes
-        y_vals = []
-
-        for size in sorted_sizes:
-            size_results = sizes[size]
-            accuracy = sum(r.correct for r in size_results) / len(size_results) * 100
-            y_vals.append(accuracy)
-
-        ax.plot(
-            x_vals,
-            y_vals,
-            marker=MARKERS.get(runner, "o"),
-            color=COLORS.get(runner, "gray"),
-            label=LABELS.get(runner, runner),
-            linewidth=2,
-            markersize=8,
-        )
-
-    ax.set_xscale("log", base=2)
-    ax.set_xlabel("Context Size (characters)", fontsize=11)
-    ax.set_ylabel("Accuracy (%)", fontsize=11)
-    ax.set_title(title, fontweight="bold", fontsize=12)
-    ax.set_ylim(-5, 105)
-    ax.legend(loc="lower left", fontsize=10)
-    ax.axhline(y=100, color="gray", linestyle="--", alpha=0.5)
-    ax.grid(True, alpha=0.3, linestyle="--")
-
-    # Format x-axis with powers of 2 or readable sizes
-    def format_size(x, p):
-        if x <= 0:
-            return "0"
-        if x < 1024:
-            return f"{int(x)}"
-        elif x < 1024 * 1024:
-            return f"{int(x // 1024)}K"
-        elif x < 1024 * 1024 * 1024:
-            return f"{int(x // (1024 * 1024))}M"
-        else:
-            return f"{int(x // (1024 * 1024 * 1024))}G"
-
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(format_size))
-
-    # Highlight where RLM outperforms vanilla (if both present)
-    vanilla_runner = None
-    rlm_runner = None
-    for runner in scaling_data.keys():
-        if runner == "vanilla":
-            vanilla_runner = runner
-        elif runner in ["ours", "official"]:
-            rlm_runner = runner
-
-    if vanilla_runner and rlm_runner and vanilla_runner in scaling_data and rlm_runner in scaling_data:
-        # Find sizes where RLM accuracy > vanilla accuracy
-        vanilla_sizes = sorted(scaling_data[vanilla_runner].keys())
-        rlm_sizes = sorted(scaling_data[rlm_runner].keys())
-        common_sizes = sorted(set(vanilla_sizes) & set(rlm_sizes))
-
-        if common_sizes:
-            rlm_better_sizes = []
-            for size in common_sizes:
-                vanilla_acc = (
-                    sum(r.correct for r in scaling_data[vanilla_runner][size])
-                    / len(scaling_data[vanilla_runner][size])
-                    * 100
-                )
-                rlm_acc = (
-                    sum(r.correct for r in scaling_data[rlm_runner][size]) / len(scaling_data[rlm_runner][size]) * 100
-                )
-                if rlm_acc > vanilla_acc:
-                    rlm_better_sizes.append(size)
-
-            if rlm_better_sizes:
-                # Add annotation showing where RLM outperforms
-                min_better = min(rlm_better_sizes)
-                max_better = max(rlm_better_sizes)
-                ax.axvspan(min_better, max_better, alpha=0.1, color="green", label="RLM > Vanilla")
-                # Add text annotation
-                mid_size = (min_better * max_better) ** 0.5
-                ax.text(
-                    mid_size, 95, "RLM outperforms", ha="center", fontsize=9, style="italic", color="green", alpha=0.7
-                )
-
-    plt.tight_layout()
-
-    if output_path:
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
-
-    return fig
-
-
-def plot_cost_comparison(
-    results: list[EvalResult], output_path: Path | None = None, title: str = "Cost Analysis"
-) -> plt.Figure | None:
-    """
-    Bar chart showing cost comparison across methods.
-    Returns None if no cost data is available.
-    """
-    # Check if cost data is available
-    costs_available = any(r.cost_usd is not None for r in results)
-    if not costs_available:
-        return None
-
-    apply_style()
-
-    runners = sorted({r.runner_name for r in results})
-
-    # Calculate total cost per runner
-    runner_costs = {}
-    for runner in runners:
-        runner_results = [r for r in results if r.runner_name == runner]
-        costs = [r.cost_usd for r in runner_results if r.cost_usd is not None]
-        if costs:
-            runner_costs[runner] = {
-                "total": sum(costs),
-                "avg": sum(costs) / len(costs),
-                "count": len(costs),
-            }
-
-    if not runner_costs:
-        return None
-
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-    # Left: Total cost
-    ax1 = axes[0]
-    runners_with_cost = list(runner_costs.keys())
-    totals = [runner_costs[r]["total"] for r in runners_with_cost]
-    colors = [COLORS.get(r, "gray") for r in runners_with_cost]
-
-    bars = ax1.bar(runners_with_cost, totals, color=colors, alpha=0.85)
-    for bar, val in zip(bars, totals):
-        ax1.text(
-            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"${val:.6f}", ha="center", va="bottom", fontsize=10
-        )
-
-    ax1.set_ylabel("Total Cost (USD)")
-    ax1.set_title("Total Cost by Runner", fontweight="bold")
-    ax1.set_xticks(range(len(runners_with_cost)))
-    ax1.set_xticklabels([LABELS.get(r, r) for r in runners_with_cost])
-
-    # Right: Cost per query
-    ax2 = axes[1]
-    avgs = [runner_costs[r]["avg"] * 1000 for r in runners_with_cost]  # Cost per 1000 queries
-
-    bars = ax2.bar(runners_with_cost, avgs, color=colors, alpha=0.85)
-    for bar, val in zip(bars, avgs):
-        ax2.text(
-            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"${val:.2f}", ha="center", va="bottom", fontsize=10
-        )
-
-    ax2.set_ylabel("Cost per 1000 Queries (USD)")
-    ax2.set_title("Cost per 1000 Queries", fontweight="bold")
-    ax2.set_xticks(range(len(runners_with_cost)))
-    ax2.set_xticklabels([LABELS.get(r, r) for r in runners_with_cost])
-
-    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.02)
-    plt.tight_layout()
-
-    if output_path:
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
-
-    return fig
-
-
-def plot_cost_by_task_and_context(
-    results: list[EvalResult], output_path: Path | None = None, title: str = "Cost by Task & Context"
-) -> plt.Figure | None:
-    """
-    Combined view: cost by task category (left) and cost vs context length (right).
-    Groups similar tasks for readability.
-    """
-    costs_available = any(r.cost_usd is not None for r in results)
-    if not costs_available:
-        return None
-
-    apply_style()
-
-    runners = sorted({r.runner_name for r in results})
-
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-
-    # Left: Cost by task CATEGORY (grouped)
-    ax1 = axes[0]
-
-    # Group tasks into categories
-    def get_category(task_name: str) -> str:
-        task_upper = task_name.upper()
-        if "SCALING" in task_upper:
-            return "SCALING"
-        elif "LONG_CONTEXT" in task_upper:
-            return "LONG_CONTEXT"
-        elif "MULTI_NEEDLE" in task_upper:
-            return "MULTI_NEEDLE"
-        elif "JSON_EXTRACT" in task_upper:
-            return "JSON_EXTRACT"
-        elif "JSON_AGG" in task_upper:
-            return "JSON_AGG"
-        elif "OOLONG" in task_upper:
-            return "OOLONG"
-        elif "CODEQA" in task_upper:
-            return "CODEQA"
-        elif "BROWSECOMP" in task_upper:
-            return "BROWSECOMP"
-        else:
-            return task_upper.split("_")[0]  # First word
-
-    # Aggregate costs by category
-    category_costs: dict[str, dict[str, list[float]]] = {}
-    for r in results:
-        if r.cost_usd is None:
-            continue
-        cat = get_category(r.task_name)
-        if cat not in category_costs:
-            category_costs[cat] = {runner: [] for runner in runners}
-        if r.runner_name in category_costs[cat]:
-            category_costs[cat][r.runner_name].append(r.cost_usd)
-
-    categories = sorted(category_costs.keys())
-    x = np.arange(len(categories))
-    width = 0.25
-
-    for i, runner in enumerate(runners):
-        costs = []
-        for cat in categories:
-            cat_costs = category_costs[cat].get(runner, [])
-            avg_cost = sum(cat_costs) / len(cat_costs) * 1000 if cat_costs else 0
-            costs.append(avg_cost)
-
-        bars = ax1.bar(
-            x + i * width,
-            costs,
-            width,
-            label=LABELS.get(runner, runner),
-            color=COLORS.get(runner, f"C{i}"),
-            alpha=0.85,
-        )
-
-        for bar, val in zip(bars, costs):
-            if val > 0.5:  # Only label significant bars
-                ax1.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar.get_height(),
-                    f"${val:.1f}",
-                    ha="center",
-                    va="bottom",
-                    fontsize=9,
-                )
-
-    ax1.set_ylabel("Cost per 1000 Queries (USD)")
-    ax1.set_title("Cost by Task Category", fontweight="bold")
-    ax1.set_xticks(x + width * (len(runners) - 1) / 2)
-    ax1.set_xticklabels(categories, rotation=45, ha="right", fontsize=9)
-    ax1.legend(loc="upper right")
-
-    # Right: Cost vs context length (line chart)
-    ax2 = axes[1]
-
-    # Group by runner and context size
-    cost_by_context: dict[str, dict[int, list[float]]] = {}
-    for r in results:
-        if r.cost_usd is None or r.context_size == 0:
-            continue
-        if r.runner_name not in cost_by_context:
-            cost_by_context[r.runner_name] = {}
-        if r.context_size not in cost_by_context[r.runner_name]:
-            cost_by_context[r.runner_name][r.context_size] = []
-        cost_by_context[r.runner_name][r.context_size].append(r.cost_usd)
-
-    has_context_data = any(len(sizes) > 1 for sizes in cost_by_context.values())
-
-    if has_context_data:
-        for runner, sizes in cost_by_context.items():
-            sorted_sizes = sorted(sizes.keys())
-            x_vals = sorted_sizes
-            y_vals = [sum(sizes[s]) / len(sizes[s]) * 1000 for s in sorted_sizes]  # per 1000 queries
-
-            ax2.plot(
-                x_vals,
-                y_vals,
-                marker=MARKERS.get(runner, "o"),
-                color=COLORS.get(runner, "gray"),
-                label=LABELS.get(runner, runner),
-                linewidth=2,
-                markersize=8,
+    def _bars(ax: plt.Axes, values: list[float], ylabel: str, fmt: str, title_: str) -> None:
+        colors = [_color(r) for r in runners]
+        bars = ax.bar(range(len(runners)), values, color=colors, alpha=0.88, width=0.55)
+        vmax = max(values) if max(values) > 0 else 1
+        for bar, val in zip(bars, values):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + vmax * 0.02,
+                fmt.format(val),
+                ha="center", va="bottom", fontsize=12, fontweight="bold",
             )
+        ax.set_xticks(range(len(runners)))
+        ax.set_xticklabels([_label(r) for r in runners], fontsize=11)
+        ax.set_ylabel(ylabel, fontsize=11)
+        ax.set_title(title_, fontweight="bold", pad=10)
 
-        ax2.set_xscale("log", base=2)
-        ax2.set_xlabel("Context Size (characters)")
-        ax2.set_ylabel("Cost per 1000 Queries (USD)")
-        ax2.set_title("Cost vs Context Length", fontweight="bold")
-        ax2.legend(loc="upper left")
-        ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"$2^{{{int(np.log2(x))}}}$" if x > 0 else "0"))
-    else:
-        # Fallback: show cost savings summary
-        ax2.axis("off")
-        summary_lines = ["Cost Savings Summary\n"]
+    accs = [by_r.get(r, {}).get("overall_accuracy", 0) for r in runners]
+    toks = [by_r.get(r, {}).get("avg_tokens_per_task", 0) for r in runners]
+    lats = [by_r.get(r, {}).get("avg_time_per_task", 0) for r in runners]
 
-        vanilla_cost = sum(r.cost_usd for r in results if r.runner_name == "vanilla" and r.cost_usd) or 0
-        ours_cost = sum(r.cost_usd for r in results if r.runner_name == "ours" and r.cost_usd) or 0
-        official_cost = sum(r.cost_usd for r in results if r.runner_name == "official" and r.cost_usd) or 0
+    _bars(ax_acc, accs, "Accuracy (%)", "{:.1f}%", "Overall Accuracy")
+    ax_acc.set_ylim(0, 115)
+    _bars(ax_tok, toks, "Avg Tokens", "{:,.0f}", "Avg Tokens per Task")
+    _bars(ax_lat, lats, "Avg Latency (s)", "{:.1f}s", "Avg Latency per Task")
 
-        if vanilla_cost > 0:
-            summary_lines.append(f"Vanilla LLM: ${vanilla_cost:.6f}")
-        if ours_cost > 0:
-            summary_lines.append(f"minRLM: ${ours_cost:.6f}")
-            if vanilla_cost > 0:
-                savings = (1 - ours_cost / vanilla_cost) * 100
-                summary_lines.append(f"→ {savings:.0f}% cheaper than Vanilla")
-        if official_cost > 0:
-            summary_lines.append(f"Official RLM: ${official_cost:.6f}")
+    # ── Key stats text (full-width bottom row) ──────────────────────────────
+    model = stats.get("model", "N/A")
+    total = stats.get("total_evaluations", 0)
+    lines = [f"Model: {model}   |   Total Evaluations: {total}", ""]
 
-        ax2.text(
-            0.5,
-            0.5,
-            "\n".join(summary_lines),
-            transform=ax2.transAxes,
-            fontsize=12,
-            ha="center",
-            va="center",
-            bbox={"boxstyle": "round", "facecolor": "lightgreen", "alpha": 0.3},
-        )
+    our_runners = [r for r in runners if r not in ("vanilla", "official")]
+    for our in our_runners:
+        our_d = by_r.get(our, {})
+        van_d = by_r.get("vanilla", {})
+        off_d = by_r.get("official", {})
+        our_tok = our_d.get("avg_tokens_per_task", 1) or 1
+        our_acc = our_d.get("overall_accuracy", 0)
 
-    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.02)
-    plt.tight_layout()
+        bullets: list[str] = []
+        if van_d:
+            van_tok = van_d.get("avg_tokens_per_task", 0)
+            van_acc = van_d.get("overall_accuracy", 0)
+            if van_tok > our_tok:
+                bullets.append(f"{van_tok/our_tok:.1f}× fewer tokens than Vanilla")
+            if our_acc >= van_acc:
+                bullets.append(f"matches or beats Vanilla accuracy ({our_acc:.1f}% vs {van_acc:.1f}%)")
+        if off_d:
+            off_tok = off_d.get("avg_tokens_per_task", 0)
+            off_acc = off_d.get("overall_accuracy", 0)
+            if off_tok > our_tok:
+                bullets.append(f"{off_tok/our_tok:.1f}× fewer tokens than Official RLM")
+            if our_acc >= off_acc:
+                bullets.append(f"matches or beats Official RLM ({our_acc:.1f}% vs {off_acc:.1f}%)")
+        our_cost = our_d.get("total_cost_usd")
+        van_cost = van_d.get("total_cost_usd") if van_d else None
+        if our_cost and van_cost and van_cost > 0:
+            bullets.append(f"{van_cost/our_cost:.1f}× cheaper than Vanilla")
 
+        for b in bullets:
+            lines.append(f"✓  {_label(our)}  {b}")
+
+    ax_txt.text(
+        0.5, 0.55, "\n".join(lines),
+        transform=ax_txt.transAxes,
+        fontsize=12, ha="center", va="center",
+        bbox={"boxstyle": "round,pad=0.9", "facecolor": "#EAF4FB",
+              "alpha": 0.9, "edgecolor": "#2980B9"},
+    )
+
+    # Runner legend
+    legend_patches = [mpatches.Patch(color=_color(r), label=_label(r)) for r in runners]
+    fig.legend(handles=legend_patches, loc="lower center", ncol=len(runners),
+               framealpha=0.9, fontsize=11, bbox_to_anchor=(0.5, -0.01))
+
+    plt.tight_layout(rect=(0, 0.04, 1, 0.97))
     if output_path:
-        plt.savefig(output_path, dpi=150, bbox_inches="tight")
-
+        _save(fig, output_path)
     return fig
+
+
+# =============================================================================
+# Master function  — generates all plots
+# =============================================================================
+
+
+def plot_all(
+    results: list[EvalResult],
+    output_dir: Path,
+    title_prefix: str = "RLM Evaluation",
+) -> list[Path]:
+    """
+    Generate every plot and save to *output_dir*.
+    Returns the list of paths that were actually written.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    saved: list[Path] = []
+
+    def _run(name: str, fn, *args, **kwargs):
+        path = output_dir / f"{name}.png"
+        print(f"  Plotting {name}...", flush=True)
+        fig = fn(*args, output_path=path, **kwargs)
+        if fig is not None:
+            saved.append(path)
+            plt.close(fig)
+        else:
+            print(f"    (skipped — data not available)", flush=True)
+
+    _run("accuracy_per_task",    plot_accuracy_per_task,    results, title=f"{title_prefix} — Accuracy by Task")
+    _run("tokens_per_task",      plot_tokens_per_task,      results, title=f"{title_prefix} — Avg Tokens per Task")
+    _run("latency_per_task",     plot_latency_per_task,     results, title=f"{title_prefix} — Avg Latency per Task")
+    _run("cost_per_task",        plot_cost_per_task,        results, title=f"{title_prefix} — Avg Cost per Query")
+    _run("accuracy_vs_cost",     plot_accuracy_vs_cost,     results, title=f"{title_prefix} — Accuracy vs Cost")
+    _run("accuracy_vs_latency",  plot_accuracy_vs_latency,  results, title=f"{title_prefix} — Accuracy vs Latency")
+    _run("token_savings",        plot_token_savings,        results, title=f"{title_prefix} — Token Savings vs Baselines")
+    _run("summary_dashboard",    plot_summary_dashboard,    results, title=f"{title_prefix} — Dashboard")
+
+    return saved
+
+
+# =============================================================================
+# Backward-compatible helpers (used by eval/run.py)
+# =============================================================================
 
 
 def plot_comprehensive_dashboard(
-    results: list[EvalResult], output_dir: Path, title: str = "RLM Evaluation Dashboard"
+    results: list[EvalResult],
+    output_dir: Path,
+    title: str = "RLM Evaluation",
 ) -> list[Path]:
-    """
-    Generate a comprehensive set of plots.
-
-    Returns list of saved plot paths.
-    """
-    apply_style()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    saved_paths = []
-
-    # 1. Accuracy comparison
-    path = output_dir / "accuracy_comparison.png"
-    plot_accuracy_comparison(results, path, "Accuracy Comparison by Method")
-    saved_paths.append(path)
-
-    # 2. Token efficiency
-    path = output_dir / "token_efficiency.png"
-    plot_token_efficiency(results, path, "Token Usage Analysis")
-    saved_paths.append(path)
-
-    # 3. Latency comparison
-    path = output_dir / "latency_comparison.png"
-    plot_latency_comparison(results, path, "Execution Time Analysis")
-    saved_paths.append(path)
-
-    # 4. Scaling analysis (if applicable)
-    scaling_results = [r for r in results if "scaling" in r.task_name.lower()]
-    if scaling_results:
-        path = output_dir / "scaling_analysis.png"
-        plot_scaling_analysis(scaling_results, path, "Accuracy vs Context Size (RLM vs Vanilla)")
-        saved_paths.append(path)
-
-    # 5. Cost comparison (if cost data available)
-    path = output_dir / "cost_comparison.png"
-    fig = plot_cost_comparison(results, path, "Cost Analysis")
-    if fig is not None:
-        saved_paths.append(path)
-        plt.close(fig)
-
-    # 6. Cost by task and context (new)
-    path = output_dir / "cost_by_task_context.png"
-    fig = plot_cost_by_task_and_context(results, path, "Cost by Task & Context Length")
-    if fig is not None:
-        saved_paths.append(path)
-        plt.close(fig)
-
-    # 6. Summary dashboard
-    path = output_dir / "summary_dashboard.png"
-    _plot_summary_dashboard(results, path, title)
-    saved_paths.append(path)
-
-    return saved_paths
-
-
-def _plot_summary_dashboard(results: list[EvalResult], output_path: Path, title: str):
-    """Generate a summary dashboard with key metrics."""
-    apply_style()
-
-    stats = compute_statistics(results)
-
-    fig = plt.figure(figsize=(16, 12))
-    fig.suptitle(title, fontsize=16, fontweight="bold", y=0.98)
-
-    # Grid layout
-    gs = fig.add_gridspec(3, 3, hspace=0.35, wspace=0.3)
-
-    # 1. Accuracy by runner (top left)
-    ax1 = fig.add_subplot(gs[0, 0])
-    runners = list(stats.get("by_runner", {}).keys())
-    accuracies = [stats["by_runner"][r].get("overall_accuracy", 0) for r in runners]
-    colors = [COLORS.get(r, "gray") for r in runners]
-
-    bars = ax1.bar(runners, accuracies, color=colors, alpha=0.85)
-    for bar, val in zip(bars, accuracies):
-        ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1, f"{val:.1f}%", ha="center", fontsize=10)
-    ax1.set_ylabel("Accuracy (%)")
-    ax1.set_title("Overall Accuracy", fontweight="bold")
-    ax1.set_ylim(0, 110)
-    ax1.set_xticks(range(len(runners)))
-    ax1.set_xticklabels([LABELS.get(r, r) for r in runners])
-
-    # 2. Token usage (top middle)
-    ax2 = fig.add_subplot(gs[0, 1])
-    tokens = [stats["by_runner"][r].get("avg_tokens_per_task", 0) for r in runners]
-
-    bars = ax2.bar(runners, tokens, color=colors, alpha=0.85)
-    for bar, val in zip(bars, tokens):
-        ax2.text(
-            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"{val:,.0f}", ha="center", va="bottom", fontsize=9
-        )
-    ax2.set_ylabel("Avg Tokens per Task")
-    ax2.set_title("Token Usage", fontweight="bold")
-    ax2.set_xticks(range(len(runners)))
-    ax2.set_xticklabels([LABELS.get(r, r) for r in runners])
-
-    # 3. Time (top right)
-    ax3 = fig.add_subplot(gs[0, 2])
-    times = [stats["by_runner"][r].get("avg_time_per_task", 0) for r in runners]
-
-    bars = ax3.bar(runners, times, color=colors, alpha=0.85)
-    for bar, val in zip(bars, times):
-        ax3.text(
-            bar.get_x() + bar.get_width() / 2, bar.get_height(), f"{val:.1f}s", ha="center", va="bottom", fontsize=9
-        )
-    ax3.set_ylabel("Avg Time (seconds)")
-    ax3.set_title("Execution Time", fontweight="bold")
-    ax3.set_xticks(range(len(runners)))
-    ax3.set_xticklabels([LABELS.get(r, r) for r in runners])
-
-    # 4-6. Task breakdown (middle row)
-    tasks = list(stats.get("by_task", {}).keys())[:3]
-
-    for i, task in enumerate(tasks):
-        ax = fig.add_subplot(gs[1, i])
-        task_data = stats["by_task"][task]
-        task_runners = list(task_data.keys())
-        task_accuracies = [task_data[r].get("accuracy", 0) for r in task_runners]
-        task_colors = [COLORS.get(r, "gray") for r in task_runners]
-
-        bars = ax.bar(range(len(task_runners)), task_accuracies, color=task_colors, alpha=0.85)
-        ax.set_ylabel("Accuracy (%)")
-        ax.set_title(f"{task.upper().replace('_', ' ')}", fontweight="bold")
-        ax.set_xticks(range(len(task_runners)))
-        ax.set_xticklabels([LABELS.get(r, r) for r in task_runners], fontsize=8)
-        ax.set_ylim(0, 110)
-
-    # 7. Summary text (bottom row)
-    ax7 = fig.add_subplot(gs[2, :])
-    ax7.axis("off")
-
-    # Build summary text
-    summary_lines = [
-        f"Model: {stats.get('model', 'N/A')}",
-        f"Total Evaluations: {stats.get('total_evaluations', 0)}",
-        "",
-    ]
-
-    # Token efficiency
-    vanilla_tokens = stats.get("by_runner", {}).get("vanilla", {}).get("avg_tokens_per_task", 0)
-    ours_tokens = stats.get("by_runner", {}).get("ours", {}).get("avg_tokens_per_task", 1)
-    official_tokens = stats.get("by_runner", {}).get("official", {}).get("avg_tokens_per_task", 0)
-
-    if vanilla_tokens > 0 and ours_tokens > 0:
-        summary_lines.append(f"✓ minRLM uses {vanilla_tokens / ours_tokens:.1f}x fewer tokens than Vanilla LLM")
-    if official_tokens > 0 and ours_tokens > 0:
-        summary_lines.append(f"✓ minRLM uses {official_tokens / ours_tokens:.1f}x fewer tokens than Official RLM")
-
-    # Cost efficiency
-    vanilla_cost = stats.get("by_runner", {}).get("vanilla", {}).get("total_cost_usd")
-    ours_cost = stats.get("by_runner", {}).get("ours", {}).get("total_cost_usd")
-
-    if vanilla_cost is not None and ours_cost is not None and ours_cost > 0:
-        cost_ratio = vanilla_cost / ours_cost
-        summary_lines.append(
-            f"✓ minRLM is {cost_ratio:.1f}x cheaper than Vanilla (${ours_cost:.6f} vs ${vanilla_cost:.6f})"
-        )
-    elif ours_cost is None:
-        summary_lines.append("⚠ Cost data unavailable (model not in tokencost)")
-
-    summary_text = "\n".join(summary_lines)
-    ax7.text(
-        0.5,
-        0.5,
-        summary_text,
-        transform=ax7.transAxes,
-        fontsize=12,
-        ha="center",
-        va="center",
-        bbox={"boxstyle": "round", "facecolor": "lightyellow", "alpha": 0.8},
-    )
-
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close()
-
-
-# =============================================================================
-# Utility Functions
-# =============================================================================
+    """Alias kept for backward compatibility."""
+    return plot_all(results, output_dir, title_prefix=title)
 
 
 def load_and_visualize(json_path: Path, output_dir: Path) -> list[Path]:
-    """Load results from JSON and generate all visualizations."""
+    """Load results from *json_path* and generate all plots into *output_dir*."""
     with open(json_path) as f:
         data = json.load(f)
-
     results = [EvalResult.from_dict(d) for d in data]
-    return plot_comprehensive_dashboard(results, output_dir)
+    return plot_all(results, output_dir)
+
+
+# =============================================================================
+# CLI  —  python -m eval.visualize  <path>  [output_dir]
+# =============================================================================
+
+
+def _find_latest_json(root: Path) -> Path | None:
+    """Recursively find the most-recently-modified .json file under *root*."""
+    candidates = sorted(root.rglob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return candidates[0] if candidates else None
+
+
+def main(argv: list[str] | None = None) -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Generate plots from an RLM evaluation JSON file or directory.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    parser.add_argument(
+        "path",
+        help="Path to eval JSON file OR a directory containing one (auto-discovers the newest).",
+    )
+    parser.add_argument(
+        "output_dir",
+        nargs="?",
+        default=None,
+        help="Output directory for plots. Defaults to <json_file_dir>/plots/.",
+    )
+    args = parser.parse_args(argv)
+
+    input_path = Path(args.path)
+
+    if input_path.is_dir():
+        json_path = _find_latest_json(input_path)
+        if json_path is None:
+            print(f"Error: no .json files found under {input_path}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Auto-selected: {json_path}")
+    else:
+        json_path = input_path
+
+    if not json_path.exists():
+        print(f"Error: {json_path} not found", file=sys.stderr)
+        sys.exit(1)
+
+    output_dir = Path(args.output_dir) if args.output_dir else json_path.parent / "plots"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Loading  {json_path}")
+    print(f"Output → {output_dir}/")
+    paths = load_and_visualize(json_path, output_dir)
+
+    print(f"\n✅  {len(paths)} plots saved:")
+    for p in paths:
+        print(f"   {p}")
 
 
 if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) < 2:
-        print("Usage: python -m eval.visualize <results.json> [output_dir]")
-        print("\nGenerates visualization plots from evaluation results.")
-        sys.exit(1)
-
-    json_path = Path(sys.argv[1])
-    output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else json_path.parent / "plots"
-
-    if not json_path.exists():
-        print(f"Error: {json_path} not found")
-        sys.exit(1)
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Loading results from {json_path}...")
-    paths = load_and_visualize(json_path, output_dir)
-
-    print(f"\n✅ Generated {len(paths)} plots in {output_dir}/")
-    for p in paths:
-        print(f"  - {p.name}")
+    main()

@@ -8,7 +8,7 @@ requires-python = ">=3.10"
 authors = [
     {name = "Avi Lumelsky", email = "avilum@users.noreply.github.com"}
 ]
-keywords = ["llm", "language-model", "reasoning", "code-execution", "recursive", "openai", "gpt"]
+keywords = ["llm", "language-model", "reasoning", "recursive-language-model", "recursive", "rlm", "gpt"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -17,14 +17,23 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+
 dependencies = [
     "openai>=1.0.0",
-    "tokencost>=0.1.26",
 ]
 
 [project.optional-dependencies]
+eval = [
+    "datasets>=4.6.0",
+    "huggingface-hub>=1.3.5",
+    "matplotlib>=3.8.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.66.0",
+]
 visualizer = [
     "gradio>=5.0.0",
     "pandas>=2.0.0",
@@ -35,14 +44,11 @@ proxy = [
     "uvicorn[standard]>=0.23.0",
 ]
 dev = [
-    "matplotlib>=3.8.0",
-    "numpy>=1.24.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
-    "tqdm>=4.66.0",
 ]
 all = [
-    "minrlm[visualizer,proxy,dev]",
+    "minrlm[eval,visualizer,proxy,dev]",
 ]
 
 [project.urls]
@@ -109,3 +115,4 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["examples.*", "eval.*"]
 ignore_errors = true
+

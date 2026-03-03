@@ -139,19 +139,19 @@ Here is the text to analyze:
             )
 
 
-@register_runner("ours")
+@register_runner("minrlm")
 class OursRunner(BaseRunner):
     """
-    Our Minimal RLM Runner
+    minRLM Runner
 
     Uses our minimal RLM implementation (~400 LOC).
     Key features: sub_llm(), FINAL(), Python REPL.
     """
 
-    description = "Our minimal RLM implementation"
+    description = "minRLM implementation"
 
     def __init__(
-        self, model: str, max_iterations: int = 10, log_dir: str | None = None, **kwargs
+        self, model: str, max_iterations: int = 10, log_dir: str | None = None, use_docker: bool | None = None, **kwargs
     ):
         super().__init__(model, **kwargs)
         self.max_iterations = max_iterations
@@ -164,8 +164,15 @@ class OursRunner(BaseRunner):
             sys.path.insert(0, module_path)
 
         from minrlm.core import RLM
+        from minrlm.docker_repl import check_docker_available
 
         self.RLM = RLM
+
+        # Auto-detect Docker availability if not explicitly set
+        if use_docker is None:
+            self.use_docker = check_docker_available()
+        else:
+            self.use_docker = use_docker
 
     def run(self, task: str, context: str) -> RunResult:
         start = time.time()
@@ -176,6 +183,7 @@ class OursRunner(BaseRunner):
                 max_iterations=self.max_iterations,
                 log_dir=self.log_dir,
                 async_batch=True,
+                use_docker=self.use_docker,
             )
             result = rlm.completion(task=task, context=context)
             elapsed = time.time() - start
