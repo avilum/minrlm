@@ -408,6 +408,11 @@ class RLM:
         self.use_docker = use_docker
         self.max_sub_llm_calls = max_sub_llm_calls
         self._sub_llm_calls = 0
+        # Accumulators for tokens spent in sub_llm() / sub_llm_batch() calls.
+        # Reset at the start of each top-level completion(); summed into the result.
+        self._sub_llm_total_tokens: int = 0
+        self._sub_llm_input_tokens: int = 0
+        self._sub_llm_output_tokens: int = 0
 
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.async_client = AsyncOpenAI(api_key=api_key, base_url=base_url) if async_batch else None
@@ -585,6 +590,8 @@ class RLM:
         # Retry logic with exponential backoff for rate limits
         max_retries = 5
         base_delay = 1.0  # Start with 1 second
+        # Escalation order for models that reject lower reasoning_effort values
+        _effort_levels = ["low", "medium", "high"]
 
         for attempt in range(max_retries):
             try:
@@ -597,8 +604,29 @@ class RLM:
                     usage.completion_tokens if usage else 0,
                 )
             except Exception as e:
-                # Check if it's a rate limit error (429)
                 error_str = str(e)
+
+                # reasoning_effort value not supported by this model — escalate and retry immediately
+                if "reasoning_effort" in error_str and "unsupported_value" in error_str and "reasoning_effort" in kwargs:
+                    current = kwargs["reasoning_effort"]
+                    current_idx = _effort_levels.index(current) if current in _effort_levels else -1
+                    if current_idx < len(_effort_levels) - 1:
+                        kwargs["reasoning_effort"] = _effort_levels[current_idx + 1]
+                        self._log("reasoning_effort_escalated", {
+                            "from": current,
+                            "to": kwargs["reasoning_effort"],
+                        })
+                        continue
+                    raise
+
+                # Model does not support the chat completions endpoint
+                if "404" in error_str and "not a chat model" in error_str:
+                    raise ValueError(
+                        f"Model '{self.model}' does not support the chat completions endpoint. "
+                        "Use a chat-capable variant (e.g. add '-chat' suffix)."
+                    ) from e
+
+                # Check if it's a rate limit error (429)
                 is_rate_limit = "429" in error_str or "rate_limit" in error_str.lower()
 
                 if is_rate_limit and attempt < max_retries - 1:
@@ -797,14 +825,20 @@ class RLM:
         task = self._sanitize_sub_llm_task(task, context)
         allowed = self._extract_allowed_labels(task)
         messages = self._build_sub_llm_messages(task, context, allowed)
-        response_text, _, _, _ = self._call_llm(messages)
+        response_text, tok_t, tok_i, tok_o = self._call_llm(messages)
+        self._sub_llm_total_tokens += tok_t
+        self._sub_llm_input_tokens += tok_i
+        self._sub_llm_output_tokens += tok_o
         normalized = self._normalize_sub_llm_output(response_text, allowed)
 
         if allowed and normalized not in allowed:
             # Retry once with stricter instruction
             retry_task = task + f"\n\nReturn exactly one of: {', '.join(allowed)}. Do not add any other text."
             messages = self._build_sub_llm_messages(retry_task, context, allowed)
-            response_text, _, _, _ = self._call_llm(messages)
+            response_text, tok_t, tok_i, tok_o = self._call_llm(messages)
+            self._sub_llm_total_tokens += tok_t
+            self._sub_llm_input_tokens += tok_i
+            self._sub_llm_output_tokens += tok_o
             normalized = self._normalize_sub_llm_output(response_text, allowed)
             if normalized not in allowed:
                 self._log("sub_llm_invalid_label", {"task": task[:120], "output": response_text[:120]})
@@ -1081,6 +1115,10 @@ class RLM:
                 kwargs["temperature"] = 0.7
 
             resp = await async_client.chat.completions.create(**kwargs)
+            if resp.usage:
+                self._sub_llm_total_tokens += resp.usage.total_tokens
+                self._sub_llm_input_tokens += resp.usage.prompt_tokens
+                self._sub_llm_output_tokens += resp.usage.completion_tokens
             text = resp.choices[0].message.content or ""
             return self._normalize_sub_llm_output(text, allowed)
 
@@ -1131,6 +1169,9 @@ class RLM:
             self._log_entries = []
             self._log("start", {"task": task, "model": self.model})
             self._sub_llm_calls = 0
+            self._sub_llm_total_tokens = 0
+            self._sub_llm_input_tokens = 0
+            self._sub_llm_output_tokens = 0
 
         # Set input_0 and task_0 for this completion (both top-level and sub_llm calls)
         # task_0 lets the model pass the full original task (with all choices) to sub_llm
@@ -1307,6 +1348,12 @@ class RLM:
                 },
             )
             log_path = self._save_log(task)
+
+        # Only add sub_llm tokens at the top level to avoid double-counting across recursive depths
+        if is_top_level:
+            total_tokens += self._sub_llm_total_tokens
+            input_tokens += self._sub_llm_input_tokens
+            output_tokens += self._sub_llm_output_tokens
 
         return RLMResult(
             response=final_output if final_output is not None else "No output",

@@ -8,7 +8,7 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 **The solution**: Data stays in a Python REPL as `input_0`. The model writes code to search, filter, and aggregate. The raw data never enters the conversation - the LLM decides what to look at through code, pulls what it needs, and runs attention only on what matters.
 
-**The proof**: 1,200-eval benchmark on gpt-5-mini across 8 tasks - **3.7x fewer tokens**, **1.8x cheaper**, and higher overall accuracy than vanilla LLM (76.8% vs 64.0%).
+**The proof**: 1,200-eval benchmark on gpt-5-mini across 8 tasks - **3.7x fewer tokens**, **1.9x cheaper**, and higher overall accuracy than vanilla LLM (71.8% vs 64.0%).
 
 **Improve every LLM in production, today.** If your application passes documents, logs, tables, or code to an LLM, minRLM is the fastest ROI you can find. The context window is the real bottleneck — not the model. Swap the client, keep everything else. Works with OpenAI, Anthropic, and any OpenAI-compatible API. Ships in an afternoon, scales to any context size.
 
@@ -33,11 +33,11 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 |  | minRLM | Vanilla LLM | Official RLM |
 |---|---|---|---|
-| **Accuracy** | **76.8%** | 64.0% | 75.2% |
-| **Avg Tokens** | **5,257** | 19,370 | 50,442 |
-| **Total Cost** | **$1.64** | $3.02 | $8.11 |
+| **Accuracy** | **71.8%** | 64.0% | 69.5% |
+| **Avg Tokens** | **5,198** | 19,319 | 41,781 |
+| **Total Cost** | **$1.58** | $2.98 | $6.91 |
 
-**3.7x fewer tokens** than vanilla | **9.6x fewer** than official | **1.8x cheaper** than vanilla | **4.9x cheaper** than official
+**3.7x fewer tokens** than vanilla | **8.0x fewer** than official | **1.9x cheaper** than vanilla | **4.4x cheaper** than official
 
 ![Summary Dashboard](docs/summary_dashboard.png)
 
@@ -59,14 +59,14 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 | Task | minRLM | Vanilla | Official | minRLM Tokens | vs Vanilla | vs Official |
 |------|--------|---------|----------|---------------|------------|-------------|
-| BrowseComp | **94%** | 0% | 72% | 4,881 | ∞ | **24.5x fewer** |
-| CodeQA | **62%** | 24% | 58% | 3,908 | **14.6x fewer** | **22.8x fewer** |
-| LongBench V2 | **50%** | 44% | 54% | 3,793 | **19.5x fewer** | **24.8x fewer** |
-| SNIAH | **100%** | 100% | 88% | 4,545 | - | **3.7x fewer** |
-| AIME 2025 | **88%** | 94% | 84% | 6,436 | - | **1.7x fewer** |
-| OOLONG | 88% | 94% | **94%** | 4,152 | **1.7x fewer** | **3.7x fewer** |
-| RepoQA | 86% | **100%** | 96% | 3,998 | 1.2x fewer | **5.3x fewer** |
-| GDP Val | 46% | 56% | **56%** | 10,344 | - | **3.5x fewer** |
+| BrowseComp | **94%** | 0% | 58% | 4,531 | ∞ | **21.2x fewer** |
+| CodeQA | **56%** | 28% | 40% | 3,902 | **14.6x fewer** | **19.4x fewer** |
+| LongBench V2 | 36% | 46% | **48%** | 3,796 | **19.4x fewer** | **18.8x fewer** |
+| SNIAH | **98%** | 100% | 94% | 4,494 | - | **4.0x fewer** |
+| AIME 2025 | 76% | **90%** | 84% | 6,750 | - | **1.7x fewer** |
+| OOLONG | 88% | 92% | **94%** | 4,122 | **1.7x fewer** | **3.7x fewer** |
+| RepoQA | **90%** | 100% | 90% | 4,157 | 1.2x fewer | **4.7x fewer** |
+| GDP Val | 36% | **56%** | 48% | 9,830 | - | **2.8x fewer** |
 
 Full results and reproduction: [`eval/README.md`](eval/README.md)
 
@@ -391,7 +391,7 @@ export MINRLM_VERBOSE="1"
 
 ## Credits
 
-**minrlm** is built by [Avi Lumelsky](https://github.com/avilum). This is an independent implementation - not a fork of the official code. The prompts, reasoning engine, eval framework, Docker sandboxing, and proxy server are all original work. On the official benchmarks, minrlm uses **9.6x fewer tokens** than the paper's reference implementation at comparable accuracy.
+**minrlm** is built by [Avi Lumelsky](https://github.com/avilum). This is an independent implementation - not a fork of the official code. The prompts, reasoning engine, eval framework, Docker sandboxing, and proxy server are all original work. On the official benchmarks, minrlm uses **8.0x fewer tokens** than the paper's reference implementation at comparable accuracy.
 
 The RLM concept comes from Zhang, Kraska, and Khattab:
 

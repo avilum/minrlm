@@ -24,16 +24,16 @@ Usage:
     uv run python eval/quickstart.py
 
     # Single task
-    uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah --runs 3
+    uv run python eval/run.py --model gpt-5-mini --tasks official_sniah --runs 3
 
     # Multiple official tasks
-    uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah,official_oolong --runs 5
+    uv run python eval/run.py --model gpt-5-mini --tasks official_sniah,official_oolong --runs 5
 
     # Comprehensive benchmark (all official datasets)
     ./run_comprehensive_official_benchmark.sh
 
     # Output to specific directory
-    uv run python eval/run.py --model gpt-4o-mini --output-dir my_results/
+    uv run python eval/run.py --model gpt-5-mini --output-dir my_results/
 """
 
 import argparse
@@ -96,14 +96,14 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  uv run python eval/run.py --model gpt-4o-mini
-  uv run python eval/run.py --model gpt-4o-mini --runs 3 --tasks all
-  uv run python eval/run.py --model gpt-4o-mini --skip-official
+  uv run python eval/run.py --model gpt-5-mini
+  uv run python eval/run.py --model gpt-5-mini --runs 3 --tasks all
+  uv run python eval/run.py --model gpt-5-mini --skip-official
         """,
     )
 
     parser.add_argument(
-        "--model", "-m", default="gpt-4o-mini", help="Model to use for evaluation (e.g., gpt-4o-mini, gpt-4o, gpt-4-turbo)"
+        "--model", "-m", default="gpt-5-mini", help="Model to use for evaluation (e.g., gpt-5-mini, gpt-4o, gpt-4-turbo)"
     )
 
     parser.add_argument(
@@ -287,8 +287,9 @@ def run_evaluation(
     active_runners = {}
     for runner_name in runners:
         try:
-            # Pass log_dir to RLM runners
-            kwargs = {"log_dir": log_dir} if runner_name in ("minrlm", "minrlm-reasoning") and log_dir else {}
+            # Pass log_dir to all RLM runners (minrlm, official)
+            _log_dir_runners = ("minrlm", "minrlm-reasoning", "official")
+            kwargs = {"log_dir": log_dir} if runner_name in _log_dir_runners and log_dir else {}
             runner = get_runner(runner_name, model, **kwargs)
             if runner.warmup():
                 active_runners[runner_name] = runner
@@ -309,7 +310,7 @@ def run_evaluation(
     max_context_chars = official_oolong_max_context_chars
     max_context_tokens = official_oolong_max_context_tokens
 
-    if max_context_chars is None and max_context_tokens is None and "gpt-4o-mini" in model:
+    if max_context_chars is None and max_context_tokens is None and "gpt-5-mini" in model:
         max_context_tokens = 272000
         max_context_chars = 10_000_000
 

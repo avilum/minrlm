@@ -60,6 +60,9 @@ class RLMReasoning(RLM):
         self._depth = 0
         self._log_entries = []
         self._sub_llm_calls = 0
+        self._sub_llm_total_tokens = 0
+        self._sub_llm_input_tokens = 0
+        self._sub_llm_output_tokens = 0
         self._reasoning = ""
         self._repl.reset()
 
@@ -162,9 +165,9 @@ class RLMReasoning(RLM):
                     return RLMReasoningResult(
                         response=error_msg,
                         iterations=iteration,
-                        total_tokens=total_tokens,
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
+                        total_tokens=total_tokens + self._sub_llm_total_tokens,
+                        input_tokens=input_tokens + self._sub_llm_input_tokens,
+                        output_tokens=output_tokens + self._sub_llm_output_tokens,
                         history=messages,
                         reasoning=self._reasoning,
                     )
@@ -207,9 +210,9 @@ class RLMReasoning(RLM):
                 return RLMReasoningResult(
                     response=response,
                     iterations=iteration,
-                    total_tokens=total_tokens,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
+                    total_tokens=total_tokens + self._sub_llm_total_tokens,
+                    input_tokens=input_tokens + self._sub_llm_input_tokens,
+                    output_tokens=output_tokens + self._sub_llm_output_tokens,
                     history=messages,
                     reasoning=self._reasoning,
                     log_file_path=str(log_path) if log_path else None,
@@ -256,9 +259,9 @@ class RLMReasoning(RLM):
         return RLMReasoningResult(
             response=last_stdout,
             iterations=self.max_iterations,
-            total_tokens=total_tokens,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            total_tokens=total_tokens + self._sub_llm_total_tokens,
+            input_tokens=input_tokens + self._sub_llm_input_tokens,
+            output_tokens=output_tokens + self._sub_llm_output_tokens,
             history=messages,
             reasoning=self._reasoning,
             log_file_path=str(log_path) if log_path else None,

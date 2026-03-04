@@ -270,7 +270,10 @@ def _is_numeric_string(text: str) -> bool:
 
 @register_task("official_oolong")
 class OfficialOOLONGTask(BaseTask):
-    """Official OOLONG benchmark from Hugging Face (oolongbench/oolong-synth)."""
+    """Official OOLONG benchmark.
+
+    Dataset: https://huggingface.co/datasets/oolongbench/oolong-synth
+    """
 
     description = "OOLONG official dataset (oolongbench/oolong-synth)"
     difficulty = "hard"
@@ -403,7 +406,10 @@ class OfficialOOLONGTask(BaseTask):
 
 @register_task("official_codeqa")
 class OfficialLongBenchCodeQATask(BaseTask):
-    """Official CodeQA subset from LongBench-v2 (zai-org/LongBench-v2)."""
+    """Official CodeQA subset from LongBench-v2 (code domain filter).
+
+    Dataset: https://huggingface.co/datasets/zai-org/LongBench-v2
+    """
 
     description = "LongBench-v2 Code repo QA (official dataset)"
     difficulty = "hard"
@@ -490,7 +496,10 @@ class OfficialLongBenchCodeQATask(BaseTask):
 
 @register_task("official_longbench_v2")
 class OfficialLongBenchV2Task(BaseTask):
-    """Official LongBench-v2 dataset (all domains)."""
+    """Official LongBench-v2 dataset (all domains).
+
+    Dataset: https://huggingface.co/datasets/zai-org/LongBench-v2
+    """
 
     description = "LongBench-v2 (official dataset, all domains)"
     difficulty = "hard"
@@ -593,7 +602,10 @@ class OfficialLongBenchV2Task(BaseTask):
 
 @register_task("official_repoqa")
 class OfficialRepoQATask(BaseTask):
-    """Official RepoQA dataset (function retrieval from repos)."""
+    """Official RepoQA dataset (function retrieval from repos).
+
+    Dataset: https://github.com/evalplus/repoqa_release
+    """
 
     description = "RepoQA (official dataset)"
     difficulty = "hard"
@@ -759,7 +771,10 @@ class OfficialRepoQATask(BaseTask):
 
 @register_task("official_browsecomp")
 class OfficialBrowseCompPlusTask(BaseTask):
-    """Official BrowseComp-Plus dataset (Tevatron/browsecomp-plus) with decryption."""
+    """Official BrowseComp-Plus dataset with XOR decryption.
+
+    Dataset: https://huggingface.co/datasets/Tevatron/browsecomp-plus
+    """
 
     description = "BrowseComp-Plus (HuggingFace, decrypted)"
     difficulty = "very hard"
@@ -873,7 +888,10 @@ def _strip_ruler_prompt(prompt: str) -> str:
 
 @register_task("official_sniah")
 class OfficialRulerSNIAHTask(BaseTask):
-    """Official RULER NIAH tasks from the HF mirror (tonychenxyz/ruler-full)."""
+    """Official RULER single needle-in-a-haystack (NIAH) tasks.
+
+    Dataset: https://huggingface.co/datasets/tonychenxyz/ruler-full
+    """
 
     description = "RULER NIAH (official format, HF mirror)"
     difficulty = "easy"
@@ -945,7 +963,10 @@ class OfficialRulerSNIAHTask(BaseTask):
 
 @register_task("official_gdpval")
 class OfficialGDPVALTask(BaseTask):
-    """Official GDPVAL dataset - real professional work tasks."""
+    """Official GDPVAL dataset — real professional work tasks across 44 occupations.
+
+    Dataset: https://huggingface.co/datasets/openai/gdpval
+    """
 
     description = "GDPVAL (real professional tasks across 44 occupations)"
     difficulty = "very hard"
@@ -1265,7 +1286,10 @@ class OfficialGDPVALTask(BaseTask):
 
 @register_task("official_aime_2025")
 class OfficialAIME2025Task(BaseTask):
-    """Official AIME 2025 dataset - American Invitational Mathematics Examination."""
+    """Official AIME 2025 — American Invitational Mathematics Examination.
+
+    Dataset: https://huggingface.co/datasets/MathArena/aime_2025
+    """
 
     description = "AIME 2025 (30 competition math problems)"
     difficulty = "very hard"

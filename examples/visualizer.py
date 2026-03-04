@@ -16,9 +16,11 @@ matplotlib.use("Agg")
 
 import json
 import os
+import queue
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -199,7 +201,7 @@ def get_available_models(base_url: str = None) -> list[str]:
     # Known working chat models (conservative list)
     fallback_models = [
         "gpt-4o",
-        "gpt-4o-mini",
+        "gpt-5-mini",
         "gpt-4-turbo",
         "gpt-4",
         "gpt-3.5-turbo",
@@ -227,9 +229,18 @@ def get_available_models(base_url: str = None) -> list[str]:
             # Include gpt-3.5-turbo variants
             elif m_lower.startswith("gpt-3.5-turbo"):
                 chat_models.append(model_id)
-            # Include gpt-5 if it exists
+            # Include gpt-5 chat/instruct variants but not bare base models.
+            # Models like "gpt-5.2" (decimal version, no chat suffix) only support
+            # v1/completions, not v1/chat/completions.
             elif m_lower.startswith("gpt-5"):
-                chat_models.append(model_id)
+                import re as _re
+                _chat_suffixes = ("-chat", "-mini", "-nano", "-turbo", "-instruct")
+                has_chat_suffix = any(s in m_lower for s in _chat_suffixes)
+                is_explicit_base = m_lower.endswith("-base")
+                # Decimal-versioned names without a chat suffix are base/completion models
+                has_decimal_version = bool(_re.search(r"gpt-5\.\d", m_lower))
+                if not is_explicit_base and (has_chat_suffix or not has_decimal_version):
+                    chat_models.append(model_id)
 
         # Sort: latest versions first
         if chat_models:
@@ -328,10 +339,10 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
             has_code = data.get("has_code", False)
             trace_parts.append(f"**LLM Response** ({len(data.get('response', ''))} chars):\n")
             if has_code:
-                trace_parts.append("✅ Contains code block\n\n")
+                trace_parts.append("Contains code block\n\n")
             else:
                 response_preview = data.get("response", "")[:300]
-                trace_parts.append("⚠️ No code block found\n\n")
+                trace_parts.append("No code block found\n\n")
                 trace_parts.append(
                     f"```\n{response_preview}{'...' if len(data.get('response', '')) > 300 else ''}\n```\n\n"
                 )
@@ -349,7 +360,7 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
                         f"**stdout:**\n```\n{stdout[:2000]}{'...' if len(stdout) > 2000 else ''}\n```\n\n"
                     )
                 if output:
-                    trace_parts.append(f"✅ **FINAL():** `{output}`\n\n")
+                    trace_parts.append(f"**FINAL():** `{output}`\n\n")
                 elif not stdout:
                     trace_parts.append("*(no output)*\n\n")
 
@@ -517,6 +528,7 @@ import time
 
 try:
     from rlm import RLM
+    from rlm.logger import RLMLogger
 
     with open("{context_file}") as f:
         context = f.read()
@@ -526,12 +538,15 @@ try:
 
     start = time.time()
 
+    logger = RLMLogger()  # in-memory trajectory capture
+
     rlm = RLM(
         backend="openai",
         backend_kwargs={{"model_name": "{model}"}},
         environment="local",
         max_iterations=10,
         verbose=False,
+        logger=logger,
     )
 
     if context.strip():
@@ -553,6 +568,28 @@ try:
 
     iterations = getattr(result, 'num_iterations', None) or getattr(result, 'iterations', None) or 1
 
+    # Extract slim trajectory (skip prompt — it's the full context, too large)
+    slim_iterations = []
+    trajectory = logger.get_trajectory() or {{}}
+    for it in trajectory.get("iterations", []):
+        slim_blocks = []
+        for block in it.get("code_blocks", []):
+            res = block.get("result", {{}})
+            slim_blocks.append({{
+                "code": block.get("code", ""),
+                "stdout": (res.get("stdout") or "")[:3000],
+                "stderr": (res.get("stderr") or "")[:500],
+                "final_answer": res.get("final_answer"),
+            }})
+        slim_iterations.append({{
+            "iteration": it.get("iteration"),
+            "response": (it.get("response") or "")[:300],
+            "response_len": len(it.get("response") or ""),
+            "code_blocks": slim_blocks,
+            "final_answer": it.get("final_answer"),
+            "iteration_time": it.get("iteration_time"),
+        }})
+
     print("<<<RESULT>>>")
     print(json.dumps({{
         "response": response,
@@ -561,6 +598,7 @@ try:
         "input_tokens": total_input,
         "output_tokens": total_output,
         "iterations": iterations,
+        "trajectory": slim_iterations,
     }}))
 except Exception as e:
     import traceback
@@ -588,9 +626,41 @@ except Exception as e:
             input_tokens = data.get("input_tokens", 0)
             output_tokens = data.get("output_tokens", 0)
             iterations = data.get("iterations", 1)
+            trajectory = data.get("trajectory", [])
 
             correct = check_fn(resp_text) if check_fn else True
             cost = calculate_cost(model, input_tokens, output_tokens)
+
+            # Render per-iteration trajectory
+            for it in trajectory:
+                it_num = it.get("iteration") or trajectory.index(it) + 1
+                it_time = it.get("iteration_time")
+                time_str = f" ({it_time:.1f}s)" if it_time else ""
+                trace += f"### Iteration {it_num}{time_str}\n\n"
+
+                resp_len = it.get("response_len", 0)
+                resp_preview = it.get("response", "")
+                has_code = bool(it.get("code_blocks"))
+                trace += f"**LLM Response** ({resp_len:,} chars):\n"
+                if has_code:
+                    trace += "Contains code block\n\n"
+                else:
+                    trace += "No code block found\n\n"
+                    if resp_preview:
+                        trace += f"```\n{resp_preview}{'...' if resp_len > 300 else ''}\n```\n\n"
+
+                for block in it.get("code_blocks", []):
+                    code = block.get("code", "")
+                    stdout = block.get("stdout", "")
+                    stderr = block.get("stderr", "")
+                    final_answer = block.get("final_answer")
+                    trace += f"**Executing Code:**\n```python\n{code}\n```\n\n"
+                    if stderr:
+                        trace += f"❌ **Error:**\n```\n{stderr}\n```\n\n"
+                    if stdout:
+                        trace += f"**stdout:**\n```\n{stdout}\n```\n\n"
+                    if final_answer is not None:
+                        trace += f"**FINAL():** `{final_answer}`\n\n"
 
             trace += f"**Tokens:** {input_tokens:,} in + {output_tokens:,} out = {total_tokens:,} total"
             if cost is not None:
@@ -643,6 +713,376 @@ except Exception as e:
             try:
                 os.unlink(f)
             except:
+                pass
+
+
+# =============================================================================
+# Real-time streaming generators
+# Each yields (partial_trace: str, result: RunResult | None).
+# None result = still in progress; non-None result = run finished.
+# =============================================================================
+
+def _rlm_trace_event(event: str, data: dict, include_reasoning: bool = False) -> str:
+    """Convert an on_step event into a markdown trace fragment."""
+    if event == "thinking":
+        return f"### Iteration {data['iteration']}\n\n"
+    if event == "reasoning" and include_reasoning:
+        r = data.get("reasoning", "")
+        return f"**Reasoning:**\n> {r[:500]}{'...' if len(r) > 500 else ''}\n\n"
+    if event == "llm_response":
+        rlen = len(data.get("response", ""))
+        frag = f"**LLM Response** ({rlen:,} chars):\n"
+        if data.get("has_code"):
+            frag += "Contains code block\n\n"
+        else:
+            preview = data.get("response", "")[:300]
+            frag += "No code block found\n\n"
+            if preview:
+                frag += f"```\n{preview}{'...' if rlen > 300 else ''}\n```\n\n"
+        return frag
+    if event == "executing":
+        return f"**Executing Code:**\n```python\n{data.get('code', '')}\n```\n\n"
+    if event == "executed":
+        if data.get("error"):
+            return f"❌ **Error:**\n```\n{data['error']}\n```\n\n"
+        frag = ""
+        stdout = data.get("stdout", "")
+        output = data.get("output")
+        if stdout:
+            frag += f"**stdout:**\n```\n{stdout[:2000]}{'...' if len(stdout) > 2000 else ''}\n```\n\n"
+        if output is not None:
+            frag += f"**FINAL():** `{output}`\n\n"
+        elif not stdout:
+            frag += "*(no output)*\n\n"
+        return frag
+    return ""
+
+
+def _stream_rlm_runner(label, task, context, model, check_fn, rlm_factory, include_reasoning=False):
+    """
+    Generic streaming generator for on_step-based RLM runners (minRLM, minRLM-reasoning).
+
+    Runs rlm.completion() in a background thread. on_step events push the current
+    partial trace to a queue; the generator yields each snapshot to Gradio immediately.
+    """
+    q = queue.Queue()
+    result_holder = [None]
+    exc_holder = [None]
+    trace_parts = [f"## {label}\n\n"]
+    if context:
+        trace_parts.append(f"Processing {len(context):,} chars...\n\n")
+    start = time.time()
+
+    def on_step(event: str, data: dict) -> None:
+        frag = _rlm_trace_event(event, data, include_reasoning)
+        if frag:
+            trace_parts.append(frag)
+            q.put(("step", "".join(trace_parts)))
+
+    def run() -> None:
+        try:
+            rlm = rlm_factory(on_step)
+            res = rlm.completion(task=task, context=context) if context else rlm.completion(task=task)
+            result_holder[0] = res
+        except Exception as e:
+            exc_holder[0] = e
+            trace_parts.append(f"\n**Error:** {e}\n")
+        finally:
+            q.put(("done", None))
+
+    threading.Thread(target=run, daemon=True).start()
+
+    while True:
+        kind, payload = q.get()
+        if kind == "done":
+            break
+        yield payload, None  # intermediate: partial trace, no result yet
+
+    elapsed = time.time() - start
+
+    if exc_holder[0] or result_holder[0] is None:
+        yield "".join(trace_parts), RunResult(
+            response="", correct=False, tokens=0, input_tokens=0,
+            output_tokens=0, time_seconds=elapsed, trace="".join(trace_parts),
+        )
+        return
+
+    result = result_holder[0]
+    response = result.response
+    correct = check_fn(response) if check_fn else True
+    cost = calculate_cost(model, result.input_tokens, result.output_tokens)
+
+    reasoning = getattr(result, "reasoning", "")
+    if reasoning:
+        trace_parts.append(
+            f"\n**Reasoning Summary:** {reasoning[:300]}{'...' if len(reasoning) > 300 else ''}\n"
+        )
+    trace_parts.append(f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n")
+    trace_parts.append(
+        f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out"
+        f" = {result.total_tokens:,} total"
+    )
+    if cost is not None:
+        trace_parts.append(f" | **Cost:** ${cost:.6f}")
+    trace_parts.append(f" | **Time:** {elapsed:.1f}s\n")
+    if check_fn:
+        trace_parts.append(f"{'✅ Correct' if correct else '❌ Incorrect'}\n\n")
+
+    yield "".join(trace_parts), RunResult(
+        response=response,
+        correct=correct,
+        tokens=result.total_tokens,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+        time_seconds=elapsed,
+        iterations=result.iterations,
+        cost_usd=cost,
+        trace="".join(trace_parts),
+    )
+
+
+def stream_vanilla_llm(task: str, context: str, model: str, check_fn=None):
+    """Streaming wrapper for vanilla LLM (single call — yield a status, then the result)."""
+    trace = "## Vanilla LLM\n\n"
+    trace += f"Sending {'full context (' + str(len(context)) + ' chars)' if context else 'prompt'} in one request.\n\n"
+    trace += "*Calling API…*\n\n"
+    yield trace, None  # show "calling API" immediately
+
+    result = run_vanilla_llm(task, context, model, check_fn)
+    yield result.trace, result
+
+
+def stream_our_rlm(task: str, context: str, model: str, check_fn=None):
+    """Streaming generator for minRLM."""
+    yield from _stream_rlm_runner(
+        label="minRLM",
+        task=task, context=context, model=model, check_fn=check_fn,
+        rlm_factory=lambda on_step: RLMBase(model=model, max_iterations=10, on_step=on_step),
+        include_reasoning=False,
+    )
+
+
+def stream_reasoning_rlm(task: str, context: str, model: str, check_fn=None):
+    """Streaming generator for minRLM with Reasoning."""
+    yield from _stream_rlm_runner(
+        label="Recursive minRLM",
+        task=task, context=context, model=model, check_fn=check_fn,
+        rlm_factory=lambda on_step: RLM(model=model, max_iterations=10, on_step=on_step),
+        include_reasoning=True,
+    )
+
+
+def stream_official_rlm(task: str, context: str, model: str, check_fn=None):
+    """Streaming generator for Official RLM — reads <<<ITER>>> markers from subprocess stdout."""
+    trace = "## Official RLM\n\n"
+    trace += (
+        f"Processing {len(context):,} chars via "
+        f"[github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).\n\n"
+        if context else
+        "Running via [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).\n\n"
+    )
+    start = time.time()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write(context or "")
+        context_file = f.name
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write(task)
+        task_file = f.name
+
+    script = f"""
+import json, sys, time
+
+try:
+    from rlm import RLM
+    from rlm.logger import RLMLogger
+
+    with open("{context_file}") as f:
+        context = f.read()
+    with open("{task_file}") as f:
+        task = f.read()
+
+    model = "{model}"
+    start = time.time()
+    logger = RLMLogger()
+
+    # Monkey-patch to stream iteration events to stdout
+    _orig_log = logger.log
+    def _streaming_log(it):
+        _orig_log(it)
+        blocks = []
+        for b in it.code_blocks:
+            r = b.result
+            blocks.append({{
+                "code": b.code[:3000],
+                "stdout": (r.stdout or "")[:2000],
+                "stderr": (r.stderr or "")[:500],
+                "final_answer": r.final_answer,
+            }})
+        entry = {{
+            "iter": logger.iteration_count,
+            "response_preview": (it.response or "")[:300],
+            "response_len": len(it.response or ""),
+            "has_code": bool(it.code_blocks),
+            "code_blocks": blocks,
+            "final_answer": it.final_answer,
+            "iteration_time": it.iteration_time,
+        }}
+        print("<<<ITER>>> " + json.dumps(entry), flush=True)
+    logger.log = _streaming_log
+
+    rlm = RLM(
+        backend="openai",
+        backend_kwargs={{"model_name": model}},
+        environment="local",
+        max_iterations=10,
+        verbose=False,
+        logger=logger,
+    )
+
+    result = rlm.completion(prompt=context, root_prompt=task) if context.strip() else rlm.completion(prompt=task)
+    elapsed = time.time() - start
+
+    total_input = total_output = 0
+    if result.usage_summary and result.usage_summary.model_usage_summaries:
+        for usage in result.usage_summary.model_usage_summaries.values():
+            total_input += usage.total_input_tokens
+            total_output += usage.total_output_tokens
+
+    response = result.response or ""
+    if response.startswith('"') and response.endswith('"'):
+        response = response[1:-1]
+
+    iterations = getattr(result, 'num_iterations', None) or getattr(result, 'iterations', None) or 1
+
+    slim_iters = []
+    traj = logger.get_trajectory() or {{}}
+    for it in traj.get("iterations", []):
+        slim_blocks = []
+        for block in it.get("code_blocks", []):
+            res = block.get("result", {{}})
+            slim_blocks.append({{
+                "code": block.get("code", ""),
+                "stdout": (res.get("stdout") or "")[:3000],
+                "stderr": (res.get("stderr") or "")[:500],
+                "final_answer": res.get("final_answer"),
+            }})
+        slim_iters.append({{
+            "iteration": it.get("iteration"),
+            "response": (it.get("response") or "")[:300],
+            "response_len": len(it.get("response") or ""),
+            "code_blocks": slim_blocks,
+            "final_answer": it.get("final_answer"),
+            "iteration_time": it.get("iteration_time"),
+        }})
+
+    print("<<<RESULT>>>")
+    print(json.dumps({{
+        "response": response, "elapsed": elapsed,
+        "total_tokens": total_input + total_output,
+        "input_tokens": total_input, "output_tokens": total_output,
+        "iterations": iterations, "trajectory": slim_iters,
+    }}))
+except Exception as e:
+    import traceback
+    print("<<<ERROR>>>")
+    print(str(e))
+    traceback.print_exc()
+"""
+
+    try:
+        proc = subprocess.Popen(
+            ["uv", "run", "--with", "git+https://github.com/alexzhang13/rlm", "python", "-c", script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            env={**os.environ, "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", ""), "PYTHONUNBUFFERED": "1"},
+        )
+
+        result_json = None
+        for raw_line in proc.stdout:
+            line = raw_line.rstrip()
+            if line.startswith("<<<ITER>>>"):
+                try:
+                    it = json.loads(line[len("<<<ITER>>> "):])
+                    it_num = it.get("iter", "?")
+                    it_time = it.get("iteration_time")
+                    time_str = f" ({it_time:.1f}s)" if it_time else ""
+                    trace += f"### Iteration {it_num}{time_str}\n\n"
+                    trace += f"**LLM Response** ({it.get('response_len', 0):,} chars):\n"
+                    if it.get("has_code"):
+                        trace += "Contains code block\n\n"
+                        for block in it.get("code_blocks", []):
+                            trace += f"**Executing Code:**\n```python\n{block['code']}\n```\n\n"
+                            if block.get("stderr"):
+                                trace += f"❌ **Error:**\n```\n{block['stderr']}\n```\n\n"
+                            if block.get("stdout"):
+                                trace += f"**stdout:**\n```\n{block['stdout']}\n```\n\n"
+                            if block.get("final_answer") is not None:
+                                trace += f"**FINAL():** `{block['final_answer']}`\n\n"
+                    else:
+                        trace += "No code block found\n\n"
+                        preview = it.get("response_preview", "")
+                        if preview:
+                            trace += f"```\n{preview}...\n```\n\n"
+                    yield trace, None
+                except Exception:
+                    pass
+            elif "<<<RESULT>>>" in line:
+                next_line = proc.stdout.readline()
+                try:
+                    result_json = json.loads(next_line.strip())
+                except Exception:
+                    pass
+                break
+            elif line == "<<<ERROR>>>":
+                err_msg = proc.stdout.readline().strip()
+                trace += f"**Error:** {err_msg}\n"
+                yield trace, None
+
+        proc.wait()
+        elapsed = time.time() - start
+
+        if result_json:
+            resp_text = result_json.get("response", "")
+            input_tokens = result_json.get("input_tokens", 0)
+            output_tokens = result_json.get("output_tokens", 0)
+            total_tokens = result_json.get("total_tokens", 0)
+            iterations = result_json.get("iterations", 1)
+            correct = check_fn(resp_text) if check_fn else True
+            cost = calculate_cost(model, input_tokens, output_tokens)
+
+            trace += f"**Tokens:** {input_tokens:,} in + {output_tokens:,} out = {total_tokens:,} total"
+            if cost is not None:
+                trace += f" | **Cost:** ${cost:.6f}"
+            trace += "\n\n"
+            trace += f"**Response:** `{resp_text[:200]}{'...' if len(resp_text) > 200 else ''}`\n\n"
+            if check_fn:
+                trace += f"{'✅ Correct' if correct else '❌ Incorrect'}\n\n"
+
+            yield trace, RunResult(
+                response=resp_text, correct=correct, tokens=total_tokens,
+                input_tokens=input_tokens, output_tokens=output_tokens,
+                time_seconds=elapsed, iterations=iterations, cost_usd=cost, trace=trace,
+            )
+        else:
+            trace += "**Error:** No result received from subprocess.\n"
+            yield trace, RunResult(
+                response="", correct=False, tokens=0, input_tokens=0,
+                output_tokens=0, time_seconds=elapsed, trace=trace,
+            )
+
+    except Exception as e:
+        trace += f"**Error:** {e}\n"
+        yield trace, RunResult(
+            response="", correct=False, tokens=0, input_tokens=0,
+            output_tokens=0, time_seconds=time.time() - start, trace=trace,
+        )
+    finally:
+        for f in [context_file, task_file]:
+            try:
+                os.unlink(f)
+            except Exception:
                 pass
 
 
@@ -909,10 +1349,10 @@ def build_app():
             """)
 
         with gr.Row(equal_height=True):
-            # Use gpt-4o-mini as default (it's reliable and cost-effective)
-            # Fallback to first model in list if gpt-4o-mini not available
-            default_model = "gpt-4o-mini" if "gpt-4o-mini" in initial_models else (
-                initial_models[0] if initial_models else "gpt-4o-mini"
+            # Use gpt-5-mini as default (it's reliable and cost-effective)
+            # Fallback to first model in list if gpt-5-mini not available
+            default_model = "gpt-5-mini" if "gpt-5-mini" in initial_models else (
+                initial_models[0] if initial_models else "gpt-5-mini"
             )
 
             model_dropdown = gr.Dropdown(
@@ -968,7 +1408,7 @@ def build_app():
                     with gr.Column():
                         eval_time_plot = gr.Plot(label="Time", show_label=True)
 
-                with gr.Accordion("Execution traces", open=False):
+                with gr.Accordion("Execution traces", open=True):
                     eval_traces_output = gr.Markdown("*Run a benchmark to see traces.*")
 
                 with gr.Accordion("Task details", open=False):
@@ -1020,13 +1460,13 @@ def build_app():
 
                     methods = []
                     if run_vanilla:
-                        methods.append(("Vanilla", "🔵", "#4dabf7", run_vanilla_llm))
+                        methods.append(("Vanilla", "🔵", "#4dabf7", stream_vanilla_llm))
                     if run_rlm:
-                        methods.append(("minRLM", "🟠", "#ff922b", run_our_rlm))
+                        methods.append(("minRLM", "🟠", "#ff922b", stream_our_rlm))
                     if run_reasoning:
-                        methods.append(("minRLM with Reasoning", "🟣", "#c084fc", run_reasoning_rlm))
+                        methods.append(("minRLM with Reasoning", "🟣", "#c084fc", stream_reasoning_rlm))
                     if run_official:
-                        methods.append(("Official", "🟢", "#51cf66", run_official_rlm))
+                        methods.append(("Official", "🟢", "#51cf66", stream_official_rlm))
 
                     if not methods:
                         yield (
@@ -1039,25 +1479,30 @@ def build_app():
                         return
 
                     total_elapsed = 0.0
-                    for i, (name, icon, color, run_fn) in enumerate(methods):
-                        yield (
-                            create_status_box(
-                                f"Running {name}…",
-                                f"Step {i + 1}/{len(methods)} · {len(context):,} chars",
-                                "⋯",
-                                color,
-                                True,
-                            ),
-                            "",
-                            *build_charts(results_list),
-                            traces,
+                    for i, (name, icon, color, stream_fn) in enumerate(methods):
+                        step_status = create_status_box(
+                            f"Running {name}…",
+                            f"Step {i + 1}/{len(methods)} · {len(context):,} chars",
+                            "⋯",
+                            color,
+                            True,
                         )
+                        yield (step_status, "", *build_charts(results_list), traces)
 
                         step_start = time.time()
-                        r = run_fn(task, context, model, check_fn)
+                        r = None
+                        for partial_trace, result in stream_fn(task, context, model, check_fn):
+                            if result is None:
+                                # Intermediate update: push partial trace to UI immediately
+                                yield (step_status, "", *build_charts(results_list), traces + partial_trace)
+                            else:
+                                r = result
                         step_elapsed = time.time() - step_start
                         total_elapsed += step_elapsed
 
+                        if r is None:
+                            r = RunResult(response="", correct=False, tokens=0, input_tokens=0,
+                                          output_tokens=0, time_seconds=step_elapsed, trace="")
                         results_list.append((name, r))
                         traces += r.trace + "\n---\n\n"
 
@@ -1153,7 +1598,7 @@ def build_app():
                     with gr.Column():
                         custom_time_plot = gr.Plot(label="Time", show_label=True)
 
-                with gr.Accordion("Execution traces", open=False):
+                with gr.Accordion("Execution traces", open=True):
                     custom_traces_output = gr.Markdown("*Run a task to see traces.*")
 
                 with gr.Accordion("Responses", open=True):
@@ -1176,13 +1621,13 @@ def build_app():
 
                     methods = []
                     if run_vanilla:
-                        methods.append(("Vanilla", "🔵", "#4dabf7", run_vanilla_llm))
+                        methods.append(("Vanilla", "🔵", "#4dabf7", stream_vanilla_llm))
                     if run_rlm:
-                        methods.append(("minRLM", "🟠", "#ff922b", run_our_rlm))
+                        methods.append(("minRLM", "🟠", "#ff922b", stream_our_rlm))
                     if run_reasoning:
-                        methods.append(("minRLM with Reasoning", "🟣", "#c084fc", run_reasoning_rlm))
+                        methods.append(("minRLM with Reasoning", "🟣", "#c084fc", stream_reasoning_rlm))
                     if run_official:
-                        methods.append(("Official", "🟢", "#51cf66", run_official_rlm))
+                        methods.append(("Official", "🟢", "#51cf66", stream_official_rlm))
 
                     if not methods:
                         yield (
@@ -1198,22 +1643,26 @@ def build_app():
                     context_info = f"{len(context):,} chars" if context else "no context"
                     total_elapsed = 0.0
 
-                    for i, (name, icon, color, run_fn) in enumerate(methods):
-                        yield (
-                            create_status_box(
-                                f"Running {name}…", f"Step {i + 1}/{len(methods)} · {context_info}", "⋯", color, True
-                            ),
-                            "",
-                            *build_charts(results_list),
-                            traces,
-                            "",
+                    for i, (name, icon, color, stream_fn) in enumerate(methods):
+                        step_status = create_status_box(
+                            f"Running {name}…", f"Step {i + 1}/{len(methods)} · {context_info}", "⋯", color, True
                         )
+                        yield (step_status, "", *build_charts(results_list), traces, "")
 
                         step_start = time.time()
-                        r = run_fn(task, context, model, None)  # No check_fn for custom tasks
+                        r = None
+                        for partial_trace, result in stream_fn(task, context, model, None):
+                            if result is None:
+                                # Real-time update: push partial trace to UI immediately
+                                yield (step_status, "", *build_charts(results_list), traces + partial_trace, "")
+                            else:
+                                r = result
                         step_elapsed = time.time() - step_start
                         total_elapsed += step_elapsed
 
+                        if r is None:
+                            r = RunResult(response="", correct=False, tokens=0, input_tokens=0,
+                                          output_tokens=0, time_seconds=step_elapsed, trace="")
                         results_list.append((name, r))
                         traces += r.trace + "\n---\n\n"
 

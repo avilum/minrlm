@@ -220,22 +220,63 @@ class OfficialRunner(BaseRunner):
     """
     Official RLM Runner
 
-    Uses the official RLM implementation via uv run --with.
-    Installs from github.com/alexzhang13/rlm on demand.
+    Uses the official RLM implementation installed once at warmup into a
+    dedicated venv, then reused for every sample.  Installing on every call
+    via `uv run --with` causes concurrent git-fetch failures under parallel
+    evaluation.
     """
 
     description = "Official RLM implementation from the paper"
+    _RLM_REPO = "git+https://github.com/alexzhang13/rlm"
 
-    def __init__(self, model: str, timeout: int = 300, **kwargs):
+    def __init__(self, model: str, timeout: int = 300, log_dir: str | None = None, **kwargs):
         super().__init__(model, **kwargs)
         self.timeout = timeout
+        self.log_dir = log_dir
+        self._venv_python: str | None = None  # set by warmup()
 
     def warmup(self) -> bool:
-        """Official RLM is always available via uv --with."""
+        """Install rlm once into a persistent venv so run() never fetches git."""
+        import shutil
+
+        venv_dir = Path(tempfile.gettempdir()) / "rlm_official_venv"
+
+        # Reuse an existing venv if the rlm package is already installed there.
+        python_bin = venv_dir / "bin" / "python"
+        if python_bin.exists():
+            check = subprocess.run(
+                [str(python_bin), "-c", "import rlm"],
+                capture_output=True,
+            )
+            if check.returncode == 0:
+                self._venv_python = str(python_bin)
+                return True
+            # Broken venv — remove and recreate
+            shutil.rmtree(venv_dir, ignore_errors=True)
+
+        print(f"[official] Installing rlm into {venv_dir} …", flush=True)
+        subprocess.run(["uv", "venv", str(venv_dir)], check=True, capture_output=True)
+        result = subprocess.run(
+            ["uv", "pip", "install", self._RLM_REPO, "--python", str(python_bin)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print(f"[official] Install failed:\n{result.stderr}", flush=True)
+            return False
+
+        self._venv_python = str(python_bin)
         return True
 
     def run(self, task: str, context: str) -> RunResult:
         start = time.time()
+
+        if not self._venv_python:
+            return RunResult(
+                response="",
+                error="official runner not warmed up — rlm venv missing",
+                time_seconds=0.0,
+            )
 
         # Write context and task to temp files (too large for command line)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
@@ -246,12 +287,15 @@ class OfficialRunner(BaseRunner):
             f.write(task)
             task_file = f.name
 
+        log_dir_escaped = json.dumps(self.log_dir) if self.log_dir else "None"
+
         # Script to run official RLM
         script = f"""
 import json
 import time
 
 from rlm import RLM
+from rlm.logger import RLMLogger
 
 with open("{context_file}") as f:
     context = f.read()
@@ -260,15 +304,19 @@ with open("{task_file}") as f:
     task = f.read()
 
 model = "{self.model}"
+log_dir = {log_dir_escaped}
 
 start = time.time()
+
+logger = RLMLogger(log_dir=log_dir) if log_dir else None
 
 rlm = RLM(
     backend="openai",
     backend_kwargs={{"model_name": model}},
     environment="local",
     max_iterations=10,
-    verbose=False
+    verbose=False,
+    logger=logger,
 )
 
 # Official API: prompt=context, root_prompt=task
@@ -291,6 +339,19 @@ response = result.response or ""
 if response.startswith('"') and response.endswith('"'):
     response = response[1:-1]
 
+# Extract generated code from iterations (first code block across all iterations)
+generated_code = None
+if logger:
+    trajectory = logger.get_trajectory()
+    if trajectory:
+        for it in trajectory.get("iterations", []):
+            code_blocks = it.get("code_blocks", [])
+            if code_blocks:
+                generated_code = code_blocks[0].get("code")
+                break
+
+log_file_path = logger.log_file_path if logger else None
+
 print("<<<RESULT>>>")
 print(json.dumps({{
     "response": response,
@@ -298,22 +359,15 @@ print(json.dumps({{
     "input_tokens": total_input,
     "output_tokens": total_output,
     "time_seconds": elapsed,
-    "iterations": iterations
+    "iterations": iterations,
+    "generated_code": generated_code,
+    "log_file_path": log_file_path,
 }}))
 """
 
         try:
-            # Use uv run --with to install official RLM from GitHub
             proc = subprocess.run(
-                [
-                    "uv",
-                    "run",
-                    "--with",
-                    "git+https://github.com/alexzhang13/rlm",
-                    "python",
-                    "-c",
-                    script,
-                ],
+                [self._venv_python, "-c", script],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
@@ -336,6 +390,8 @@ print(json.dumps({{
                     output_tokens=data["output_tokens"],
                     time_seconds=data["time_seconds"],
                     iterations=data["iterations"],
+                    generated_code=data.get("generated_code"),
+                    log_file_path=data.get("log_file_path"),
                 )
             else:
                 error_msg = proc.stderr[:500] if proc.stderr else proc.stdout[:500]
