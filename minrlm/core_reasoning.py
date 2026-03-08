@@ -68,8 +68,7 @@ class RLMReasoning(RLM):
 
         # Set context in REPL (allow override for reuse)
         self._repl.set_variable("task_0", task, allow_override=True)
-        if context:
-            self._repl.set_variable("input_0", context, allow_override=True)
+        self._repl.set_variable("input_0", context or "", allow_override=True)
 
         # Log start with full task and context for debugging
         start_data = {

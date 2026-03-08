@@ -117,6 +117,36 @@ GDP Val and AIME 2025 require multiple code-execution iterations, explaining the
 | `official_repoqa` | RepoQA | [evalplus/repoqa_release](https://github.com/evalplus/repoqa_release) |
 | `official_gdpval` | GDP Val | [openai/gdpval](https://huggingface.co/datasets/openai/gdpval) |
 | `official_aime_2025` | AIME 2025 | [MathArena/aime_2025](https://huggingface.co/datasets/MathArena/aime_2025) |
+| `official_gpqa_diamond` | GPQA Diamond | [Idavidrein/gpqa](https://huggingface.co/datasets/Idavidrein/gpqa) (gated) |
+| `official_mmlu_pro` | MMLU-Pro | [TIGER-Lab/MMLU-Pro](https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro) |
+| `official_ifeval` | IFEval | [google/IFEval](https://huggingface.co/datasets/google/IFEval) |
+| `official_livecodebench` | LiveCodeBench v6 | [livecodebench/code_generation_lite](https://huggingface.co/datasets/livecodebench/code_generation_lite) |
+
+### Downloading datasets
+
+GDP Val, AIME 2025, GPQA Diamond, MMLU-Pro, IFEval, and LiveCodeBench are auto-downloaded at runtime.
+GPQA Diamond is a gated dataset — you must accept the license at [huggingface.co/datasets/Idavidrein/gpqa](https://huggingface.co/datasets/Idavidrein/gpqa) and run `huggingface-cli login` first.
+
+The remaining datasets must be pre-downloaded to `evals/data/`:
+
+```bash
+uv run --with datasets,huggingface_hub python -c "
+from datasets import load_dataset
+
+datasets = {
+    'oolong': ('oolongbench/oolong-synth', None),
+    'longbench_v2': ('zai-org/LongBench-v2', None),
+    'browsecomp_plus': ('Tevatron/browsecomp-plus', None),
+    'ruler_full_mirror': ('tonychenxyz/ruler-full', 'plain'),
+}
+
+for name, (repo, config) in datasets.items():
+    print(f'Downloading {repo}...')
+    ds = load_dataset(repo, config)
+    ds.save_to_disk(f'evals/data/{name}')
+    print(f'  Saved to evals/data/{name}')
+"
+```
 
 ## Reproduction
 

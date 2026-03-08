@@ -17,10 +17,10 @@ Plots generated
 Usage
 -----
     # From a JSON results file
-    uv run python -m eval.visualize path/to/eval.json [output_dir]
+    uv run python -m eval.plotting path/to/eval.json [output_dir]
 
     # Auto-discovers the newest JSON in a directory tree
-    uv run python -m eval.visualize logs/my_eval/ [output_dir]
+    uv run python -m eval.plotting logs/my_eval/ [output_dir]
 """
 
 from __future__ import annotations
@@ -703,7 +703,7 @@ def load_and_visualize(json_path: Path, output_dir: Path) -> list[Path]:
 
 
 # =============================================================================
-# CLI  —  python -m eval.visualize  <path>  [output_dir]
+# CLI  —  python -m eval.plotting  <path>  [output_dir]
 # =============================================================================
 
 

@@ -299,13 +299,13 @@ uv run python eval/run.py \
 
 ```bash
 # Generate 8 plots from any eval JSON
-uv run python -m eval.visualize logs/my_eval/eval_20260302.json
+uv run python -m eval.plotting logs/my_eval/eval_20260302.json
 
 # Auto-discover newest JSON in a directory tree
-uv run python -m eval.visualize logs/my_eval/
+uv run python -m eval.plotting logs/my_eval/
 
 # Custom output directory
-uv run python -m eval.visualize logs/my_eval/ reports/my_eval_plots/
+uv run python -m eval.plotting logs/my_eval/ reports/my_eval_plots/
 ```
 
 Plots generated: accuracy per task, tokens per task, latency per task, cost per task, accuracy vs cost (efficiency frontier), accuracy vs latency, token savings vs baselines, summary dashboard.

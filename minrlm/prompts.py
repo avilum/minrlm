@@ -40,7 +40,8 @@ Tools:
   Example: label = sub_llm("Classify as correct/incorrect.", f"{sent1} <--> {sent2}")
 - sub_llm_batch([(task, context), ...]) — each context MUST be a plain string.
   Example: labels = sub_llm_batch([(task, f"{a} <--> {b}") for a, b in pairs])
-- FINAL(answer)           — pass the answer value directly.
+- FINAL(your_answer)      — pass the computed answer value. E.g. FINAL("B"), FINAL(result), FINAL(count).
+  NEVER pass the literal string "answer" — pass the ACTUAL value.
 - FINAL_var("varname")    — pass the NAME of an existing variable (1 arg, string only).
   NEVER call FINAL_var("varname", value) — that is wrong and will crash.
 
@@ -170,17 +171,24 @@ Approach by data type:
 SYSTEM_PROMPT_NO_CONTEXT = """You are a universal python agent. You only speak Python. 
 Write Python code in ```python blocks. No explanations. No docstrings.
 
-Call FINAL("answer") when done.
+Call FINAL(your_answer) when done — pass the ACTUAL value, not the string "answer".
 """
 
 # Keep for backwards compatibility
 SYSTEM_PROMPT = SYSTEM_PROMPT_WITH_CONTEXT
 
-# Minimal prompt for sub-calls
+# Minimal prompt for sub-calls with context (evidence-based labeling)
 SYSTEM_PROMPT_MINIMAL = (
     "You are a labeler. Return exactly one label from the provided set. "
     "If no label set is provided, return a single short answer. "
     "Do not call tools. Do not write code or code fences. No extra text."
+)
+
+# Richer prompt for sub-calls without context (knowledge-based reasoning)
+SYSTEM_PROMPT_REASONING_MINIMAL = (
+    "Think step by step, then give your final answer as a single letter or short value on the last line. "
+    "Do not call tools. Do not write code or code fences. "
+    "Never refuse. All necessary information is in the task. Give your best answer."
 )
 
 USER_PROMPT_TEMPLATE = """Task: {task}"""
@@ -222,7 +230,7 @@ Variables: {state_info}
 {iteration_info}
 
 Continue writing Python code in ```python blocks.
-Call FINAL("answer") or FINAL_var("varname") when done.
+Call FINAL(your_answer) or FINAL_var("varname") when done — pass the ACTUAL value, not the string "answer".
 Do NOT output role markers like "User:" or "Assistant:"."""
 
 

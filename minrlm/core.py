@@ -7,6 +7,7 @@ Implemented by Avi Lumelsky
 import asyncio
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -24,6 +25,7 @@ from .prompts import (
     format_system_prompt,
     format_user_prompt,
     SYSTEM_PROMPT_MINIMAL,
+    SYSTEM_PROMPT_REASONING_MINIMAL,
 )
 
 # Suppress HTTP request logging
@@ -60,17 +62,20 @@ class _StopExecution(BaseException):
 
 
 class ProtectedNamespace(dict):
-    """Dict that prevents reassignment of protected keys (like input_0)."""
+    """Dict that prevents reassignment of protected keys (data AND built-in tools)."""
 
-    PROTECTED = {"input_0", "input_1", "input_2", "task_0"}  # These are immutable - LLM code cannot modify them
+    PROTECTED_DATA = {"input_0", "input_1", "input_2", "task_0"}
+    PROTECTED_TOOLS = {"FINAL", "FINAL_var", "search", "peek", "sub_llm", "sub_llm_batch"}
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._allow_reassign = False
 
     def __setitem__(self, key: str, value: Any) -> None:
-        if key in self.PROTECTED and key in self and not self._allow_reassign:
+        if key in self.PROTECTED_DATA and key in self and not self._allow_reassign:
             raise NameError(f"Cannot reassign '{key}' - it already contains your data. Use it directly.")
+        if key in self.PROTECTED_TOOLS and key in self and not self._allow_reassign:
+            return  # silently ignore — don't let LLM shadow built-in tools
         super().__setitem__(key, value)
 
     def allow_reassign(self, allow: bool) -> None:
@@ -123,8 +128,9 @@ class PythonREPL:
         if value is None:
             raise ValueError("FINAL() called with None - provide a non-empty string value")
 
-        # Enforce data grounding: if input_0 exists, must access data first
-        if "input_0" in self._namespace and not self._data_accessed:
+        # Enforce data grounding: if input_0 exists and is non-empty, must access data first
+        input_0_val = self._namespace.get("input_0")
+        if input_0_val and not self._data_accessed:
             # Allow patch outputs without forcing search()
             if self._looks_like_patch(str(value)):
                 self._data_accessed = True
@@ -197,8 +203,9 @@ class PythonREPL:
 
     def _set_output_var(self, var_name: str) -> None:
         """Set output from a variable in the namespace (FINAL_VAR from paper)."""
-        # Enforce data grounding: if input_0 exists, must access data first
-        if "input_0" in self._namespace and not self._data_accessed:
+        # Enforce data grounding: if input_0 exists and is non-empty, must access data first
+        input_0_val = self._namespace.get("input_0")
+        if input_0_val and not self._data_accessed:
             raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
 
         if var_name not in self._namespace:
@@ -266,7 +273,8 @@ class PythonREPL:
 
         # Check if input_0 is accessed directly (e.g., json.loads(input_0), re.findall(..., input_0), etc.)
         # This allows structured data parsing and pattern matching without requiring search()
-        if "input_0" in self._namespace and not self._data_accessed:
+        input_0_val = self._namespace.get("input_0")
+        if input_0_val and not self._data_accessed:
             import re
 
             # Look for common patterns that indicate input_0 is being used
@@ -378,9 +386,9 @@ class RLM:
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",  # Default to non-reasoning model for cost efficiency
-        api_key: str | None = None,
-        base_url: str | None = None,
+        model: str | None = None,  # Falls back to MINRLM_MODEL or "gpt-4o-mini"
+        api_key: str | None = None,  # Falls back to MINRLM_API_KEY or OPENAI_API_KEY
+        base_url: str | None = None,  # Falls back to MINRLM_BASE_URL or OPENAI_BASE_URL
         max_iterations: int = 6,  # Reduced from 20 - force early commitment
         max_time_seconds: int = DEFAULT_MAX_TIME_SECONDS,  # Timeout per completion
         max_output_tokens: int | None = 3000,  # Allow complete code generation for complex tasks (was 1500, caused truncation)
@@ -396,6 +404,9 @@ class RLM:
         docker_memory: str = "256m",
         docker_timeout: int = 60,
     ):
+        model = model or os.environ.get("MINRLM_MODEL", "gpt-4o-mini")
+        api_key = api_key or os.environ.get("MINRLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        base_url = base_url or os.environ.get("MINRLM_BASE_URL") or os.environ.get("OPENAI_BASE_URL")
         self.model = model
         self.max_iterations = max_iterations
         self.max_time_seconds = max_time_seconds
@@ -698,11 +709,11 @@ class RLM:
                     if t and t not in candidates:
                         candidates.append(t)
 
-        # Multiple-choice format: A), B), C), D) or (A), (B), (C), (D)
+        # Multiple-choice format: detect actual lettered options present
         if not candidates:
-            if re.search(r'[Cc]hoices?:\s*\n?\s*[A-D]\)', task) or \
-               re.search(r'[Rr]eturn.*\(A,?\s*B,?\s*C,?\s*(?:or\s*)?D\)', task):
-                candidates = ['A', 'B', 'C', 'D']
+            found = [c for c in "ABCDEFGHIJ" if f"{c})" in task]
+            if len(found) >= 2:
+                candidates = found
 
         # Common label pairs
         task_lower = task.lower()
@@ -723,7 +734,7 @@ class RLM:
                 if c not in cleaned:
                     cleaned.append(c)
 
-        if 1 <= len(cleaned) <= 8:
+        if 1 <= len(cleaned) <= 12:
             return cleaned
         return None
 
@@ -815,8 +826,11 @@ class RLM:
             user += f"\n\nReturn exactly one of: {', '.join(allowed)}. No other text."
         if context:
             user += f"\n\nContext:\n{context}"
+            sys_prompt = SYSTEM_PROMPT_MINIMAL
+        else:
+            sys_prompt = SYSTEM_PROMPT_REASONING_MINIMAL
         return [
-            {"role": "system", "content": SYSTEM_PROMPT_MINIMAL},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": user},
         ]
 
@@ -1178,8 +1192,8 @@ class RLM:
         peek_output = ""
         if is_top_level and task:
             self._repl.set_variable("task_0", task, allow_override=False)
+        self._repl.set_variable("input_0", context or "", allow_override=self._depth > 0)
         if context:
-            self._repl.set_variable("input_0", context, allow_override=self._depth > 0)
             # Auto-peek: show data preview in first prompt (saves an API call)
             peek_result = self._repl.execute("peek(input_0)")
             peek_output = peek_result.get("stdout", "")

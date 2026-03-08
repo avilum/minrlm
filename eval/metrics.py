@@ -444,9 +444,12 @@ def _generate_markdown_report(stats: dict, results: list[EvalResult]) -> str:
         ]
     )
 
-    vanilla = stats.get("by_runner", {}).get("vanilla", {})
-    ours = stats.get("by_runner", {}).get("ours", {})
-    official = stats.get("by_runner", {}).get("official", {})
+    by_runner = stats.get("by_runner", {})
+    vanilla = by_runner.get("vanilla", {})
+    official = by_runner.get("official", {})
+    # Find our RLM runner dynamically (minrlm, minrlm-reasoning, or legacy "ours")
+    _rlm_keys = [k for k in by_runner if k.startswith("minrlm") or k == "ours"]
+    ours = by_runner.get(_rlm_keys[0], {}) if _rlm_keys else {}
 
     if vanilla and ours:
         token_ratio = vanilla.get("avg_tokens_per_task", 0) / max(ours.get("avg_tokens_per_task", 1), 1)

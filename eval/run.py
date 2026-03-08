@@ -18,6 +18,10 @@ Official Datasets:
 - official_browsecomp: Multi-hop research
 - official_gdpval: Professional work tasks
 - official_aime_2025: Competition math
+- official_gpqa_diamond: Graduate-level science reasoning
+- official_mmlu_pro: Hard 10-choice knowledge questions
+- official_ifeval: Instruction following (verifiable constraints)
+- official_livecodebench: Competitive programming (code execution)
 
 Usage:
     # Quick start
@@ -72,7 +76,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from eval.metrics import EvalResult, calculate_cost, compute_statistics, save_results
 from eval.runners import RUNNER_REGISTRY, RunResult, get_runner
 from eval.tasks import TASK_REGISTRY, get_task
-from eval.visualize import plot_comprehensive_dashboard
+from eval.plotting import plot_comprehensive_dashboard
 
 # =============================================================================
 # Logging Setup
@@ -853,6 +857,12 @@ def main():
             "official_longbench_v2",
             "official_repoqa",
             "official_browsecomp",
+            "official_gdpval",
+            "official_aime_2025",
+            "official_gpqa_diamond",
+            "official_mmlu_pro",
+            "official_ifeval",
+            "official_livecodebench",
         ]
 
     # Parse runners

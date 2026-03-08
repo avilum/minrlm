@@ -58,132 +58,87 @@ from minrlm import RLM, RLMBase
 # =============================================================================
 
 
+def _display_name(task_name: str) -> str:
+    """Convert a task registry key like 'official_gpqa_diamond' into 'GPQA DIAMOND'."""
+    return (
+        task_name.upper()
+        .replace("OFFICIAL_", "")
+        .replace("_", " ")
+    )
+
+
 def get_benchmark_options() -> dict[str, dict]:
-    """Build benchmark dropdown options from the eval task registry."""
-    options = {}
+    """Build benchmark dropdown options from the eval task registry.
 
-    # Official tasks (use actual tasks that exist)
-    core_tasks = ["official_sniah", "official_oolong", "official_repoqa", "official_codeqa"]
-    for task_name in core_tasks:
-        if task_name in TASK_REGISTRY:
-            task_cls = TASK_REGISTRY[task_name]
-            display = f"{task_name.upper().replace('OFFICIAL_', '').replace('_', ' ')}"
-            options[display] = {
-                "task": task_name,
-                "description": f"{task_cls.description}",
-            }
+    Every registered task appears automatically.  Parameterized size/position
+    variants are added on top for tasks that benefit from them.
+    """
+    options: dict[str, dict] = {}
 
-    # Paper's scaling sizes: 8K to 1M (Figure 1), plus 10M for extreme testing
-    scaling_sizes = [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 10485760]
-    for size in scaling_sizes:
-        if size < 1024 * 1024:
-            size_label = f"{size // 1024}K"
-        else:
-            size_label = f"{size // (1024 * 1024)}M"
-        options[f"SCALING - {size_label}"] = {
-            "task": "official_sniah",
-            "context_size": size,
-            "description": f"S-NIAH at {size:,} chars",
+    # ------------------------------------------------------------------
+    # 1) Auto-discover ALL registered tasks
+    # ------------------------------------------------------------------
+    for task_name, task_cls in sorted(TASK_REGISTRY.items()):
+        display = _display_name(task_name)
+        options[display] = {
+            "task": task_name,
+            "description": getattr(task_cls, "description", task_name),
         }
 
-    json_sizes = {"50K": 50000, "100K": 100000, "200K": 200000}
-    for size_name, size_val in json_sizes.items():
-        if "json_extraction" in TASK_REGISTRY:
-            options[f"JSON EXTRACTION - {size_name}"] = {
-                "task": "json_extraction",
-                "context_size": size_val,
-                "description": f"Extract data from JSON ({size_val:,} chars)",
-            }
-        if "json_aggregation" in TASK_REGISTRY:
-            options[f"JSON AGGREGATION - {size_name}"] = {
-                "task": "json_aggregation",
-                "context_size": size_val,
-                "description": f"Aggregate data from JSON ({size_val:,} chars)",
+    # ------------------------------------------------------------------
+    # 2) Parameterized variants (scaling sizes, context sizes, positions)
+    #    These add extra dropdown entries for tasks that support them.
+    # ------------------------------------------------------------------
+
+    # SNIAH scaling: 8K → 10M
+    if "official_sniah" in TASK_REGISTRY:
+        for size in [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 10485760]:
+            label = f"{size // 1024}K" if size < 1024 * 1024 else f"{size // (1024 * 1024)}M"
+            options[f"SCALING - {label}"] = {
+                "task": "official_sniah",
+                "context_size": size,
+                "description": f"S-NIAH at {size:,} chars",
             }
 
-    # Extended long context sizes including paper's large contexts
-    long_sizes = {
-        "128K": 131072,
-        "256K": 262144,
-        "512K": 524288,
-        "1M": 1048576,
-        "10M": 10485760,
-    }
-    for size_name, size_val in long_sizes.items():
-        if "long_context" in TASK_REGISTRY:
-            for pos in ["start", "middle", "end"]:
-                options[f"LONG CONTEXT {size_name} ({pos})"] = {
-                    "task": "long_context",
-                    "context_size": size_val,
-                    "position": pos,
-                    "description": f"Needle at {pos} of {size_val:,} chars",
+    # JSON tasks at various sizes
+    for json_task in ("json_extraction", "json_aggregation"):
+        if json_task in TASK_REGISTRY:
+            for label, val in {"50K": 50000, "100K": 100000, "200K": 200000}.items():
+                display = json_task.upper().replace("_", " ")
+                options[f"{display} - {label}"] = {
+                    "task": json_task,
+                    "context_size": val,
+                    "description": f"{display} ({val:,} chars)",
                 }
 
-    # Additional official tasks
-    if "official_browsecomp" in TASK_REGISTRY:
-        options["BROWSECOMP"] = {
-            "task": "official_browsecomp",
-            "description": "Multi-hop research and reasoning",
-        }
+    # Long context with needle positions
+    if "long_context" in TASK_REGISTRY:
+        for label, val in {"128K": 131072, "256K": 262144, "512K": 524288, "1M": 1048576, "10M": 10485760}.items():
+            for pos in ("start", "middle", "end"):
+                options[f"LONG CONTEXT {label} ({pos})"] = {
+                    "task": "long_context",
+                    "context_size": val,
+                    "position": pos,
+                    "description": f"Needle at {pos} of {val:,} chars",
+                }
 
-    if "official_gdpval" in TASK_REGISTRY:
-        options["GDPVAL"] = {
-            "task": "official_gdpval",
-            "description": "Professional work tasks",
-        }
-
-    if "official_oolong" in TASK_REGISTRY:
-        options["OOLONG (Aggregation)"] = {
-            "task": "official_oolong",
-            "context_size": 131072,
-            "description": "Count label occurrences (131K chars)",
-        }
-
+    # CodeQA at various sizes
     if "official_codeqa" in TASK_REGISTRY:
-        # Paper's CodeQA sizes: 23K-4.2M, include 1M+
-        codeqa_sizes = {
-            "Small (100K)": 100000,
-            "Medium (500K)": 500000,
-            "Large (1M)": 1000000,
-            "XL (2M)": 2000000,
-            "XXL (10M)": 10000000,
-        }
-        for size_name, size_val in codeqa_sizes.items():
-            options[f"CODEQA - {size_name}"] = {
+        for label, val in {"100K": 100000, "500K": 500000, "1M": 1000000, "2M": 2000000, "10M": 10000000}.items():
+            options[f"CODEQA - {label}"] = {
                 "task": "official_codeqa",
-                "context_size": size_val,
-                "description": f"Code repository understanding ({size_val:,} chars)",
+                "context_size": val,
+                "description": f"Code repository understanding ({val:,} chars)",
             }
 
+    # BrowseComp at various sizes
     if "official_browsecomp" in TASK_REGISTRY:
-        # Paper's BrowseComp+ sizes: 6M-11M
-        browsecomp_sizes = {
-            "Small (200K)": 200000,
-            "Medium (1M)": 1000000,
-            "Large (6M)": 6000000,
-            "XL (10M)": 10000000,
-            "XXL (11M)": 11000000,
-        }
-        for size_name, size_val in browsecomp_sizes.items():
-            options[f"BROWSECOMP - {size_name}"] = {
+        for label, val in {"200K": 200000, "1M": 1000000, "6M": 6000000, "10M": 10000000, "11M": 11000000}.items():
+            options[f"BROWSECOMP - {label}"] = {
                 "task": "official_browsecomp",
-                "context_size": size_val,
-                "description": f"Multi-hop research ({size_val:,} chars)",
+                "context_size": val,
+                "description": f"Multi-hop research ({val:,} chars)",
             }
-
-    if "official_gdpval" in TASK_REGISTRY:
-        # Real professional work tasks across multiple occupations
-        options["GDPVAL (Professional Tasks)"] = {
-            "task": "official_gdpval",
-            "description": "Real professional work tasks (Accounting, Tax, Finance, etc.)",
-        }
-
-    if "official_aime_2025" in TASK_REGISTRY:
-        # AIME 2025 competition math problems
-        options["AIME 2025 (Competition Math)"] = {
-            "task": "official_aime_2025",
-            "description": "AIME 2025 - 30 competition-level math problems",
-        }
 
     return options
 
@@ -414,7 +369,7 @@ def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) 
 
 def run_reasoning_rlm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
     """Run with RLMReasoning (Reasoning approach)."""
-    trace_parts = ["## Recursive minRLM\n\n"]
+    trace_parts = ["## minRLM with Reasoning\n\n"]
     if context:
         trace_parts.append(f"Processing {len(context):,} chars with reasoning-first approach...\n\n")
 
@@ -865,7 +820,7 @@ def stream_our_rlm(task: str, context: str, model: str, check_fn=None):
 def stream_reasoning_rlm(task: str, context: str, model: str, check_fn=None):
     """Streaming generator for minRLM with Reasoning."""
     yield from _stream_rlm_runner(
-        label="Recursive minRLM",
+        label="minRLM with Reasoning",
         task=task, context=context, model=model, check_fn=check_fn,
         rlm_factory=lambda on_step: RLM(model=model, max_iterations=10, on_step=on_step),
         include_reasoning=True,
@@ -1084,6 +1039,20 @@ except Exception as e:
                 os.unlink(f)
             except Exception:
                 pass
+
+
+def _consume_stream_in_thread(stream_gen, method_name, update_queue):
+    """Consume a streaming generator in a background thread, pushing updates to a shared queue."""
+    try:
+        final_result = None
+        for partial_trace, result in stream_gen:
+            if result is None:
+                update_queue.put(("trace", method_name, partial_trace))
+            else:
+                final_result = result
+        update_queue.put(("done", method_name, final_result))
+    except Exception as e:
+        update_queue.put(("error", method_name, str(e)))
 
 
 # =============================================================================
@@ -1478,33 +1447,65 @@ def build_app():
                         )
                         return
 
-                    total_elapsed = 0.0
-                    for i, (name, icon, color, stream_fn) in enumerate(methods):
-                        step_status = create_status_box(
-                            f"Running {name}…",
-                            f"Step {i + 1}/{len(methods)} · {len(context):,} chars",
-                            "⋯",
-                            color,
-                            True,
-                        )
-                        yield (step_status, "", *build_charts(results_list), traces)
+                    method_names_ordered = [name for name, _, _, _ in methods]
+                    parallel_start = time.time()
+                    update_q = queue.Queue()
+                    latest_traces: dict[str, str] = {}
+                    results_dict: dict[str, RunResult] = {}
 
-                        step_start = time.time()
-                        r = None
-                        for partial_trace, result in stream_fn(task, context, model, check_fn):
-                            if result is None:
-                                # Intermediate update: push partial trace to UI immediately
-                                yield (step_status, "", *build_charts(results_list), traces + partial_trace)
+                    for name, icon, color, stream_fn in methods:
+                        gen = stream_fn(task, context, model, check_fn)
+                        threading.Thread(
+                            target=_consume_stream_in_thread,
+                            args=(gen, name, update_q),
+                            daemon=True,
+                        ).start()
+
+                    done_count = 0
+                    while done_count < len(methods):
+                        try:
+                            kind, mname, payload = update_q.get(timeout=0.5)
+                        except queue.Empty:
+                            continue
+
+                        if kind == "trace":
+                            latest_traces[mname] = payload
+                        elif kind in ("done", "error"):
+                            done_count += 1
+                            if kind == "done" and payload is not None:
+                                results_dict[mname] = payload
+                                latest_traces[mname] = payload.trace
                             else:
-                                r = result
-                        step_elapsed = time.time() - step_start
-                        total_elapsed += step_elapsed
+                                err_trace = latest_traces.get(mname, "")
+                                if kind == "error":
+                                    err_trace += f"\n**Error:** {payload}\n"
+                                results_dict[mname] = RunResult(
+                                    response="", correct=False, tokens=0, input_tokens=0,
+                                    output_tokens=0, time_seconds=time.time() - parallel_start,
+                                    trace=err_trace,
+                                )
+                                latest_traces[mname] = err_trace
 
-                        if r is None:
-                            r = RunResult(response="", correct=False, tokens=0, input_tokens=0,
-                                          output_tokens=0, time_seconds=step_elapsed, trace="")
-                        results_list.append((name, r))
-                        traces += r.trace + "\n---\n\n"
+                        running = [n for n in method_names_ordered if n not in results_dict]
+                        finished = [n for n in method_names_ordered if n in results_dict]
+                        running_label = (
+                            f"Running {len(running)} method{'s' if len(running) != 1 else ''} in parallel…"
+                            if running else "Finishing…"
+                        )
+                        step_status = create_status_box(
+                            running_label,
+                            f"{len(finished)}/{len(methods)} done · {len(context):,} chars",
+                            "⋯", "#818cf8", bool(running),
+                        )
+                        combined_traces = "\n---\n\n".join(
+                            latest_traces[n] for n in method_names_ordered if n in latest_traces
+                        )
+                        partial_results = [(n, results_dict[n]) for n in method_names_ordered if n in results_dict]
+                        yield (step_status, "", *build_charts(partial_results), combined_traces)
+
+                    results_list = [(n, results_dict[n]) for n in method_names_ordered]
+                    total_elapsed = time.time() - parallel_start
+                    traces = "\n---\n\n".join(r.trace for _, r in results_list if r.trace)
 
                     # Final output
                     output = f"**{benchmark_name}** · {len(context):,} chars · {model}\n\n"
@@ -1641,30 +1642,65 @@ def build_app():
                         return
 
                     context_info = f"{len(context):,} chars" if context else "no context"
-                    total_elapsed = 0.0
+                    method_names_ordered = [name for name, _, _, _ in methods]
+                    parallel_start = time.time()
+                    update_q = queue.Queue()
+                    latest_traces: dict[str, str] = {}
+                    results_dict: dict[str, RunResult] = {}
 
-                    for i, (name, icon, color, stream_fn) in enumerate(methods):
-                        step_status = create_status_box(
-                            f"Running {name}…", f"Step {i + 1}/{len(methods)} · {context_info}", "⋯", color, True
-                        )
-                        yield (step_status, "", *build_charts(results_list), traces, "")
+                    for name, icon, color, stream_fn in methods:
+                        gen = stream_fn(task, context, model, None)
+                        threading.Thread(
+                            target=_consume_stream_in_thread,
+                            args=(gen, name, update_q),
+                            daemon=True,
+                        ).start()
 
-                        step_start = time.time()
-                        r = None
-                        for partial_trace, result in stream_fn(task, context, model, None):
-                            if result is None:
-                                # Real-time update: push partial trace to UI immediately
-                                yield (step_status, "", *build_charts(results_list), traces + partial_trace, "")
+                    done_count = 0
+                    while done_count < len(methods):
+                        try:
+                            kind, mname, payload = update_q.get(timeout=0.5)
+                        except queue.Empty:
+                            continue
+
+                        if kind == "trace":
+                            latest_traces[mname] = payload
+                        elif kind in ("done", "error"):
+                            done_count += 1
+                            if kind == "done" and payload is not None:
+                                results_dict[mname] = payload
+                                latest_traces[mname] = payload.trace
                             else:
-                                r = result
-                        step_elapsed = time.time() - step_start
-                        total_elapsed += step_elapsed
+                                err_trace = latest_traces.get(mname, "")
+                                if kind == "error":
+                                    err_trace += f"\n**Error:** {payload}\n"
+                                results_dict[mname] = RunResult(
+                                    response="", correct=False, tokens=0, input_tokens=0,
+                                    output_tokens=0, time_seconds=time.time() - parallel_start,
+                                    trace=err_trace,
+                                )
+                                latest_traces[mname] = err_trace
 
-                        if r is None:
-                            r = RunResult(response="", correct=False, tokens=0, input_tokens=0,
-                                          output_tokens=0, time_seconds=step_elapsed, trace="")
-                        results_list.append((name, r))
-                        traces += r.trace + "\n---\n\n"
+                        running = [n for n in method_names_ordered if n not in results_dict]
+                        finished = [n for n in method_names_ordered if n in results_dict]
+                        running_label = (
+                            f"Running {len(running)} method{'s' if len(running) != 1 else ''} in parallel…"
+                            if running else "Finishing…"
+                        )
+                        step_status = create_status_box(
+                            running_label,
+                            f"{len(finished)}/{len(methods)} done · {context_info}",
+                            "⋯", "#818cf8", bool(running),
+                        )
+                        combined_traces = "\n---\n\n".join(
+                            latest_traces[n] for n in method_names_ordered if n in latest_traces
+                        )
+                        partial_results = [(n, results_dict[n]) for n in method_names_ordered if n in results_dict]
+                        yield (step_status, "", *build_charts(partial_results), combined_traces, "")
+
+                    results_list = [(n, results_dict[n]) for n in method_names_ordered]
+                    total_elapsed = time.time() - parallel_start
+                    traces = "\n---\n\n".join(r.trace for _, r in results_list if r.trace)
 
                     # Final output table
                     output = f"**Custom Task** · {context_info} · {model}\n\n"
