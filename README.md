@@ -8,7 +8,7 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 **The solution**: Data stays in a Python REPL as `input_0`. The model writes code to search, filter, and aggregate. The raw data never enters the conversation - the LLM decides what to look at through code, pulls what it needs, and runs attention only on what matters.
 
-**The proof**: 1,200-eval benchmark on gpt-5-mini across 8 tasks - **3.7x fewer tokens**, **1.9x cheaper**, and higher overall accuracy than vanilla LLM (71.8% vs 64.0%).
+**The proof**: 1,800-eval benchmark on gpt-5-mini across 12 tasks — **3.1x fewer tokens**, **1.5x cheaper**, comparable accuracy (70.2% vs 71.7% vanilla). Enables tasks vanilla can't run: BrowseComp (54% vs 6% — vanilla hits the context limit). **7.2x fewer tokens** than the official RLM at the same accuracy.
 
 **Improve every LLM in production, today.** If your application passes documents, logs, tables, or code to an LLM, minRLM is the fastest ROI you can find. The context window is the real bottleneck — not the model. Swap the client, keep everything else. Works with OpenAI, Anthropic, and any OpenAI-compatible API. Ships in an afternoon, scales to any context size.
 
@@ -22,22 +22,22 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 |-----------|----------|--------------|
 | **RLM client** | [`minrlm/`](minrlm/) | Core `RLM` and `RLMReasoning` classes - the LLM ↔ REPL loop |
 | **DockerREPL** | [`minrlm/docker_repl.py`](minrlm/docker_repl.py) | Sandboxed code execution via Docker + custom seccomp |
-| **Evals** | [`eval/`](eval/) | 8-task benchmark framework, runners, metrics, plot generation |
+| **Evals** | [`eval/`](eval/) | 12-task benchmark framework, runners, metrics, plot generation |
 | **Examples** | [`examples/`](examples/) | Quickstart scripts, proxy server, Gradio side-by-side UI |
 
 ---
 
 ## Benchmarks
 
-**gpt-5-mini** | **1,200 evaluations** | 8 tasks | 50 runs per task per runner
+**gpt-5-mini** | **1,800 evaluations** | 12 tasks | 50 runs per task per runner
 
 |  | minRLM | Vanilla LLM | Official RLM |
 |---|---|---|---|
-| **Accuracy** | **71.8%** | 64.0% | 69.5% |
-| **Avg Tokens** | **5,198** | 19,319 | 41,781 |
-| **Total Cost** | **$1.58** | $2.98 | $6.91 |
+| **Accuracy** | 70.2% | 71.7% | 71.0% |
+| **Avg Tokens** | **6,568** | 20,112 | 47,270 |
+| **Total Cost** | **$2.97** | $4.57 | $11.68 |
 
-**3.7x fewer tokens** than vanilla | **8.0x fewer** than official | **1.9x cheaper** than vanilla | **4.4x cheaper** than official
+**3.1x fewer tokens** than vanilla | **7.2x fewer** than official | **1.5x cheaper** than vanilla | **3.9x cheaper** than official
 
 ![Summary Dashboard](docs/summary_dashboard.png)
 
@@ -57,16 +57,22 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 ### Per task
 
-| Task | minRLM | Vanilla | Official | minRLM Tokens | vs Vanilla | vs Official |
-|------|--------|---------|----------|---------------|------------|-------------|
-| BrowseComp | **94%** | 0% | 58% | 4,531 | ∞ | **21.2x fewer** |
-| CodeQA | **56%** | 28% | 40% | 3,902 | **14.6x fewer** | **19.4x fewer** |
-| LongBench V2 | 36% | 46% | **48%** | 3,796 | **19.4x fewer** | **18.8x fewer** |
-| SNIAH | **98%** | 100% | 94% | 4,494 | - | **4.0x fewer** |
-| AIME 2025 | 76% | **90%** | 84% | 6,750 | - | **1.7x fewer** |
-| OOLONG | 88% | 92% | **94%** | 4,122 | **1.7x fewer** | **3.7x fewer** |
-| RepoQA | **90%** | 100% | 90% | 4,157 | 1.2x fewer | **4.7x fewer** |
-| GDP Val | 36% | **56%** | 48% | 9,830 | - | **2.8x fewer** |
+| Task | minRLM | Vanilla | Official | minRLM Tokens | vs Official Tokens |
+|------|--------|---------|----------|---------------|-------------------|
+| SNIAH | **100%** | 100% | 96% | 6,265 | **2.8x fewer** |
+| MMLU-Pro | **96%** | 96% | 88% | 4,606 | **2.4x fewer** |
+| Oolong | 92% | 94% | **98%** | 4,883 | **3.2x fewer** |
+| AIME 2025 | 80% | **96%** | 86% | 6,069 | **2.6x fewer** |
+| RepoQA | 76% | **98%** | 94% | 7,960 | **2.8x fewer** |
+| GPQA Diamond | **74%** | 72% | 64% | 5,116 | **2.9x fewer** |
+| IFEval | 70% | **78%** | 66% | 4,800 | **3.6x fewer** |
+| LiveCodeBench | 62% | **70%** | 62% | 7,196 | **1.3x fewer** |
+| BrowseComp | 54% | 6% | **62%** | 7,467 | **13.5x fewer** |
+| GDP Val | 52% | 52% | 52% | 10,352 | **4.7x fewer** |
+| CodeQA | 46% | **50%** | 40% | 6,909 | **24.5x fewer** |
+| LongBench V2 | 40% | **48%** | 44% | 7,193 | **17.4x fewer** |
+
+minRLM uses fewer tokens than Official RLM on **every task** (1.3x–24.5x). Vanilla fails on BrowseComp (6%) because the context exceeds the token limit.
 
 Full results and reproduction: [`eval/README.md`](eval/README.md)
 
@@ -258,16 +264,16 @@ Tip: use [gVisor](https://gvisor.dev/) as the Docker runtime for an additional k
 
 ## 3. Evals
 
-`eval/` is a self-contained benchmark framework covering 8 tasks from the RLM paper.
+`eval/` is a self-contained benchmark framework covering 12 tasks.
 
 | File | Purpose |
 |------|---------|
 | `quickstart.py` | Smoke test - one task, two runners, instant feedback |
 | `run.py` | Full benchmark runner with parallelism, logging, and result export |
-| `tasks.py` | 8 official benchmark tasks (S-NIAH, OOLONG, CodeQA, LongBench-v2, RepoQA, BrowseComp+, GDP Val, AIME 2025) |
+| `tasks.py` | 12 benchmark tasks (S-NIAH, OOLONG, CodeQA, LongBench-v2, RepoQA, BrowseComp+, GDP Val, AIME 2025, GPQA Diamond, MMLU-Pro, IFEval, LiveCodeBench) |
 | `runners.py` | Runner implementations: `vanilla`, `minrlm`, `minrlm-reasoning`, `official` |
 | `metrics.py` | `EvalResult`, `AggregatedMetrics`, cost calculation, markdown report generation |
-| `visualize.py` | 8 standalone plots (accuracy, tokens, latency, cost, efficiency scatter) |
+| `plotting.py` | 8 standalone plots (accuracy, tokens, latency, cost, efficiency scatter) |
 | `README.md` | Full benchmark results and reproduction steps |
 
 ### Quick start

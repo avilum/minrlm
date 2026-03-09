@@ -1004,6 +1004,36 @@ class RLM:
             )
         return None
 
+    def _guard_stdin_usage(self, task: str, code: str) -> str | None:
+        """Guard against executing sys.stdin.read() which hangs the REPL.
+        Code generation tasks must return source code as a string, not execute it."""
+        if not code:
+            return None
+        # Check if code calls sys.stdin outside of a string literal
+        # Simple heuristic: if sys.stdin appears AND it's not inside a triple-quoted string
+        if "sys.stdin" not in code:
+            return None
+        # If it's inside a string assignment (code = '''...sys.stdin...'''), that's fine
+        if re.search(r"""(?:code|solution|program|my_answer|src|source)\s*=\s*(?:'''|\"\"\"|\"|')""", code):
+            return None
+        # If FINAL() is called with a string variable, it's likely wrapping code correctly
+        if re.search(r'FINAL\s*\(\s*(?:code|solution|program|my_answer|src|source)', code):
+            return None
+        return (
+            "sys.stdin.read() will HANG — there is no stdin in this REPL.\n"
+            "This is a CODE GENERATION task. Wrap the solution in a STRING and return it:\n"
+            "  code = '''\n"
+            "  import sys\n"
+            "  def main():\n"
+            "      data = sys.stdin.read().split()\n"
+            "      ...\n"
+            "      print(result)\n"
+            "  if __name__ == \"__main__\":\n"
+            "      main()\n"
+            "  '''\n"
+            "  FINAL(code.strip())"
+        )
+
     def _guard_code_extraction(self, task: str, context: str, output: str) -> str | None:
         """Ensure code outputs are exact substrings of input_0 for code-retrieval tasks."""
         if not output or not context:
@@ -1272,7 +1302,9 @@ class RLM:
                     continue
 
             # Guard: reject code that counts label words instead of using sub_llm
-            guard_msg = self._guard_label_counting(task, code, context)
+            guard_msg = self._guard_stdin_usage(task, code)
+            if not guard_msg:
+                guard_msg = self._guard_label_counting(task, code, context)
             if not guard_msg:
                 guard_msg = self._guard_pipe_delimited_search(task, code, context)
             if not guard_msg:

@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 
 from .core import RLM, RLMResult
 from .prompts_reasoning import (
+    compute_context_preview,
+    compute_entropy_profile,
     format_continue_prompt_reasoning,
     format_system_prompt_reasoning,
     format_user_prompt_reasoning,
@@ -38,12 +40,18 @@ class RLMReasoning(RLM):
         # Build initial messages with reasoning prompt
         # Use custom prompt if provided, otherwise use default
         if self._custom_system_prompt:
-            # Format custom prompt with context metadata
+            # Format custom prompt with context metadata + entropy profile
             if context:
                 meta = f"string with {len(context)} chars"
                 if "\n" in context:
                     lines = context.count("\n") + 1
                     meta += f", ~{lines} lines"
+                preview = compute_context_preview(context)
+                if preview:
+                    meta += f"\n\n{preview}"
+                profile = compute_entropy_profile(context)
+                if profile:
+                    meta += f"\n\n{profile}"
                 system_prompt = self._custom_system_prompt.replace("{context_meta}", meta)
             else:
                 system_prompt = self._custom_system_prompt.replace("{context_meta}", "string")
