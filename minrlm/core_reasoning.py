@@ -179,6 +179,15 @@ class RLMReasoning(RLM):
                 # Try fallback: accept raw Python code without code fences
                 # (Some models like gpt-5-mini generate code directly without ```python markers)
                 cleaned = response_text.strip()
+                # Strip any leftover code fence markers that _extract_code failed to parse
+                if cleaned.startswith("```python"):
+                    cleaned = cleaned[len("```python"):].strip()
+                elif cleaned.startswith("```py"):
+                    cleaned = cleaned[len("```py"):].strip()
+                elif cleaned.startswith("```"):
+                    cleaned = cleaned[3:].strip()
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3].strip()
                 if cleaned and "FINAL(" in cleaned:
                     # Response contains FINAL() call - treat as raw Python code
                     code = cleaned
