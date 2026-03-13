@@ -1240,6 +1240,15 @@ def create_status_box(
     </div>"""
 
 
+def _method_display_name(name: str) -> str:
+    """Use 'minRLM with Reasoning' in summary sentences, not 'minrlm'."""
+    if not name:
+        return ""
+    if name.strip().lower() == "minrlm":
+        return "minRLM with Reasoning"
+    return name
+
+
 def build_charts(results_list: list) -> tuple:
     if not results_list:
         return None, None
@@ -1783,7 +1792,7 @@ def build_app():
                                 tokens, key=lambda x: x[1]
                             )
                             if best[1] < worst[1]:
-                                output += f"\n**{best[0]}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
+                                output += f"\n**{_method_display_name(best[0])}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
 
                         if costs:
                             best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(
@@ -1791,7 +1800,7 @@ def build_app():
                             )
                             if best_cost[1] < worst_cost[1]:
                                 savings = (1 - best_cost[1] / worst_cost[1]) * 100
-                                output += f"\n**{best_cost[0]}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
+                                output += f"\n**{_method_display_name(best_cost[0])}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
 
                     all_correct = all(r.correct for _, r in results_list)
                     final_status = create_status_box(
@@ -2045,7 +2054,7 @@ def build_app():
                                 tokens, key=lambda x: x[1]
                             )
                             if best[1] < worst[1]:
-                                output += f"\n**{best[0]}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
+                                output += f"\n**{_method_display_name(best[0])}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
 
                         if costs:
                             best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(
@@ -2053,7 +2062,7 @@ def build_app():
                             )
                             if best_cost[1] < worst_cost[1]:
                                 savings = (1 - best_cost[1] / worst_cost[1]) * 100
-                                output += f"\n**{best_cost[0]}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
+                                output += f"\n**{_method_display_name(best_cost[0])}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
 
                     # Build responses display
                     responses_md = "### Responses\n\n"
