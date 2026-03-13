@@ -630,8 +630,8 @@ def _run_one_instance(
                 )
                 if not correct:
                     # Show mismatch details for failures
-                    tqdm.write(f"      Expected: {expected_preview}...")
-                    tqdm.write(f"      Got:      {actual_preview}...")
+                    tqdm.write(f"      Expected: {expected_preview}")
+                    tqdm.write(f"      Got:      {actual_preview}")
                     tqdm.write("       --------------------------------")
     return results
 
