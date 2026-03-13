@@ -322,7 +322,7 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
             )
 
         if VERBOSE:
-            print(f"[RLM] 🚀 Starting completion", file=sys.stderr)
+            print("[RLM] 🚀 Starting completion", file=sys.stderr)
             print(
                 f"      Task: {task[:100]}{'...' if len(task) > 100 else ''}",
                 file=sys.stderr,
@@ -357,13 +357,13 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
         ):
             if VERBOSE:
                 print(
-                    f"[RLM] ⚠️  Response is empty, using stdout as fallback",
+                    "[RLM] ⚠️  Response is empty, using stdout as fallback",
                     file=sys.stderr,
                 )
             response_content = last_stdout.strip()
 
         if VERBOSE:
-            print(f"[RLM] ✨ Completion finished", file=sys.stderr)
+            print("[RLM] ✨ Completion finished", file=sys.stderr)
             print(
                 f"      Response: {response_content[:200]}{'...' if len(response_content) > 200 else ''}",
                 file=sys.stderr,
@@ -401,7 +401,9 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
         return JSONResponse(content=response_data)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"RLM completion failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"RLM completion failed: {str(e)}"
+        ) from e
 
 
 if __name__ == "__main__":

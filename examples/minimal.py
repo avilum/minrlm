@@ -32,7 +32,9 @@ print(f"\n  Task: {task}\n  Model: {model}\n")
 # ─────────────────────────────────────────────────────
 print("  ┌─ Vanilla LLM (direct API)")
 client = OpenAI()
-resp = client.chat.completions.create(model=model, messages=[{"role": "user", "content": task}])
+resp = client.chat.completions.create(
+    model=model, messages=[{"role": "user", "content": task}]
+)
 answer = resp.choices[0].message.content.strip()
 tokens = resp.usage.total_tokens if resp.usage else 0
 for line in answer.split("\n"):
@@ -46,7 +48,9 @@ print("  ┌─ minRLM (code execution)")
 rlm = RLM(model=model, on_step=on_step if verbose else None)
 result = rlm.completion(task)
 print(f"  │  Answer: {result.response}")
-print(f"  └─ {result.total_tokens} tokens ({result.iterations} iteration{'s' if result.iterations != 1 else ''})\n")
+print(
+    f"  └─ {result.total_tokens} tokens ({result.iterations} iteration{'s' if result.iterations != 1 else ''})\n"
+)
 
 # ─────────────────────────────────────────────────────
 # Summary

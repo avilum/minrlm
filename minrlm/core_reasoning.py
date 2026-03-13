@@ -3,7 +3,7 @@ Reasoning-enhanced RLM - wrapper around existing RLM with modified prompts.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .core import RLM, RLMResult
 from .prompts_reasoning import (
@@ -48,15 +48,21 @@ class RLMReasoning(RLM):
                     meta += f", ~{lines} lines"
                 preview = compute_context_preview(context)
                 if preview:
-                    meta += f"\n\n{preview}"
+                    meta += f"\n\n<context_preview>\n{preview}\n</context_preview>"
                 profile = compute_entropy_profile(context)
                 if profile:
-                    meta += f"\n\n{profile}"
-                system_prompt = self._custom_system_prompt.replace("{context_meta}", meta)
+                    meta += f"\n\n<entropy_map>\n{profile}\n</entropy_map>"
+                system_prompt = self._custom_system_prompt.replace(
+                    "{context_meta}", meta
+                )
             else:
-                system_prompt = self._custom_system_prompt.replace("{context_meta}", "string")
+                system_prompt = self._custom_system_prompt.replace(
+                    "{context_meta}", "string"
+                )
         else:
-            system_prompt = format_system_prompt_reasoning(context=context, context_type="string")
+            system_prompt = format_system_prompt_reasoning(
+                context=context, context_type="string"
+            )
         user_prompt = format_user_prompt_reasoning(task=task)
 
         messages = [
@@ -86,7 +92,9 @@ class RLMReasoning(RLM):
         }
         # Optionally include first 2000 chars of context for debugging
         if context:
-            start_data["context_preview"] = context[:2000] if len(context) > 2000 else context
+            start_data["context_preview"] = (
+                context[:2000] if len(context) > 2000 else context
+            )
         self._log("start", start_data)
 
         # Iteration loop
@@ -104,7 +112,10 @@ class RLMReasoning(RLM):
             if time.time() - start_time > self.max_time_seconds:
                 self._log("timeout", {"iterations": iteration})
                 if self.on_step:
-                    self.on_step("timeout", {"elapsed": time.time() - start_time, "iteration": iteration})
+                    self.on_step(
+                        "timeout",
+                        {"elapsed": time.time() - start_time, "iteration": iteration},
+                    )
                 break
 
             if self.on_step:
@@ -125,14 +136,20 @@ class RLMReasoning(RLM):
             if iteration == 1:
                 # Look for # REASONING: comment in the code
                 # Extract from code block if present
-                code_block_match = re.search(r'```(?:python)?\s*\n(.*?)```', response_text, re.DOTALL)
+                code_block_match = re.search(
+                    r"```(?:python)?\s*\n(.*?)```", response_text, re.DOTALL
+                )
                 if code_block_match:
                     code_content = code_block_match.group(1)
                     # Look for # REASONING: at the start of the code
-                    reasoning_match = re.match(r'#\s*REASONING:\s*(.+?)(?:\n|$)', code_content, re.IGNORECASE)
+                    reasoning_match = re.match(
+                        r"#\s*REASONING:\s*(.+?)(?:\n|$)", code_content, re.IGNORECASE
+                    )
                     if reasoning_match:
                         self._reasoning = reasoning_match.group(1).strip()
-                        self._log("reasoning_extracted", {"reasoning": self._reasoning[:500]})
+                        self._log(
+                            "reasoning_extracted", {"reasoning": self._reasoning[:500]}
+                        )
                         if self.on_step:
                             self.on_step("reasoning", {"reasoning": self._reasoning})
 
@@ -148,7 +165,11 @@ class RLMReasoning(RLM):
             if self.on_step:
                 self.on_step(
                     "llm_response",
-                    {"iteration": iteration, "response": response_text, "has_code": code is not None},
+                    {
+                        "iteration": iteration,
+                        "response": response_text,
+                        "has_code": code is not None,
+                    },
                 )
 
             # Add assistant response to messages
@@ -161,12 +182,17 @@ class RLMReasoning(RLM):
                 if cleaned and "FINAL(" in cleaned:
                     # Response contains FINAL() call - treat as raw Python code
                     code = cleaned
-                    self._log("code_auto_wrapped", {"note": "Accepted raw Python without code fences"})
+                    self._log(
+                        "code_auto_wrapped",
+                        {"note": "Accepted raw Python without code fences"},
+                    )
 
                 if not code:
                     # Still no code - return error
                     self._log("no_code", {"response": response_text})
-                    error_msg = "ERROR: LLM response did not contain executable Python code"
+                    error_msg = (
+                        "ERROR: LLM response did not contain executable Python code"
+                    )
                     if len(response_text) > 1900:  # Likely truncated
                         error_msg += f" (response may be truncated at {len(response_text)} chars)"
                     return RLMReasoningResult(

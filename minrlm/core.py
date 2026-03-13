@@ -21,11 +21,11 @@ from typing import Any
 from openai import AsyncOpenAI, OpenAI
 
 from .prompts import (
+    SYSTEM_PROMPT_MINIMAL,
+    SYSTEM_PROMPT_REASONING_MINIMAL,
     format_continue_prompt,
     format_system_prompt,
     format_user_prompt,
-    SYSTEM_PROMPT_MINIMAL,
-    SYSTEM_PROMPT_REASONING_MINIMAL,
 )
 
 # Suppress HTTP request logging
@@ -65,7 +65,14 @@ class ProtectedNamespace(dict):
     """Dict that prevents reassignment of protected keys (data AND built-in tools)."""
 
     PROTECTED_DATA = {"input_0", "input_1", "input_2", "task_0"}
-    PROTECTED_TOOLS = {"FINAL", "FINAL_var", "search", "peek", "sub_llm", "sub_llm_batch"}
+    PROTECTED_TOOLS = {
+        "FINAL",
+        "FINAL_var",
+        "search",
+        "peek",
+        "sub_llm",
+        "sub_llm_batch",
+    }
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -73,7 +80,9 @@ class ProtectedNamespace(dict):
 
     def __setitem__(self, key: str, value: Any) -> None:
         if key in self.PROTECTED_DATA and key in self and not self._allow_reassign:
-            raise NameError(f"Cannot reassign '{key}' - it already contains your data. Use it directly.")
+            raise NameError(
+                f"Cannot reassign '{key}' - it already contains your data. Use it directly."
+            )
         if key in self.PROTECTED_TOOLS and key in self and not self._allow_reassign:
             return  # silently ignore — don't let LLM shadow built-in tools
         super().__setitem__(key, value)
@@ -85,9 +94,22 @@ class ProtectedNamespace(dict):
 class PythonREPL:
     """Persistent Python REPL with sub_llm() and FINAL() support."""
 
-    HIDDEN_KEYS = {"__builtins__", "__name__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search"}  # Don't include input_0/task_0 - they should be cleared on reset()
+    HIDDEN_KEYS = {
+        "__builtins__",
+        "__name__",
+        "sub_llm",
+        "sub_llm_batch",
+        "FINAL",
+        "FINAL_var",
+        "peek",
+        "search",
+    }  # Don't include input_0/task_0 - they should be cleared on reset()
 
-    def __init__(self, sub_llm_callback: Callable | None = None, sub_llm_batch_callback: Callable | None = None):
+    def __init__(
+        self,
+        sub_llm_callback: Callable | None = None,
+        sub_llm_batch_callback: Callable | None = None,
+    ):
         self._output: str | None = None
         self._data_accessed = False  # Track if search() or input_0 was used
         self._namespace = ProtectedNamespace(
@@ -103,7 +125,9 @@ class PythonREPL:
             }
         )
 
-    def _make_sub_llm(self, callback: Callable[[str, str], str] | None) -> Callable[[str, str], str]:
+    def _make_sub_llm(
+        self, callback: Callable[[str, str], str] | None
+    ) -> Callable[[str, str], str]:
         def sub_llm(task: str, context: str = "") -> str:
             """Call a sub-LLM with a task and optional context data."""
             if callback is None:
@@ -126,7 +150,9 @@ class PythonREPL:
     def _set_output(self, value: str) -> None:
         # Reject None or empty values
         if value is None:
-            raise ValueError("FINAL() called with None - provide a non-empty string value")
+            raise ValueError(
+                "FINAL() called with None - provide a non-empty string value"
+            )
 
         # Enforce data grounding: if input_0 exists and is non-empty, must access data first
         input_0_val = self._namespace.get("input_0")
@@ -135,7 +161,9 @@ class PythonREPL:
             if self._looks_like_patch(str(value)):
                 self._data_accessed = True
             else:
-                raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
+                raise ValueError(
+                    "You must call search(input_0, 'keyword') first to find the data. Don't guess - search!"
+                )
 
         self._output = str(value).strip()
 
@@ -144,17 +172,23 @@ class PythonREPL:
         if self._output.startswith("[") and self._output.endswith("]"):
             inner = self._output[1:-1].strip()
             # Handle ['value'] or ["value"]
-            if (inner.startswith("'") and inner.endswith("'")) or (inner.startswith('"') and inner.endswith('"')):
+            if (inner.startswith("'") and inner.endswith("'")) or (
+                inner.startswith('"') and inner.endswith('"')
+            ):
                 inner = inner[1:-1]
             self._output = inner
 
         # Disallow placeholder outputs
         if self._output.strip().lower() in {"unknown", "n/a", "none"}:
-            raise ValueError("FINAL() cannot be a placeholder (unknown/n/a/none). Extract the answer from input_0.")
+            raise ValueError(
+                "FINAL() cannot be a placeholder (unknown/n/a/none). Extract the answer from input_0."
+            )
 
         # Reject empty string after cleaning
         if self._output == "":
-            raise ValueError("FINAL() called with empty string - provide a non-empty answer")
+            raise ValueError(
+                "FINAL() called with empty string - provide a non-empty answer"
+            )
 
         # Halt execution cleanly - FINAL() is a terminal call
         raise _StopExecution()
@@ -164,7 +198,9 @@ class PythonREPL:
         """Detect patch-like outputs to relax grounding requirements."""
         return "diff --git " in text or "*** Begin Patch" in text
 
-    def _search(self, text: str, pattern: str, context: int = SEARCH_CONTEXT_CHARS) -> list[tuple[str, str, str]]:
+    def _search(
+        self, text: str, pattern: str, context: int = SEARCH_CONTEXT_CHARS
+    ) -> list[tuple[str, str, str]]:
         """Search for literal pattern in text (case-insensitive).
 
         For regex, use: import re; re.findall(pattern, text)
@@ -206,14 +242,18 @@ class PythonREPL:
         # Enforce data grounding: if input_0 exists and is non-empty, must access data first
         input_0_val = self._namespace.get("input_0")
         if input_0_val and not self._data_accessed:
-            raise ValueError("You must call search(input_0, 'keyword') first to find the data. Don't guess - search!")
+            raise ValueError(
+                "You must call search(input_0, 'keyword') first to find the data. Don't guess - search!"
+            )
 
         if var_name not in self._namespace:
             raise NameError(f"Variable '{var_name}' not found in REPL")
 
         value = self._namespace[var_name]
         if value is None:
-            raise ValueError(f"Variable '{var_name}' is None - provide a non-empty value")
+            raise ValueError(
+                f"Variable '{var_name}' is None - provide a non-empty value"
+            )
 
         self._output = str(value).strip()
         if self._output.strip().lower() in {"unknown", "n/a", "none"}:
@@ -222,12 +262,16 @@ class PythonREPL:
                 "Extract the answer from input_0."
             )
         if self._output == "":
-            raise ValueError(f"Variable '{var_name}' contains empty string - provide a non-empty value")
+            raise ValueError(
+                f"Variable '{var_name}' contains empty string - provide a non-empty value"
+            )
 
         # Halt execution cleanly
         raise _StopExecution()
 
-    def _peek(self, data: Any, max_len: int = 500, max_items: int = 5, depth: int = 0) -> str:
+    def _peek(
+        self, data: Any, max_len: int = 500, max_items: int = 5, depth: int = 0
+    ) -> str:
         """Efficient preview of data - truncates large strings/lists, recurses into structures."""
         if isinstance(data, str):
             if len(data) <= max_len:
@@ -247,7 +291,7 @@ class PythonREPL:
         elif isinstance(data, dict):
             if len(data) == 0:
                 return "{}"
-            for k, v in list(data.items())[:max_items]:
+            for _k, v in list(data.items())[:max_items]:
                 self._peek(v, max_len, max_items, depth + 2)
             return f"{{}} ({len(data)} keys)"
 
@@ -279,7 +323,9 @@ class PythonREPL:
 
             # Look for common patterns that indicate input_0 is being used
             has_input_0 = "input_0" in code
-            has_regex = bool(re.search(r"re\.(findall|search|finditer|match|fullmatch)", code))
+            has_regex = bool(
+                re.search(r"re\.(findall|search|finditer|match|fullmatch)", code)
+            )
             patterns = [
                 r"json\.loads\s*\(\s*input_0",  # json.loads(input_0)
                 r"input_0\s*\[",  # input_0[...]
@@ -391,12 +437,16 @@ class RLM:
         base_url: str | None = None,  # Falls back to MINRLM_BASE_URL or OPENAI_BASE_URL
         max_iterations: int = 6,  # Reduced from 20 - force early commitment
         max_time_seconds: int = DEFAULT_MAX_TIME_SECONDS,  # Timeout per completion
-        max_output_tokens: int | None = 3000,  # Allow complete code generation for complex tasks (was 1500, caused truncation)
+        max_output_tokens: (
+            int | None
+        ) = 3000,  # Allow complete code generation for complex tasks (was 1500, caused truncation)
         temperature: float = 0.0,  # Use 0 for deterministic code generation
         reasoning_effort: str = "low",  # For reasoning models: "low", "medium", "high"
         log_dir: str | None = None,
         async_batch: bool = True,  # Enable parallel sub_llm_batch calls
-        on_step: Callable[[str, dict], None] | None = None,  # Callback for streaming steps
+        on_step: (
+            Callable[[str, dict], None] | None
+        ) = None,  # Callback for streaming steps
         max_sub_llm_calls: int = 100,  # Guardrail for recursive sub_llm usage
         # Docker options
         use_docker: bool = False,  # Run code in Docker container
@@ -405,8 +455,16 @@ class RLM:
         docker_timeout: int = 60,
     ):
         model = model or os.environ.get("MINRLM_MODEL", "gpt-4o-mini")
-        api_key = api_key or os.environ.get("MINRLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
-        base_url = base_url or os.environ.get("MINRLM_BASE_URL") or os.environ.get("OPENAI_BASE_URL")
+        api_key = (
+            api_key
+            or os.environ.get("MINRLM_API_KEY")
+            or os.environ.get("OPENAI_API_KEY")
+        )
+        base_url = (
+            base_url
+            or os.environ.get("MINRLM_BASE_URL")
+            or os.environ.get("OPENAI_BASE_URL")
+        )
         self.model = model
         self.max_iterations = max_iterations
         self.max_time_seconds = max_time_seconds
@@ -426,7 +484,9 @@ class RLM:
         self._sub_llm_output_tokens: int = 0
 
         self.client = OpenAI(api_key=api_key, base_url=base_url)
-        self.async_client = AsyncOpenAI(api_key=api_key, base_url=base_url) if async_batch else None
+        self.async_client = (
+            AsyncOpenAI(api_key=api_key, base_url=base_url) if async_batch else None
+        )
         self._depth = 0
         self._log_entries: list[dict[str, Any]] = []
 
@@ -502,7 +562,11 @@ class RLM:
                 return patch_wrapped
         # Fallback: if response looks like pure code (starts with import/assignment)
         text = text.strip()
-        if text.startswith("import ") or text.startswith("from ") or re.match(r"^[a-z_][a-z0-9_]*\s*=", text):
+        if (
+            text.startswith("import ")
+            or text.startswith("from ")
+            or re.match(r"^[a-z_][a-z0-9_]*\s*=", text)
+        ):
             sanitized = self._sanitize_patch_code(text)
             if self._is_valid_python(sanitized):
                 return sanitized
@@ -618,15 +682,26 @@ class RLM:
                 error_str = str(e)
 
                 # reasoning_effort value not supported by this model — escalate and retry immediately
-                if "reasoning_effort" in error_str and "unsupported_value" in error_str and "reasoning_effort" in kwargs:
+                if (
+                    "reasoning_effort" in error_str
+                    and "unsupported_value" in error_str
+                    and "reasoning_effort" in kwargs
+                ):
                     current = kwargs["reasoning_effort"]
-                    current_idx = _effort_levels.index(current) if current in _effort_levels else -1
+                    current_idx = (
+                        _effort_levels.index(current)
+                        if current in _effort_levels
+                        else -1
+                    )
                     if current_idx < len(_effort_levels) - 1:
                         kwargs["reasoning_effort"] = _effort_levels[current_idx + 1]
-                        self._log("reasoning_effort_escalated", {
-                            "from": current,
-                            "to": kwargs["reasoning_effort"],
-                        })
+                        self._log(
+                            "reasoning_effort_escalated",
+                            {
+                                "from": current,
+                                "to": kwargs["reasoning_effort"],
+                            },
+                        )
                         continue
                     raise
 
@@ -642,25 +717,29 @@ class RLM:
 
                 if is_rate_limit and attempt < max_retries - 1:
                     # Extract wait time from error message if available
-                    wait_time = base_delay * (2 ** attempt)  # Exponential backoff
+                    wait_time = base_delay * (2**attempt)  # Exponential backoff
 
                     # Try to parse wait time from error message (e.g., "try again in 133ms")
                     import re
-                    match = re.search(r'try again in (\d+)ms', error_str)
+
+                    match = re.search(r"try again in (\d+)ms", error_str)
                     if match:
                         suggested_ms = int(match.group(1))
                         wait_time = max(wait_time, suggested_ms / 1000.0)
 
-                    match = re.search(r'try again in ([\d.]+)s', error_str)
+                    match = re.search(r"try again in ([\d.]+)s", error_str)
                     if match:
                         suggested_s = float(match.group(1))
                         wait_time = max(wait_time, suggested_s)
 
-                    self._log("rate_limit_retry", {
-                        "attempt": attempt + 1,
-                        "wait_seconds": wait_time,
-                        "error": error_str[:200]
-                    })
+                    self._log(
+                        "rate_limit_retry",
+                        {
+                            "attempt": attempt + 1,
+                            "wait_seconds": wait_time,
+                            "error": error_str[:200],
+                        },
+                    )
 
                     time.sleep(wait_time)
                     continue
@@ -700,7 +779,9 @@ class RLM:
 
         # Pattern like: "labels: a, b, c" or "one of: a, b"
         if not candidates:
-            m = re.search(r"(?:labels?|one of)\s*[:\-]\s*([^\n.]+)", task, re.IGNORECASE)
+            m = re.search(
+                r"(?:labels?|one of)\s*[:\-]\s*([^\n.]+)", task, re.IGNORECASE
+            )
             if m:
                 chunk = m.group(1)
                 parts = re.split(r",|/|\bor\b", chunk)
@@ -819,7 +900,9 @@ class RLM:
             return True
         return False
 
-    def _build_sub_llm_messages(self, task: str, context: str, allowed: list[str] | None) -> list[dict[str, str]]:
+    def _build_sub_llm_messages(
+        self, task: str, context: str, allowed: list[str] | None
+    ) -> list[dict[str, str]]:
         """Build a minimal, tool-free prompt for sub_llm."""
         user = task.strip() if task else ""
         if allowed:
@@ -847,7 +930,10 @@ class RLM:
 
         if allowed and normalized not in allowed:
             # Retry once with stricter instruction
-            retry_task = task + f"\n\nReturn exactly one of: {', '.join(allowed)}. Do not add any other text."
+            retry_task = (
+                task
+                + f"\n\nReturn exactly one of: {', '.join(allowed)}. Do not add any other text."
+            )
             messages = self._build_sub_llm_messages(retry_task, context, allowed)
             response_text, tok_t, tok_i, tok_o = self._call_llm(messages)
             self._sub_llm_total_tokens += tok_t
@@ -855,10 +941,15 @@ class RLM:
             self._sub_llm_output_tokens += tok_o
             normalized = self._normalize_sub_llm_output(response_text, allowed)
             if normalized not in allowed:
-                self._log("sub_llm_invalid_label", {"task": task[:120], "output": response_text[:120]})
+                self._log(
+                    "sub_llm_invalid_label",
+                    {"task": task[:120], "output": response_text[:120]},
+                )
         return normalized
 
-    def _guard_label_counting(self, task: str, code: str, context: str | None = None) -> str | None:
+    def _guard_label_counting(
+        self, task: str, code: str, context: str | None = None
+    ) -> str | None:
         """Guard against label-word counting in implicit-label tasks."""
         if not task or not code:
             return None
@@ -872,7 +963,11 @@ class RLM:
         if re.search(r"label\s*:", code, flags=re.IGNORECASE):
             return None
         # Reject using search() fragments as items for line-based datasets
-        if "search(input_0" in code and ("before" in code or "after" in code) and "splitlines" not in code:
+        if (
+            "search(input_0" in code
+            and ("before" in code or "after" in code)
+            and "splitlines" not in code
+        ):
             return (
                 "Line-based dataset detected. Build items via input_0.splitlines() and filter lines. "
                 "Do not use search() fragments (before/after) as items."
@@ -890,10 +985,20 @@ class RLM:
         # If context states there are N items/pairs, require explicit limiting after filtering.
         m = None
         if context:
-            m = re.search(r"following\s+lines\s+contain\s+(\d+)\s+(?:pairs|items|lines)", context, flags=re.IGNORECASE)
+            m = re.search(
+                r"following\s+lines\s+contain\s+(\d+)\s+(?:pairs|items|lines)",
+                context,
+                flags=re.IGNORECASE,
+            )
         if not m:
-            m = re.search(r"contain\s+(\d+)\s+(?:pairs|items|lines)", task, flags=re.IGNORECASE)
-        if m and ("splitlines" in code) and ("<-->" in code or "||" in code or "Date:" in code):
+            m = re.search(
+                r"contain\s+(\d+)\s+(?:pairs|items|lines)", task, flags=re.IGNORECASE
+            )
+        if (
+            m
+            and ("splitlines" in code)
+            and ("<-->" in code or "||" in code or "Date:" in code)
+        ):
             n = m.group(1)
             if n not in code and f"[:{n}]" not in code:
                 return (
@@ -901,7 +1006,11 @@ class RLM:
                     "limit to exactly that many items (e.g., items = items[:N]) and avoid header lines."
                 )
         # If labels mentioned and no sub_llm, reject counting heuristics
-        if (not has_sub_llm) and re.search(r"\b(true|false|correct|incorrect|positive|negative|formal|informal)\b", code, flags=re.IGNORECASE):
+        if (not has_sub_llm) and re.search(
+            r"\b(true|false|correct|incorrect|positive|negative|formal|informal)\b",
+            code,
+            flags=re.IGNORECASE,
+        ):
             return (
                 "Implicit-label task detected. Do NOT count label words or rely on regex heuristics. "
                 "Use sub_llm/sub_llm_batch to classify each item then aggregate."
@@ -950,7 +1059,9 @@ class RLM:
             )
         return None
 
-    def _guard_pipe_delimited_search(self, task: str, code: str, context: str) -> str | None:
+    def _guard_pipe_delimited_search(
+        self, task: str, code: str, context: str
+    ) -> str | None:
         """Guard against using search() for pipe-delimited record-per-line data."""
         if not context or not code:
             return None
@@ -960,7 +1071,9 @@ class RLM:
         # Detect the TOOL search(input_0, "User:/Date:") being used on pipe-delimited data.
         # Allow if splitlines() is used for actual parsing (search might just be for validation)
         # Must match search(input_0, ...) not re.search(r"User:...", ...).
-        has_search = re.search(r'(?<!\w)search\s*\(\s*input_0\s*,\s*["\'](?:Date:|User:)', code)
+        has_search = re.search(
+            r'(?<!\w)search\s*\(\s*input_0\s*,\s*["\'](?:Date:|User:)', code
+        )
         has_splitlines = "splitlines" in code
         if has_search and not has_splitlines:
             return (
@@ -979,7 +1092,10 @@ class RLM:
             return None
         task_lower = task.lower()
         # Only apply to code-retrieval tasks (REPOQA)
-        if "return the exact function" not in task_lower and "return the exact code" not in task_lower:
+        if (
+            "return the exact function" not in task_lower
+            and "return the exact code" not in task_lower
+        ):
             return None
         # Allow if sub_llm was used for discovery (correct pattern)
         if "sub_llm" in code:
@@ -1014,10 +1130,15 @@ class RLM:
         if "sys.stdin" not in code:
             return None
         # If it's inside a string assignment (code = '''...sys.stdin...'''), that's fine
-        if re.search(r"""(?:code|solution|program|my_answer|src|source)\s*=\s*(?:'''|\"\"\"|\"|')""", code):
+        if re.search(
+            r"""(?:code|solution|program|my_answer|src|source)\s*=\s*(?:'''|\"\"\"|\"|')""",
+            code,
+        ):
             return None
         # If FINAL() is called with a string variable, it's likely wrapping code correctly
-        if re.search(r'FINAL\s*\(\s*(?:code|solution|program|my_answer|src|source)', code):
+        if re.search(
+            r"FINAL\s*\(\s*(?:code|solution|program|my_answer|src|source)", code
+        ):
             return None
         return (
             "sys.stdin.read() will HANG — there is no stdin in this REPL.\n"
@@ -1028,13 +1149,15 @@ class RLM:
             "      data = sys.stdin.read().split()\n"
             "      ...\n"
             "      print(result)\n"
-            "  if __name__ == \"__main__\":\n"
+            '  if __name__ == "__main__":\n'
             "      main()\n"
             "  '''\n"
             "  FINAL(code.strip())"
         )
 
-    def _guard_code_extraction(self, task: str, context: str, output: str) -> str | None:
+    def _guard_code_extraction(
+        self, task: str, context: str, output: str
+    ) -> str | None:
         """Ensure code outputs are exact substrings of input_0 for code-retrieval tasks."""
         if not output or not context:
             return None
@@ -1087,17 +1210,37 @@ class RLM:
         saved_data_accessed = None
         if self._repl:
             saved_input_0 = self._repl._namespace.get("input_0")
-            saved_data_accessed = getattr(self._repl, '_data_accessed', None)
+            saved_data_accessed = getattr(self._repl, "_data_accessed", None)
 
         if self.max_sub_llm_calls is not None:
             if self._sub_llm_calls >= self.max_sub_llm_calls:
-                self._log("sub_llm_limit", {"limit": self.max_sub_llm_calls, "depth": self._depth})
+                self._log(
+                    "sub_llm_limit",
+                    {"limit": self.max_sub_llm_calls, "depth": self._depth},
+                )
                 return "SUB_LLM_CALL_LIMIT_REACHED"
             self._sub_llm_calls += 1
 
         self._depth += 1
         try:
-            return self._call_sub_llm_raw(task, context)
+            if self.on_step:
+                self.on_step(
+                    "sub_llm_call",
+                    {
+                        "task": task[:2000],
+                        "context_preview": context[:1000] if context else "",
+                        "context_len": len(context),
+                    },
+                )
+            result = self._call_sub_llm_raw(task, context)
+            if self.on_step:
+                self.on_step(
+                    "sub_llm_response",
+                    {
+                        "response": result[:2000],
+                    },
+                )
+            return result
         finally:
             self._depth -= 1
             # Restore parent's output state
@@ -1105,8 +1248,12 @@ class RLM:
                 self._repl.restore_output(saved_output)
                 # Restore parent context + access flag to avoid subcall pollution
                 if saved_input_0 is not None:
-                    self._repl.set_variable("input_0", saved_input_0, allow_override=True)
-                if saved_data_accessed is not None and hasattr(self._repl, '_data_accessed'):
+                    self._repl.set_variable(
+                        "input_0", saved_input_0, allow_override=True
+                    )
+                if saved_data_accessed is not None and hasattr(
+                    self._repl, "_data_accessed"
+                ):
                     self._repl._data_accessed = saved_data_accessed
 
     def _handle_sub_llm_batch(self, tasks: list[tuple[str, str]]) -> list[str]:
@@ -1117,7 +1264,10 @@ class RLM:
         if self.max_sub_llm_calls is not None:
             remaining = self.max_sub_llm_calls - self._sub_llm_calls
             if remaining <= 0:
-                self._log("sub_llm_limit", {"limit": self.max_sub_llm_calls, "depth": self._depth})
+                self._log(
+                    "sub_llm_limit",
+                    {"limit": self.max_sub_llm_calls, "depth": self._depth},
+                )
                 return ["SUB_LLM_CALL_LIMIT_REACHED"] * len(tasks)
             if len(tasks) > remaining:
                 tasks_to_run = tasks[:remaining]
@@ -1167,7 +1317,9 @@ class RLM:
             return self._normalize_sub_llm_output(text, allowed)
 
         results = await asyncio.gather(*[run_one(task, ctx) for task, ctx in tasks])
-        self._log("batch_call", {"count": len(tasks), "tasks": [t[0][:50] for t in tasks]})
+        self._log(
+            "batch_call", {"count": len(tasks), "tasks": [t[0][:50] for t in tasks]}
+        )
         return list(results)
 
     def _log(self, event_type: str, data: dict[str, Any]) -> None:
@@ -1222,7 +1374,9 @@ class RLM:
         peek_output = ""
         if is_top_level and task:
             self._repl.set_variable("task_0", task, allow_override=False)
-        self._repl.set_variable("input_0", context or "", allow_override=self._depth > 0)
+        self._repl.set_variable(
+            "input_0", context or "", allow_override=self._depth > 0
+        )
         if context:
             # Auto-peek: show data preview in first prompt (saves an API call)
             peek_result = self._repl.execute("peek(input_0)")
@@ -1244,7 +1398,9 @@ class RLM:
             if elapsed > self.max_time_seconds:
                 self._log("timeout", {"elapsed": elapsed, "max": self.max_time_seconds})
                 if self.on_step:
-                    self.on_step("timeout", {"elapsed": elapsed, "iteration": iteration + 1})
+                    self.on_step(
+                        "timeout", {"elapsed": elapsed, "iteration": iteration + 1}
+                    )
                 break
 
             if self.on_step:
@@ -1257,7 +1413,12 @@ class RLM:
             history.append({"role": "assistant", "content": response_text})
             self._log(
                 "llm_call",
-                {"iteration": iteration + 1, "tokens": tok_total, "input_tokens": tok_in, "output_tokens": tok_out},
+                {
+                    "iteration": iteration + 1,
+                    "tokens": tok_total,
+                    "input_tokens": tok_in,
+                    "output_tokens": tok_out,
+                },
             )
 
             code = self._extract_code(response_text)
@@ -1268,7 +1429,11 @@ class RLM:
             if self.on_step:
                 self.on_step(
                     "llm_response",
-                    {"iteration": iteration + 1, "response": response_text, "has_code": code is not None},
+                    {
+                        "iteration": iteration + 1,
+                        "response": response_text,
+                        "has_code": code is not None,
+                    },
                 )
 
             if not code:
@@ -1312,7 +1477,10 @@ class RLM:
             if not guard_msg:
                 guard_msg = self._guard_repoqa(task, code)
             if guard_msg:
-                self._log("guard_label_counting", {"message": guard_msg, "code_preview": code[:200]})
+                self._log(
+                    "guard_label_counting",
+                    {"message": guard_msg, "code_preview": code[:200]},
+                )
                 messages += [
                     {"role": "assistant", "content": response_text},
                     {
@@ -1323,7 +1491,9 @@ class RLM:
                 continue
 
             if self.on_step:
-                self.on_step("executing", {"iteration": iteration + 1, "code": code})  # Full code for debugging
+                self.on_step(
+                    "executing", {"iteration": iteration + 1, "code": code}
+                )  # Full code for debugging
 
             result = self._repl.execute(code)
             self._log(
@@ -1353,7 +1523,10 @@ class RLM:
                 # Guard: ensure code-retrieval outputs are verbatim from input_0
                 extract_guard = self._guard_code_extraction(task, context, candidate)
                 if extract_guard:
-                    self._log("guard_code_extraction", {"message": extract_guard, "output": candidate[:200]})
+                    self._log(
+                        "guard_code_extraction",
+                        {"message": extract_guard, "output": candidate[:200]},
+                    )
                     messages += [
                         {"role": "assistant", "content": response_text},
                         {

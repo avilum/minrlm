@@ -55,6 +55,7 @@ class OursReasoningRunner(BaseRunner):
             rlm = self.RLM(
                 model=self.model,
                 max_iterations=self.max_iterations,
+                max_time_seconds=300,
                 log_dir=self.log_dir,
                 async_batch=True,
                 use_docker=self.use_docker,

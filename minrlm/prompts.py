@@ -130,7 +130,7 @@ Approach by data type:
     res = search(input_0, "def " + func_name)
     if not res: res = search(input_0, func_name + "(")
     if not res: res = search(input_0, func_name)
-    # Step 3: return name||code format with LARGER context windows 
+    # Step 3: return name||code format with LARGER context windows
     if res:
         match, before, after = res[0]
         FINAL(func_name + "||" + before[-800:] + match + after[:5000])
@@ -168,7 +168,7 @@ Approach by data type:
 6) NEVER implement a function that the task asks you to FIND. Extract from input_0.
 """
 
-SYSTEM_PROMPT_NO_CONTEXT = """You are a universal python agent. You only speak Python. 
+SYSTEM_PROMPT_NO_CONTEXT = """You are a universal python agent. You only speak Python.
 Write Python code in ```python blocks. No explanations. No docstrings.
 
 Call FINAL(your_answer) when done — pass the ACTUAL value, not the string "answer".

@@ -49,7 +49,9 @@ log = logging.getLogger(__name__)
 
 # Enable debug logging if MINRLM_VERBOSE is set
 if os.environ.get("MINRLM_VERBOSE"):
-    logging.basicConfig(level=logging.DEBUG, format="[DockerREPL] %(message)s", stream=sys.stderr)
+    logging.basicConfig(
+        level=logging.DEBUG, format="[DockerREPL] %(message)s", stream=sys.stderr
+    )
 
 # ---------------------------------------------------------------------------
 # Process-wide container registry — ensures all containers spawned by this
@@ -57,7 +59,7 @@ if os.environ.get("MINRLM_VERBOSE"):
 # parent death, crash, or KeyboardInterrupt.
 # ---------------------------------------------------------------------------
 
-_REGISTRY: set[str] = set()          # container names (minrlm_<pid>_<n>)
+_REGISTRY: set[str] = set()  # container names (minrlm_<pid>_<n>)
 _REGISTRY_LOCK = threading.Lock()
 _CONTAINER_COUNTER = itertools.count(1)
 
@@ -120,22 +122,50 @@ SECCOMP_PROFILE = {
     "defaultAction": "SCMP_ACT_ALLOW",
     "syscalls": [
         # Block all network-related syscalls
-        {"names": ["socket", "socketpair", "setsockopt", "getsockopt"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
-        {"names": ["connect", "accept", "accept4", "bind", "listen"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
-        {"names": ["sendto", "recvfrom", "sendmsg", "recvmsg"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
+        {
+            "names": ["socket", "socketpair", "setsockopt", "getsockopt"],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+        },
+        {
+            "names": ["connect", "accept", "accept4", "bind", "listen"],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+        },
+        {
+            "names": ["sendto", "recvfrom", "sendmsg", "recvmsg"],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+        },
         {"names": ["sendmmsg", "recvmmsg"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
         # NOTE: Cannot block execve - needed to start Python interpreter
         # Process isolation is handled by Docker's --pids-limit and container boundaries
         # Block kernel module loading
-        {"names": ["init_module", "finit_module", "delete_module"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
+        {
+            "names": ["init_module", "finit_module", "delete_module"],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+        },
         # Block mount operations
-        {"names": ["mount", "umount", "umount2", "pivot_root"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
+        {
+            "names": ["mount", "umount", "umount2", "pivot_root"],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+        },
         # Block keyring access
-        {"names": ["add_key", "request_key", "keyctl"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
+        {
+            "names": ["add_key", "request_key", "keyctl"],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+        },
         # Block ptrace (debugging/tracing)
         {"names": ["ptrace"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
         # Block reboot/kexec
-        {"names": ["reboot", "kexec_load", "kexec_file_load"], "action": "SCMP_ACT_ERRNO", "errnoRet": 1},
+        {
+            "names": ["reboot", "kexec_load", "kexec_file_load"],
+            "action": "SCMP_ACT_ERRNO",
+            "errnoRet": 1,
+        },
     ],
 }
 
@@ -328,7 +358,15 @@ class DockerREPL:
     - Complex objects cannot be transferred back from container
     """
 
-    HIDDEN_KEYS = {"__builtins__", "sub_llm", "sub_llm_batch", "FINAL", "FINAL_var", "peek", "search"}
+    HIDDEN_KEYS = {
+        "__builtins__",
+        "sub_llm",
+        "sub_llm_batch",
+        "FINAL",
+        "FINAL_var",
+        "peek",
+        "search",
+    }
 
     def __init__(
         self,
@@ -451,18 +489,24 @@ class DockerREPL:
 
         while attempt < max_sub_llm_calls:
             attempt += 1
-            log.debug(f"Execute attempt {attempt} (sub_llm_cache has {len(sub_llm_cache)} entries)")
+            log.debug(
+                f"Execute attempt {attempt} (sub_llm_cache has {len(sub_llm_cache)} entries)"
+            )
 
             # Prepare input data
             input_data = {
                 "code": code,
                 "namespace": {
-                    k: v for k, v in self._namespace.items() if isinstance(v, str | int | float | bool | list | dict)
+                    k: v
+                    for k, v in self._namespace.items()
+                    if isinstance(v, str | int | float | bool | list | dict)
                 },
                 "input_0": self._input_0,
                 "sub_llm_cache": sub_llm_cache,  # Inject cached sub_llm results
             }
-            log.debug(f"Input data prepared, input_0 len={len(self._input_0) if self._input_0 else 0}")
+            log.debug(
+                f"Input data prepared, input_0 len={len(self._input_0) if self._input_0 else 0}"
+            )
 
             # Create temp directory for seccomp profile
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -513,7 +557,9 @@ class DockerREPL:
                 )
 
                 log.debug(f"Docker command: {' '.join(cmd)}")
-                log.debug(f"Running with timeout={self.timeout}s, container={container_name}...")
+                log.debug(
+                    f"Running with timeout={self.timeout}s, container={container_name}..."
+                )
 
                 try:
                     result = subprocess.run(
@@ -525,7 +571,9 @@ class DockerREPL:
                     )
 
                     log.debug(f"Docker exited with code {result.returncode}")
-                    log.debug(f"stdout len={len(result.stdout)}, stderr len={len(result.stderr)}")
+                    log.debug(
+                        f"stdout len={len(result.stdout)}, stderr len={len(result.stderr)}"
+                    )
 
                     # Parse output
                     stdout = result.stdout
@@ -549,8 +597,12 @@ class DockerREPL:
 
                             # Check if this is a sub_llm request
                             if error_msg and "__SUB_LLM_REQUEST__:" in str(error_msg):
-                                cache_key = str(error_msg).split("__SUB_LLM_REQUEST__:", 1)[1]
-                                log.debug(f"Detected sub_llm request: {cache_key[:100]}...")
+                                cache_key = str(error_msg).split(
+                                    "__SUB_LLM_REQUEST__:", 1
+                                )[1]
+                                log.debug(
+                                    f"Detected sub_llm request: {cache_key[:100]}..."
+                                )
 
                                 # Parse task and context from cache key
                                 if "||" in cache_key:
@@ -560,11 +612,17 @@ class DockerREPL:
 
                                 # Call host's sub_llm callback
                                 if self._sub_llm_callback:
-                                    log.debug(f"Calling host sub_llm: task={task[:50]}...")
+                                    log.debug(
+                                        f"Calling host sub_llm: task={task[:50]}..."
+                                    )
                                     try:
-                                        llm_result = self._sub_llm_callback(task, context)
+                                        llm_result = self._sub_llm_callback(
+                                            task, context
+                                        )
                                         sub_llm_cache[cache_key] = str(llm_result)
-                                        log.debug(f"Got sub_llm result: {str(llm_result)[:100]}...")
+                                        log.debug(
+                                            f"Got sub_llm result: {str(llm_result)[:100]}..."
+                                        )
                                         continue  # Retry with cached result
                                     except Exception as e:
                                         log.debug(f"sub_llm callback failed: {e}")
@@ -585,7 +643,8 @@ class DockerREPL:
 
                             # Normal result (no sub_llm request)
                             return {
-                                "stdout": visible_stdout + exec_result.get("stdout", ""),
+                                "stdout": visible_stdout
+                                + exec_result.get("stdout", ""),
                                 "output": exec_result.get("output"),
                                 "error": error_msg,
                                 "state": exec_result.get("state", {}),
@@ -600,7 +659,9 @@ class DockerREPL:
                             }
                     else:
                         # No result marker - might be an error
-                        log.debug(f"No result marker found. stdout preview: {stdout[:200]}")
+                        log.debug(
+                            f"No result marker found. stdout preview: {stdout[:200]}"
+                        )
                         error = stderr if stderr else "No output from container"
                         if result.returncode != 0:
                             error = f"Container exited with code {result.returncode}: {stderr}"
@@ -613,7 +674,9 @@ class DockerREPL:
                         }
 
                 except subprocess.TimeoutExpired:
-                    log.debug(f"Docker timed out after {self.timeout}s — killing {container_name}")
+                    log.debug(
+                        f"Docker timed out after {self.timeout}s — killing {container_name}"
+                    )
                     _kill_container(container_name)
                     return {
                         "stdout": "",
