@@ -2,7 +2,6 @@
 Reasoning-enhanced runner for testing the impact of reasoning before code generation.
 """
 
-import re
 import sys
 import time
 from pathlib import Path
@@ -25,7 +24,12 @@ class OursReasoningRunner(BaseRunner):
     description = "minRLM with reasoning before code generation"
 
     def __init__(
-        self, model: str, max_iterations: int = 10, log_dir: str | None = None, use_docker: bool | None = None, **kwargs
+        self,
+        model: str,
+        max_iterations: int = 10,
+        log_dir: str | None = None,
+        use_docker: bool | None = None,
+        **kwargs,
     ):
         super().__init__(model, **kwargs)
         self.max_iterations = max_iterations

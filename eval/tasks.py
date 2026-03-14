@@ -87,6 +87,7 @@ def _load_dataset_from_disk(dataset_root: Path, split: str | None) -> "Dataset":
     try:
         from datasets import load_from_disk  # type: ignore
         from datasets.utils.logging import disable_progress_bar  # type: ignore
+
         disable_progress_bar()  # Suppress "Loading dataset from disk" progress bar
     except Exception as exc:  # pragma: no cover - optional dependency
         raise RuntimeError(
@@ -127,9 +128,7 @@ def _select_index(seed: int, length: int) -> int:
     return rng.randrange(length)
 
 
-def _load_json_records(
-    dataset_root: Path, max_samples: int | None = None, split: str | None = None
-) -> list[dict]:
+def _load_json_records(dataset_root: Path, max_samples: int | None = None, split: str | None = None) -> list[dict]:
     """Load JSON/JSONL records from disk (supports .json, .jsonl, .json.gz, .jsonl.gz)."""
     if dataset_root.is_file():
         candidates = [dataset_root]
@@ -198,20 +197,8 @@ def _stringify_context(value) -> str:
         parts = []
         for i, item in enumerate(value):
             if isinstance(item, dict):
-                title = (
-                    item.get("path")
-                    or item.get("file")
-                    or item.get("docid")
-                    or item.get("id")
-                    or f"item_{i}"
-                )
-                body = (
-                    item.get("content")
-                    or item.get("text")
-                    or item.get("code")
-                    or item.get("snippet")
-                    or str(item)
-                )
+                title = item.get("path") or item.get("file") or item.get("docid") or item.get("id") or f"item_{i}"
+                body = item.get("content") or item.get("text") or item.get("code") or item.get("snippet") or str(item)
                 parts.append(f"[{title}]\n{body}")
             else:
                 parts.append(str(item))
@@ -246,7 +233,11 @@ def _extract_identifiers(text: str) -> list[str]:
     if not text:
         return []
     identifiers = []
-    for pattern in (r"\bdef\s+([A-Za-z_][\w]*)", r"\bfunction\s+([A-Za-z_][\w]*)", r"\bclass\s+([A-Za-z_][\w]*)"):
+    for pattern in (
+        r"\bdef\s+([A-Za-z_][\w]*)",
+        r"\bfunction\s+([A-Za-z_][\w]*)",
+        r"\bclass\s+([A-Za-z_][\w]*)",
+    ):
         identifiers.extend(match.group(1) for match in re.finditer(pattern, text))
     return identifiers
 
@@ -383,7 +374,8 @@ class OfficialOOLONGTask(BaseTask):
             else:
                 # Use word boundary matching to avoid "correct" matching "incorrect"
                 import re
-                pattern = r'\b' + re.escape(candidate.lower()) + r'\b'
+
+                pattern = r"\b" + re.escape(candidate.lower()) + r"\b"
                 if re.search(pattern, response_lower):
                     return True
         return False
@@ -400,7 +392,8 @@ class OfficialOOLONGTask(BaseTask):
             else:
                 # Use word boundary matching to avoid "correct" matching "incorrect"
                 import re
-                pattern = r'\b' + re.escape(candidate.lower()) + r'\b'
+
+                pattern = r"\b" + re.escape(candidate.lower()) + r"\b"
                 if re.search(pattern, response_lower):
                     best_score = 1.0
         return best_score
@@ -514,7 +507,7 @@ class OfficialLongBenchV2Task(BaseTask):
         split: str | None = None,
         max_samples: int | None = None,
         max_context_tokens: int | None = None,
-        **_
+        **_,
     ):
         self.data_dir = Path(data_dir)
         self.split = split or self.default_split
@@ -634,11 +627,7 @@ class OfficialRepoQATask(BaseTask):
                 len(raw_records) == 1
                 and isinstance(raw_records[0], dict)
                 and any(
-                    isinstance(v, list)
-                    and v
-                    and isinstance(v[0], dict)
-                    and "needles" in v[0]
-                    and "content" in v[0]
+                    isinstance(v, list) and v and isinstance(v[0], dict) and "needles" in v[0] and "content" in v[0]
                     for v in raw_records[0].values()
                 )
             ):
@@ -803,6 +792,7 @@ class OfficialBrowseCompPlusTask(BaseTask):
     def _derive_key(self, password: str, length: int) -> bytes:
         """Derive encryption key from password using SHA256."""
         import hashlib
+
         hasher = hashlib.sha256()
         hasher.update(password.encode("utf-8"))
         key = hasher.digest()
@@ -811,6 +801,7 @@ class OfficialBrowseCompPlusTask(BaseTask):
     def _decrypt(self, ciphertext_b64: str, password: str) -> str:
         """Decrypt base64-encoded ciphertext using XOR with derived key."""
         import base64
+
         try:
             encrypted = base64.b64decode(ciphertext_b64)
             key = self._derive_key(password, len(encrypted))
@@ -871,9 +862,9 @@ class OfficialBrowseCompPlusTask(BaseTask):
         def normalize(s: str) -> str:
             """Remove accents and normalize to ASCII for comparison."""
             # Decompose characters into base + combining marks (accents)
-            nfd = unicodedata.normalize('NFD', s)
+            nfd = unicodedata.normalize("NFD", s)
             # Filter out combining marks (category Mn = Nonspacing_Mark)
-            ascii_str = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+            ascii_str = "".join(c for c in nfd if unicodedata.category(c) != "Mn")
             return ascii_str.strip().lower()
 
         return normalize(expected) in normalize(response)
@@ -990,9 +981,7 @@ class OfficialGDPVALTask(BaseTask):
             try:
                 from datasets import load_dataset
             except Exception as exc:
-                raise RuntimeError(
-                    "Missing dependency: datasets. Install with: uv pip install datasets"
-                ) from exc
+                raise RuntimeError("Missing dependency: datasets. Install with: uv pip install datasets") from exc
 
             ds = load_dataset(self.dataset_name, split=self.default_split)
 
@@ -1011,7 +1000,6 @@ class OfficialGDPVALTask(BaseTask):
         Download and parse reference files from HuggingFace URIs.
         Supports Excel (.xlsx, .xls) and PDF files.
         """
-        import tempfile
         from pathlib import Path
 
         context_parts = []
@@ -1037,14 +1025,15 @@ class OfficialGDPVALTask(BaseTask):
                     continue
 
                 repo_part = uri_path[:first_slash_idx]
-                file_path = uri_path[first_slash_idx + 1:]
+                file_path = uri_path[first_slash_idx + 1 :]
 
                 # Extract repo_id without branch
                 repo_id = repo_part.split("@")[0]  # e.g., "openai/gdpval"
 
                 # Download file using HuggingFace Hub
-                from huggingface_hub import hf_hub_download
                 import urllib.parse
+
+                from huggingface_hub import hf_hub_download
 
                 # Decode URL encoding (e.g., %20 -> space)
                 file_path = urllib.parse.unquote(file_path)
@@ -1077,7 +1066,7 @@ class OfficialGDPVALTask(BaseTask):
                 else:
                     # Try to read as text
                     try:
-                        with open(local_path, "r", encoding="utf-8") as f:
+                        with open(local_path, encoding="utf-8") as f:
                             content = f.read()
                         context_parts.append(f"=== {filename} ===\n{content}\n")
                     except Exception:
@@ -1172,7 +1161,7 @@ class OfficialGDPVALTask(BaseTask):
                     for row in table.rows:
                         cells = [cell.text.strip() for cell in row.cells]
                         rows.append("|".join(cells))
-                    tables_text.append(f"--- Table {i+1} ---\n" + "\n".join(rows))
+                    tables_text.append(f"--- Table {i + 1} ---\n" + "\n".join(rows))
 
                 content = "\n\n".join(paragraphs)
                 if tables_text:
@@ -1191,7 +1180,7 @@ class OfficialGDPVALTask(BaseTask):
         try:
             import zipfile
 
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            with zipfile.ZipFile(file_path, "r") as zip_ref:
                 file_list = zip_ref.namelist()
                 file_info = []
                 for name in file_list:
@@ -1244,7 +1233,10 @@ class OfficialGDPVALTask(BaseTask):
                     worksheets = re.findall(r"'([^']+)'", criterion)
                     expected_criteria.extend(worksheets)
                     # Extract numerical values (dollar amounts, percentages, dates, etc.)
-                    numbers = re.findall(r'\$[\d,]+\.?\d*|\d+\.?\d*%|\d{4}-\d{2}-\d{2}|\d+\.\d+', criterion)
+                    numbers = re.findall(
+                        r"\$[\d,]+\.?\d*|\d+\.?\d*%|\d{4}-\d{2}-\d{2}|\d+\.\d+",
+                        criterion,
+                    )
                     expected_criteria.extend(numbers)
 
             # Filter out noise: single chars, pure whitespace, duplicates
@@ -1374,19 +1366,14 @@ class OfficialAIME2025Task(BaseTask):
             try:
                 from datasets import load_dataset
             except Exception as exc:
-                raise RuntimeError(
-                    "Missing dependency: datasets. Install with: uv pip install datasets"
-                ) from exc
+                raise RuntimeError("Missing dependency: datasets. Install with: uv pip install datasets") from exc
 
             ds = load_dataset(self.dataset_name, split=self.default_split)
 
             # Filter by problem type if specified
             if self.problem_type_filter:
                 ds = ds.filter(
-                    lambda x: any(
-                        self.problem_type_filter.lower() in pt.lower()
-                        for pt in x.get("problem_type", [])
-                    )
+                    lambda x: any(self.problem_type_filter.lower() in pt.lower() for pt in x.get("problem_type", []))
                 )
 
             if self.max_samples:
@@ -1437,7 +1424,7 @@ class OfficialAIME2025Task(BaseTask):
             return False
 
         # Extract all integers from response
-        numbers = re.findall(r'-?\d+', response.strip())
+        numbers = re.findall(r"-?\d+", response.strip())
 
         if not numbers:
             return False
@@ -1480,7 +1467,7 @@ def _count_words(text: str) -> int:
 
 
 def _count_sentences(text: str) -> int:
-    return len([s for s in re.split(r'[.!?]+', text) if s.strip()])
+    return len([s for s in re.split(r"[.!?]+", text) if s.strip()])
 
 
 def _count_paragraphs(text: str) -> int:
@@ -1552,7 +1539,7 @@ def _check_ifeval_instruction(instruction_id: str, kwargs: dict, response: str) 
     # --- detectable content ---
     if instruction_id == "detectable_content:number_placeholders":
         num = int(kwargs.get("num_placeholders", 1))
-        count = len(re.findall(r'\[.*?\]', response))
+        count = len(re.findall(r"\[.*?\]", response))
         return count >= num
 
     if instruction_id == "detectable_content:postscript":
@@ -1562,12 +1549,12 @@ def _check_ifeval_instruction(instruction_id: str, kwargs: dict, response: str) 
     # --- detectable format ---
     if instruction_id == "detectable_format:number_bullet_lists":
         num_bullets = int(kwargs.get("num_bullets", 1))
-        bullet_count = len(re.findall(r'^\s*[\*\-•]\s', response, re.MULTILINE))
+        bullet_count = len(re.findall(r"^\s*[\*\-•]\s", response, re.MULTILINE))
         return bullet_count >= num_bullets
 
     if instruction_id == "detectable_format:number_highlighted_sections":
         num_highlights = int(kwargs.get("num_highlights", 1))
-        count = len(re.findall(r'\*\*[^*]+\*\*', response))
+        count = len(re.findall(r"\*\*[^*]+\*\*", response))
         return count >= num_highlights
 
     if instruction_id == "detectable_format:multiple_sections":
@@ -1592,7 +1579,9 @@ def _check_ifeval_instruction(instruction_id: str, kwargs: dict, response: str) 
 
     if instruction_id == "detectable_format:title":
         first_line = response.strip().split("\n")[0].strip() if response.strip() else ""
-        return bool(first_line) and (first_line.startswith("#") or first_line == first_line.title() or first_line.isupper())
+        return bool(first_line) and (
+            first_line.startswith("#") or first_line == first_line.title() or first_line.isupper()
+        )
 
     if instruction_id == "detectable_format:constrained_response":
         return _count_words(response.strip()) <= 10
@@ -1612,16 +1601,17 @@ def _check_ifeval_instruction(instruction_id: str, kwargs: dict, response: str) 
 
     if instruction_id == "startend:quotation":
         stripped = response.strip()
-        return (stripped.startswith('"') and stripped.endswith('"')) or \
-               (stripped.startswith("'") and stripped.endswith("'"))
+        return (stripped.startswith('"') and stripped.endswith('"')) or (
+            stripped.startswith("'") and stripped.endswith("'")
+        )
 
     # --- change case ---
     if instruction_id == "change_case:english_capital":
-        letters = re.findall(r'[a-zA-Z]', response)
+        letters = re.findall(r"[a-zA-Z]", response)
         return all(c.isupper() for c in letters) if letters else False
 
     if instruction_id == "change_case:english_lowercase":
-        letters = re.findall(r'[a-zA-Z]', response)
+        letters = re.findall(r"[a-zA-Z]", response)
         return all(c.islower() for c in letters) if letters else False
 
     # --- punctuation ---
@@ -1640,8 +1630,8 @@ def _check_ifeval_instruction(instruction_id: str, kwargs: dict, response: str) 
 def _extract_code_block(response: str) -> str:
     """Extract Python code from a model response (markdown fences or raw)."""
     patterns = [
-        r'```python\s*\n(.*?)```',
-        r'```\s*\n(.*?)```',
+        r"```python\s*\n(.*?)```",
+        r"```\s*\n(.*?)```",
     ]
     for pattern in patterns:
         match = re.search(pattern, response, re.DOTALL)
@@ -1655,22 +1645,20 @@ def _extract_code_block(response: str) -> str:
 
 def _strip_html(text: str) -> str:
     """Remove HTML tags from text (for LeetCode problem descriptions)."""
-    text = re.sub(r'<pre[^>]*>', '\n```\n', text)
-    text = re.sub(r'</pre>', '\n```\n', text)
-    text = re.sub(r'<code>', '`', text)
-    text = re.sub(r'</code>', '`', text)
-    text = re.sub(r'<[^>]+>', '', text)
-    text = re.sub(r'&lt;', '<', text)
-    text = re.sub(r'&gt;', '>', text)
-    text = re.sub(r'&amp;', '&', text)
-    text = re.sub(r'&nbsp;', ' ', text)
-    text = re.sub(r'&quot;', '"', text)
+    text = re.sub(r"<pre[^>]*>", "\n```\n", text)
+    text = re.sub(r"</pre>", "\n```\n", text)
+    text = re.sub(r"<code>", "`", text)
+    text = re.sub(r"</code>", "`", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"&lt;", "<", text)
+    text = re.sub(r"&gt;", ">", text)
+    text = re.sub(r"&amp;", "&", text)
+    text = re.sub(r"&nbsp;", " ", text)
+    text = re.sub(r"&quot;", '"', text)
     return text.strip()
 
 
-def _execute_against_tests(
-    code: str, test_cases: list[dict], timeout: int = 10
-) -> tuple[bool, int, int]:
+def _execute_against_tests(code: str, test_cases: list[dict], timeout: int = 10) -> tuple[bool, int, int]:
     """Execute Python code against stdin/stdout test cases.
 
     Returns (all_passed, num_passed, num_total).
@@ -1728,9 +1716,7 @@ class OfficialGPQADiamondTask(BaseTask):
             try:
                 from datasets import load_dataset
             except Exception as exc:
-                raise RuntimeError(
-                    "Missing dependency: datasets. Install with: uv pip install datasets"
-                ) from exc
+                raise RuntimeError("Missing dependency: datasets. Install with: uv pip install datasets") from exc
 
             ds = load_dataset(self.dataset_name, "gpqa_diamond", split=self.default_split)
             if self.max_samples:
@@ -1762,10 +1748,7 @@ class OfficialGPQADiamondTask(BaseTask):
         letters = "ABCD"
         choices_text = "\n".join(f"{letters[i]}) {shuffled[i]}" for i in range(4))
 
-        task = (
-            f"{question}\n\nChoices:\n{choices_text}\n\n"
-            "Return ONLY the letter (A, B, C, or D)."
-        )
+        task = f"{question}\n\nChoices:\n{choices_text}\n\nReturn ONLY the letter (A, B, C, or D)."
 
         return TaskInstance(
             task=task,
@@ -1808,9 +1791,7 @@ class OfficialMMLUProTask(BaseTask):
             try:
                 from datasets import load_dataset
             except Exception as exc:
-                raise RuntimeError(
-                    "Missing dependency: datasets. Install with: uv pip install datasets"
-                ) from exc
+                raise RuntimeError("Missing dependency: datasets. Install with: uv pip install datasets") from exc
 
             ds = load_dataset(self.dataset_name, split=self.default_split)
             if self.category_filter:
@@ -1829,14 +1810,11 @@ class OfficialMMLUProTask(BaseTask):
         options = row.get("options", [])
         answer_letter = str(row.get("answer", "")).strip().upper()
 
-        letters = string.ascii_uppercase[:len(options)]
+        letters = string.ascii_uppercase[: len(options)]
         choices_text = "\n".join(f"{letters[i]}) {options[i]}" for i in range(len(options)))
         valid_letters = ", ".join(letters)
 
-        task = (
-            f"{question}\n\nChoices:\n{choices_text}\n\n"
-            f"Return ONLY the letter ({valid_letters})."
-        )
+        task = f"{question}\n\nChoices:\n{choices_text}\n\nReturn ONLY the letter ({valid_letters})."
 
         return TaskInstance(
             task=task,
@@ -1876,9 +1854,7 @@ class OfficialIFEvalTask(BaseTask):
             try:
                 from datasets import load_dataset
             except Exception as exc:
-                raise RuntimeError(
-                    "Missing dependency: datasets. Install with: uv pip install datasets"
-                ) from exc
+                raise RuntimeError("Missing dependency: datasets. Install with: uv pip install datasets") from exc
 
             ds = load_dataset(self.dataset_name, split=self.default_split)
             if self.max_samples:
@@ -1896,10 +1872,12 @@ class OfficialIFEvalTask(BaseTask):
         instruction_kwargs = row.get("kwargs", [])
 
         # Encode checking info in the expected field
-        expected = json.dumps({
-            "instruction_id_list": instruction_ids,
-            "kwargs": instruction_kwargs,
-        })
+        expected = json.dumps(
+            {
+                "instruction_id_list": instruction_ids,
+                "kwargs": instruction_kwargs,
+            }
+        )
 
         return TaskInstance(
             task=prompt,
@@ -1969,9 +1947,7 @@ class OfficialLiveCodeBenchTask(BaseTask):
             try:
                 from datasets import load_dataset
             except Exception as exc:
-                raise RuntimeError(
-                    "Missing dependency: datasets. Install with: uv pip install datasets"
-                ) from exc
+                raise RuntimeError("Missing dependency: datasets. Install with: uv pip install datasets") from exc
 
             ds = load_dataset("json", data_files=self._JSONL_FILES, split="train")
             if self.max_samples:
@@ -2033,7 +2009,7 @@ class OfficialLiveCodeBenchTask(BaseTask):
                 "question_id": row.get("question_id"),
                 "platform": platform,
                 "difficulty": difficulty,
-                "num_public_tests": len(public_tests) if isinstance(public_tests, list) else 0,
+                "num_public_tests": (len(public_tests) if isinstance(public_tests, list) else 0),
             },
         )
 

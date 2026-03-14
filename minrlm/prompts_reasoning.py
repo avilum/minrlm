@@ -14,9 +14,7 @@ _ENTROPY_MIN_CONTEXT: Final[int] = 2_000
 _ENTROPY_MICRO_CHUNK: Final[int] = 500
 
 
-def compute_entropy_profile(
-    text: str, num_sections: int = _ENTROPY_NUM_SECTIONS
-) -> str:
+def compute_entropy_profile(text: str, num_sections: int = _ENTROPY_NUM_SECTIONS) -> str:
     """Compression-based entropy profile for LLM context understanding.
 
     Uses small micro-chunks (500 chars) for resolution, then aggregates into
@@ -61,9 +59,7 @@ def compute_entropy_profile(
         md = sorted(seg)[len(seg) // 2]
         max_micro_idx = mi_start + seg.index(mx)
         max_micro_pos = max_micro_idx * micro
-        sections.append(
-            (char_start, char_end, round(mx, 3), round(md, 3), max_micro_pos)
-        )
+        sections.append((char_start, char_end, round(mx, 3), round(md, 3), max_micro_pos))
 
     if not sections:
         return ""
@@ -73,11 +69,7 @@ def compute_entropy_profile(
     overall_mean = sum(max_vals) / len(max_vals)
     std_dev = (sum((v - overall_mean) ** 2 for v in max_vals) / len(max_vals)) ** 0.5
 
-    spike_thr = (
-        max(overall_median + 1.5 * std_dev, overall_median * 1.3)
-        if std_dev > 0.01
-        else overall_median * 1.3
-    )
+    spike_thr = max(overall_median + 1.5 * std_dev, overall_median * 1.3) if std_dev > 0.01 else overall_median * 1.3
 
     # Format section-size label
     sec_chars = sections[0][1] - sections[0][0] if sections else 0
@@ -119,9 +111,7 @@ def compute_entropy_profile(
     return f"{header}\n{row}"
 
 
-def compute_context_preview(
-    text: str, head: int = 400, mid: int = 300, tail: int = 500
-) -> str:
+def compute_context_preview(text: str, head: int = 400, mid: int = 300, tail: int = 500) -> str:
     """Return a compact head / mid / tail preview of the context."""
     if not text or len(text) < 500:
         return ""
@@ -149,9 +139,7 @@ class OutputLimits:
 IMPORTS_LINE: Final[str] = "import re, json, datetime, collections"
 
 
-SYSTEM_PROMPT_SIMPLE_REASONING: Final[
-    str
-] = r"""You are a Python REPL agent. Output ONLY one ```python block.
+SYSTEM_PROMPT_SIMPLE_REASONING: Final[str] = r"""You are a Python REPL agent. Output ONLY one ```python block.
 
 REQUIRED STRUCTURE:
   # REASONING: [your strategy in 1-2 sentences]
@@ -464,9 +452,7 @@ Output ONLY the ```python block. No text outside it.
 """
 
 
-SYSTEM_PROMPT_WITH_REASONING: Final[
-    str
-] = r"""You are a Python REPL agent with reasoning.
+SYSTEM_PROMPT_WITH_REASONING: Final[str] = r"""You are a Python REPL agent with reasoning.
 
 PHASE 1 — <reasoning> block: task type, data format, strategy, edge cases.
 PHASE 2 — ONE ```python block ending with FINAL(answer).
@@ -506,13 +492,9 @@ Patterns:
 """
 
 
-USER_PROMPT_SIMPLE: Final[str] = (
-    "Task: {task}\n\nWrite Python code. Start with # REASONING: comment."
-)
+USER_PROMPT_SIMPLE: Final[str] = "Task: {task}\n\nWrite Python code. Start with # REASONING: comment."
 
-USER_PROMPT_WITH_REASONING: Final[str] = (
-    "Task: {task}\n\nFirst <reasoning>, then ```python code."
-)
+USER_PROMPT_WITH_REASONING: Final[str] = "Task: {task}\n\nFirst <reasoning>, then ```python code."
 
 
 # ---------------------------------------------------------------------------
@@ -553,9 +535,7 @@ def format_system_prompt(
             meta += f"\n\n<entropy_map>\n{profile}\n</entropy_map>"
     else:
         meta = "string"
-    template = (
-        SYSTEM_PROMPT_SIMPLE_REASONING if use_simple else SYSTEM_PROMPT_WITH_REASONING
-    )
+    template = SYSTEM_PROMPT_SIMPLE_REASONING if use_simple else SYSTEM_PROMPT_WITH_REASONING
     return template.replace("{context_meta}", meta)
 
 
@@ -600,5 +580,5 @@ Variables: {state_info}
 format_system_prompt_reasoning = format_system_prompt
 
 
-def format_user_prompt_reasoning(task):
+def format_user_prompt_reasoning(task: str) -> str:
     return format_user_prompt(task, use_simple=True)

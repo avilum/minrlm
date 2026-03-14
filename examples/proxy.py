@@ -56,16 +56,10 @@ class ChatCompletionRequest(BaseModel):
 
     model: str = Field(default="gpt-5-nano", description="Model name (passed to RLM)")
     messages: list[ChatMessage] = Field(..., description="Conversation messages")
-    temperature: float | None = Field(
-        default=None, description="Temperature (passed to RLM)"
-    )
-    max_tokens: int | None = Field(
-        default=None, description="Max output tokens (passed to RLM)"
-    )
+    temperature: float | None = Field(default=None, description="Temperature (passed to RLM)")
+    max_tokens: int | None = Field(default=None, description="Max output tokens (passed to RLM)")
     # Additional RLM-specific options
-    context: str | None = Field(
-        default=None, description="Optional context data (as input_0)"
-    )
+    context: str | None = Field(default=None, description="Optional context data (as input_0)")
     use_docker: bool = Field(default=False, description="Use Docker sandboxing")
     max_iterations: int | None = Field(default=None, description="Max RLM iterations")
 
@@ -103,11 +97,7 @@ def extract_task_and_context(messages: list[ChatMessage]) -> tuple[str, str]:
 
     # If system messages exist and no explicit context, prepend to task
     if system_parts and not context:
-        task = (
-            "\n\n".join(system_parts) + "\n\n" + task
-            if task
-            else "\n\n".join(system_parts)
-        )
+        task = "\n\n".join(system_parts) + "\n\n" + task if task else "\n\n".join(system_parts)
 
     return task, context
 
@@ -174,22 +164,16 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
         task, context_from_messages = extract_task_and_context(request.messages)
 
         # Use explicit context if provided, otherwise use extracted context
-        context = (
-            request.context if request.context is not None else context_from_messages
-        )
+        context = request.context if request.context is not None else context_from_messages
 
         # If no task extracted, use the last user message or raise error
         if not task:
             # Try to get last user message
-            user_messages = [
-                msg.content for msg in request.messages if msg.role == "user"
-            ]
+            user_messages = [msg.content for msg in request.messages if msg.role == "user"]
             if user_messages:
                 task = user_messages[-1]
             else:
-                raise HTTPException(
-                    status_code=400, detail="No user message found in request"
-                )
+                raise HTTPException(status_code=400, detail="No user message found in request")
 
         # Create a temporary RLM instance with request-specific settings
         # (or use global instance if no overrides needed)
@@ -234,9 +218,7 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
             elif event == "executing":
                 iteration = data.get("iteration", "?")
                 code = data.get("code", "")
-                print(
-                    f"[RLM] ⚙️  Iteration {iteration}: Executing code", file=sys.stderr
-                )
+                print(f"[RLM] ⚙️  Iteration {iteration}: Executing code", file=sys.stderr)
                 if code:
                     # Show first few lines of code
                     code_lines_list = code.split("\n")
@@ -255,9 +237,7 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
                     )
                 elif data.get("output"):
                     output = data["output"]
-                    output_preview = (
-                        output[:200] + "..." if len(output) > 200 else output
-                    )
+                    output_preview = output[:200] + "..." if len(output) > 200 else output
                     print(
                         f"[RLM] ✅ Iteration {iteration}: FINAL() called",
                         file=sys.stderr,
@@ -265,9 +245,7 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
                     print(f"      Output: {output_preview}", file=sys.stderr)
                 elif data.get("stdout"):
                     stdout = data["stdout"]
-                    stdout_preview = (
-                        stdout[:200] + "..." if len(stdout) > 200 else stdout
-                    )
+                    stdout_preview = stdout[:200] + "..." if len(stdout) > 200 else stdout
                     print(
                         f"[RLM] 📤 Iteration {iteration}: Code executed (stdout captured)",
                         file=sys.stderr,
@@ -281,30 +259,14 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
 
         # Override settings if provided in request
         # Always create instance with on_step callback to track stdout for fallback
-        if (
-            request.temperature is not None
-            or request.max_tokens is not None
-            or request.max_iterations is not None
-        ):
+        if request.temperature is not None or request.max_tokens is not None or request.max_iterations is not None:
             rlm_instance = RLM(
                 model=request.model or rlm.model,
                 api_key=rlm_config.get("api_key"),
                 base_url=rlm_config.get("base_url"),
-                temperature=(
-                    request.temperature
-                    if request.temperature is not None
-                    else rlm.temperature
-                ),
-                max_output_tokens=(
-                    request.max_tokens
-                    if request.max_tokens is not None
-                    else rlm.max_output_tokens
-                ),
-                max_iterations=(
-                    request.max_iterations
-                    if request.max_iterations is not None
-                    else rlm.max_iterations
-                ),
+                temperature=(request.temperature if request.temperature is not None else rlm.temperature),
+                max_output_tokens=(request.max_tokens if request.max_tokens is not None else rlm.max_output_tokens),
+                max_iterations=(request.max_iterations if request.max_iterations is not None else rlm.max_iterations),
                 use_docker=request.use_docker or rlm.use_docker,
                 on_step=on_step,  # Always use callback to track stdout
             )
@@ -338,11 +300,7 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
         placeholder_patterns = ["answer", "result", "output", "done", "complete"]
 
         # If response is a placeholder and we have stdout, use stdout instead
-        if (
-            response_content.lower().strip() in placeholder_patterns
-            and last_stdout
-            and len(last_stdout.strip()) > 0
-        ):
+        if response_content.lower().strip() in placeholder_patterns and last_stdout and len(last_stdout.strip()) > 0:
             if VERBOSE:
                 print(
                     f"[RLM] ⚠️  Response is placeholder '{response_content}', using stdout as fallback",
@@ -350,11 +308,7 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
                 )
             response_content = last_stdout.strip()
         # If response is empty or just whitespace and we have stdout, use stdout
-        elif (
-            not response_content.strip()
-            and last_stdout
-            and len(last_stdout.strip()) > 0
-        ):
+        elif not response_content.strip() and last_stdout and len(last_stdout.strip()) > 0:
             if VERBOSE:
                 print(
                     "[RLM] ⚠️  Response is empty, using stdout as fallback",
@@ -401,9 +355,7 @@ async def chat_completions(request: ChatCompletionRequest) -> JSONResponse:
         return JSONResponse(content=response_data)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"RLM completion failed: {str(e)}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"RLM completion failed: {str(e)}") from e
 
 
 if __name__ == "__main__":

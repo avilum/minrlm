@@ -32,6 +32,7 @@ def main():
     # ── Docker check ────────────────────────────────────────────
     log("\nChecking Docker...", indent=0)
     from minrlm.docker_repl import check_docker_available
+
     docker_available = check_docker_available()
     log(f"Docker: {'✓ Enabled (secure sandboxed execution)' if docker_available else '✗ Disabled (local execution)'}")
 
@@ -40,6 +41,7 @@ def main():
     t0 = time.time()
     from eval.runners import get_runner, list_runners
     from eval.tasks import get_task
+
     task = get_task("official_sniah", max_samples=1)
     log(f"  Dataset loaded in {time.time() - t0:.1f}s")
 
@@ -83,22 +85,25 @@ def main():
         status = "✓ PASS" if correct else "✗ FAIL"
         log(f"[{runner_name}] {status} ({elapsed:.1f}s)", indent=0)
         log(f"  Response:   {result.response[:120]!r}", indent=0)
-        log(f"  Tokens:     {result.total_tokens:,} (in: {result.input_tokens:,}, out: {result.output_tokens:,})", indent=0)
+        log(
+            f"  Tokens:     {result.total_tokens:,} (in: {result.input_tokens:,}, out: {result.output_tokens:,})",
+            indent=0,
+        )
         log(f"  Iterations: {result.iterations}", indent=0)
 
     # ── Done ─────────────────────────────────────────────────────
     log("\n" + "=" * 60)
     log("Quick test complete!")
     log("\nTo run a full benchmark:")
-    log(f"  uv run python eval/run.py \\")
+    log("  uv run python eval/run.py \\")
     log(f"      --model {MODEL} \\")
-    log(f"      --tasks all \\")
-    log(f"      --runners minrlm-reasoning \\")
-    log(f"      --runs 50 \\")
-    log(f"      --parallel 5 \\")
-    log(f"      --task-parallel 5 \\")
-    log(f"      --official-max-samples 500 \\")
-    log(f"      --output-dir logs/my_eval")
+    log("      --tasks all \\")
+    log("      --runners minrlm-reasoning \\")
+    log("      --runs 50 \\")
+    log("      --parallel 5 \\")
+    log("      --task-parallel 5 \\")
+    log("      --official-max-samples 500 \\")
+    log("      --output-dir logs/my_eval")
     log("=" * 60)
 
 

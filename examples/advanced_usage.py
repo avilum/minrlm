@@ -120,7 +120,8 @@ print("\n" + "=" * 60)
 print("5. Custom API endpoint (local/self-hosted)")
 print("=" * 60)
 
-print("""
+print(
+    """
   # For local models (e.g., ollama, vllm, text-generation-webui):
 
   rlm = RLM(
@@ -128,7 +129,8 @@ print("""
       base_url="http://localhost:8000/v1",
       api_key="not-needed",  # or your local key
   )
-""")
+"""
+)
 
 # =============================================================================
 # Sub-LLM Usage (in generated code)
@@ -138,7 +140,8 @@ print("=" * 60)
 print("6. sub_llm() for recursive decomposition")
 print("=" * 60)
 
-print("""
+print(
+    """
   # The LLM can call sub_llm() in its generated code:
 
   # Single call:
@@ -150,7 +153,8 @@ print("""
       ("Summarize section 2", section2),
       ("Summarize section 3", section3),
   ])
-""")
+"""
+)
 
 # =============================================================================
 # Docker Sandboxing (requires Docker)
@@ -160,7 +164,8 @@ print("=" * 60)
 print("7. Docker sandboxing for secure code execution")
 print("=" * 60)
 
-print("""
+print(
+    """
   # Run code in a Docker container with strict security:
 
   from minrlm import RLM, check_docker_available
@@ -185,7 +190,8 @@ print("""
 
   # Note: sub_llm() is NOT available in Docker mode.
   # Use non-Docker mode for recursive LLM calls.
-""")
+"""
+)
 
 # Check if Docker is available
 from minrlm import check_docker_available
@@ -203,13 +209,15 @@ print("\n" + "=" * 60)
 print("8. Environment variables")
 print("=" * 60)
 
-print("""
+print(
+    """
   OPENAI_API_KEY     - API key (required)
   OPENAI_BASE_URL    - Custom base URL
 
   # For examples:
   MINRLM_MODEL       - Model to use (default: gpt-5-nano)
   MINRLM_VERBOSE     - Set to "1" for verbose output
-""")
+"""
+)
 
 print("\n✓ Advanced usage demo complete.\n")

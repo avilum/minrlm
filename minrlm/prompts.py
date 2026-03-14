@@ -206,9 +206,7 @@ def format_user_prompt(task: str, context: str = "", peek_output: str = "") -> s
     return USER_PROMPT_TEMPLATE.format(task=task)
 
 
-def format_system_prompt(
-    context: str = "", context_type: str = "string", **kwargs: Any
-) -> str:
+def format_system_prompt(context: str = "", context_type: str = "string", **kwargs: Any) -> str:
     """Format system prompt with context metadata."""
     if context:
         meta = f"{context_type} with {len(context)} chars"

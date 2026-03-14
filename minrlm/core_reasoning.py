@@ -4,6 +4,7 @@ Reasoning-enhanced RLM - wrapper around existing RLM with modified prompts.
 
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from .core import RLM, RLMResult
 from .prompts_reasoning import (
@@ -25,7 +26,7 @@ class RLMReasoningResult(RLMResult):
 class RLMReasoning(RLM):
     """RLM with reasoning step before code generation."""
 
-    def __init__(self, *args, system_prompt=None, **kwargs):
+    def __init__(self, *args: Any, system_prompt: str | None = None, **kwargs: Any) -> None:
         # Extract system_prompt before passing to parent
         self._custom_system_prompt = system_prompt
         super().__init__(*args, **kwargs)
@@ -52,17 +53,11 @@ class RLMReasoning(RLM):
                 profile = compute_entropy_profile(context)
                 if profile:
                     meta += f"\n\n<entropy_map>\n{profile}\n</entropy_map>"
-                system_prompt = self._custom_system_prompt.replace(
-                    "{context_meta}", meta
-                )
+                system_prompt = self._custom_system_prompt.replace("{context_meta}", meta)
             else:
-                system_prompt = self._custom_system_prompt.replace(
-                    "{context_meta}", "string"
-                )
+                system_prompt = self._custom_system_prompt.replace("{context_meta}", "string")
         else:
-            system_prompt = format_system_prompt_reasoning(
-                context=context, context_type="string"
-            )
+            system_prompt = format_system_prompt_reasoning(context=context, context_type="string")
         user_prompt = format_user_prompt_reasoning(task=task)
 
         messages = [
@@ -92,9 +87,7 @@ class RLMReasoning(RLM):
         }
         # Optionally include first 2000 chars of context for debugging
         if context:
-            start_data["context_preview"] = (
-                context[:2000] if len(context) > 2000 else context
-            )
+            start_data["context_preview"] = context[:2000] if len(context) > 2000 else context
         self._log("start", start_data)
 
         # Iteration loop
@@ -136,20 +129,14 @@ class RLMReasoning(RLM):
             if iteration == 1:
                 # Look for # REASONING: comment in the code
                 # Extract from code block if present
-                code_block_match = re.search(
-                    r"```(?:python)?\s*\n(.*?)```", response_text, re.DOTALL
-                )
+                code_block_match = re.search(r"```(?:python)?\s*\n(.*?)```", response_text, re.DOTALL)
                 if code_block_match:
                     code_content = code_block_match.group(1)
                     # Look for # REASONING: at the start of the code
-                    reasoning_match = re.match(
-                        r"#\s*REASONING:\s*(.+?)(?:\n|$)", code_content, re.IGNORECASE
-                    )
+                    reasoning_match = re.match(r"#\s*REASONING:\s*(.+?)(?:\n|$)", code_content, re.IGNORECASE)
                     if reasoning_match:
                         self._reasoning = reasoning_match.group(1).strip()
-                        self._log(
-                            "reasoning_extracted", {"reasoning": self._reasoning[:500]}
-                        )
+                        self._log("reasoning_extracted", {"reasoning": self._reasoning[:500]})
                         if self.on_step:
                             self.on_step("reasoning", {"reasoning": self._reasoning})
 
@@ -181,9 +168,9 @@ class RLMReasoning(RLM):
                 cleaned = response_text.strip()
                 # Strip any leftover code fence markers that _extract_code failed to parse
                 if cleaned.startswith("```python"):
-                    cleaned = cleaned[len("```python"):].strip()
+                    cleaned = cleaned[len("```python") :].strip()
                 elif cleaned.startswith("```py"):
-                    cleaned = cleaned[len("```py"):].strip()
+                    cleaned = cleaned[len("```py") :].strip()
                 elif cleaned.startswith("```"):
                     cleaned = cleaned[3:].strip()
                 if cleaned.endswith("```"):
@@ -199,9 +186,7 @@ class RLMReasoning(RLM):
                 if not code:
                     # Still no code - return error
                     self._log("no_code", {"response": response_text})
-                    error_msg = (
-                        "ERROR: LLM response did not contain executable Python code"
-                    )
+                    error_msg = "ERROR: LLM response did not contain executable Python code"
                     if len(response_text) > 1900:  # Likely truncated
                         error_msg += f" (response may be truncated at {len(response_text)} chars)"
                     return RLMReasoningResult(

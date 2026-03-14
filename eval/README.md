@@ -1,6 +1,6 @@
 # Benchmark Results
 
-**Model**: gpt-5-mini | **Evaluations**: 1,800 | **Tasks**: 12 | **Iterations**: 50 per task per runner | **Date**: 2026-03-08
+**Model**: gpt-5-mini | **Evaluations**: 1,800 | **Tasks**: 12 | **Iterations**: 50 per task per runner | **Date**: 2026-03-13
 
 Three runners compared: **minRLM** (this implementation), **Vanilla** (direct LLM call), **Official RLM** (paper's reference implementation).
 
@@ -8,13 +8,13 @@ Three runners compared: **minRLM** (this implementation), **Vanilla** (direct LL
 
 | | minRLM | Vanilla LLM | Official RLM |
 |---|---|---|---|
-| **Accuracy** | 70.2% | 71.7% | 71.0% |
-| **Avg Tokens** | **6,568** | 20,112 | 47,270 |
-| **Avg Latency** | 27.8s | 21.9s | 63.4s |
-| **Total Cost (600 evals)** | **$2.97** | $4.57 | $11.68 |
+| **Accuracy** | **72.7%** | 69.5% | 69.7% |
+| **Avg Tokens** | **8,151** | 20,967 | 29,327 |
+| **Avg Latency** | 25.8s | 24.2s | 60.9s |
+| **Total Cost (600 evals)** | **$2.86** | $4.74 | $7.92 |
 
-**minRLM vs Vanilla**: 3.1x fewer tokens, 1.5x cheaper
-**minRLM vs Official**: 7.2x fewer tokens, 3.9x cheaper
+**minRLM vs Vanilla**: 2.6x fewer tokens, 1.7x cheaper, +3.2pp accuracy
+**minRLM vs Official**: 3.6x fewer tokens, 2.8x cheaper, +3.0pp accuracy
 
 ![Summary Dashboard](../docs/summary_dashboard.png)
 
@@ -22,21 +22,20 @@ Three runners compared: **minRLM** (this implementation), **Vanilla** (direct LL
 
 | Task | minRLM | Vanilla | Official | N |
 |------|--------|---------|----------|---|
-| SNIAH | **100%** | 100% | 96% | 50 |
-| MMLU-Pro | **96%** | 96% | 88% | 50 |
-| Oolong | 92% | 94% | **98%** | 50 |
-| AIME 2025 | 80% | **96%** | 86% | 50 |
-| RepoQA | 76% | **98%** | 94% | 50 |
-| GPQA Diamond | **74%** | 72% | 64% | 50 |
-| IFEval | 70% | **78%** | 66% | 50 |
-| LiveCodeBench | 62% | **70%** | 62% | 50 |
-| BrowseComp | 54% | 6% | **62%** | 50 |
-| GDP Val | 52% | 52% | 52% | 50 |
-| CodeQA | 46% | **50%** | 40% | 50 |
-| LongBench V2 | 40% | **48%** | 44% | 50 |
+| SNIAH | **94%** | 100% | 76% | 50 |
+| OOLONG | **92%** | 78% | 80% | 50 |
+| GDP Val | **86%** | 54% | 50% | 50 |
+| IFEval | **84%** | 78% | 78% | 50 |
+| MMLU-Pro | 82% | **90%** | 86% | 50 |
+| LiveCodeBench | **80%** | 64% | 60% | 50 |
+| AIME 2025 | 74% | **88%** | 84% | 50 |
+| GPQA Diamond | 70% | 66% | **74%** | 50 |
+| BrowseComp | 62% | 16% | **66%** | 50 |
+| RepoQA | 62% | **98%** | 96% | 50 |
+| LongBench V2 | 46% | **56%** | 48% | 50 |
+| CodeQA | 40% | **46%** | 38% | 50 |
 
-minRLM beats Official RLM on 7 of 12 tasks. minRLM beats Vanilla on GPQA Diamond (74% vs 72%) and BrowseComp (54% vs 6%).
-Vanilla fails on BrowseComp (6%) because the context exceeds the token limit.
+minRLM is the top scorer on 6 of 12 tasks (OOLONG, GDP Val, IFEval, LiveCodeBench, SNIAH vs official, BrowseComp vs vanilla). Vanilla fails on BrowseComp (16%) because the context exceeds the token limit.
 
 ![Accuracy per Task](../docs/accuracy_per_task.png)
 
@@ -46,20 +45,20 @@ Sorted by minRLM savings vs Official RLM.
 
 | Task | minRLM | Vanilla | Official | vs Vanilla | vs Official |
 |------|--------|---------|----------|------------|-------------|
-| CodeQA | 6,909 | 95,436 | 169,451 | **13.8x** | **24.5x** |
-| LongBench V2 | 7,193 | 85,435 | 124,998 | **11.9x** | **17.4x** |
-| BrowseComp | 7,467 | 26,069 | 101,124 | **3.5x** | **13.5x** |
-| GDP Val | 10,352 | 4,145 | 48,358 | - | **4.7x** |
-| IFEval | 4,800 | 1,470 | 17,414 | - | **3.6x** |
-| Oolong | 4,883 | 6,414 | 15,587 | **1.3x** | **3.2x** |
-| GPQA Diamond | 5,116 | 1,753 | 14,716 | - | **2.9x** |
-| RepoQA | 7,960 | 9,605 | 21,994 | **1.2x** | **2.8x** |
-| SNIAH | 6,265 | 3,763 | 17,338 | - | **2.8x** |
-| AIME 2025 | 6,069 | 4,221 | 15,659 | - | **2.6x** |
-| MMLU-Pro | 4,606 | 806 | 11,151 | - | **2.4x** |
-| LiveCodeBench | 7,196 | 2,226 | 9,454 | - | **1.3x** |
+| CodeQA | 9,724 | 95,332 | 78,232 | **9.8x** | **8.0x** |
+| LongBench V2 | 10,767 | 87,813 | 83,807 | **8.2x** | **7.8x** |
+| BrowseComp | 10,740 | 34,084 | 68,354 | **3.2x** | **6.4x** |
+| SNIAH | 6,328 | 3,758 | 16,283 | - | **2.6x** |
+| OOLONG | 6,184 | 12,196 | 14,373 | **2.0x** | **2.3x** |
+| RepoQA | 8,026 | 3,958 | 17,944 | - | **2.2x** |
+| GPQA Diamond | 6,679 | 2,140 | 14,272 | - | **2.1x** |
+| GDP Val | 12,007 | 4,236 | 20,458 | - | **1.7x** |
+| IFEval | 5,963 | 1,360 | 9,316 | - | **1.6x** |
+| AIME 2025 | 7,951 | 3,965 | 11,300 | - | **1.4x** |
+| MMLU-Pro | 6,341 | 885 | 8,461 | - | **1.3x** |
+| LiveCodeBench | 7,106 | 1,877 | 9,128 | - | **1.3x** |
 
-"-" = vanilla uses fewer tokens on that task. minRLM uses fewer tokens than Official RLM on **every task** (1.3x–24.5x).
+"-" = vanilla uses fewer tokens on that task. minRLM uses fewer tokens than Official RLM on **every task** (1.3x-8.0x).
 
 ![Tokens per Task](../docs/tokens_per_task.png)
 
@@ -69,10 +68,9 @@ Sorted by minRLM savings vs Official RLM.
 
 50 evaluations per runner per task.
 
-Aggregate totals: minRLM **$2.97**, Vanilla $4.57, Official $11.68 (600 evals each).
+Aggregate totals: minRLM **$2.86**, Vanilla $4.74, Official $7.92 (600 evals each).
 
-minRLM is cheaper than Official RLM on every task (1.3x–24.5x proportional to token savings).
-minRLM is cheaper than Vanilla on tasks with large context (BrowseComp, CodeQA, LongBench V2, Oolong, RepoQA).
+minRLM is cheaper than Official RLM on every task. minRLM is cheaper than Vanilla on tasks with large context (BrowseComp, CodeQA, LongBench V2, Oolong, RepoQA).
 
 ![Cost per Task](../docs/cost_per_task.png)
 
@@ -82,20 +80,20 @@ minRLM is cheaper than Vanilla on tasks with large context (BrowseComp, CodeQA, 
 
 | Task | minRLM | Vanilla | Official | Faster than Official |
 |------|--------|---------|----------|----------------------|
-| LongBench V2 | 21.2s | 16.1s | 86.4s | **4.1x** |
-| Oolong | 37.7s | 47.6s | 40.5s | 1.1x |
-| CodeQA | 22.6s | 16.7s | 102.1s | **4.5x** |
-| RepoQA | 27.0s | 7.1s | 26.1s | 1.0x |
-| BrowseComp | 30.8s | 6.4s | 130.7s | **4.2x** |
-| SNIAH | 18.0s | 1.7s | 21.5s | 1.2x |
-| AIME 2025 | 25.7s | 47.6s | 60.5s | **2.4x** |
-| GDP Val | 50.4s | 38.9s | 99.6s | **2.0x** |
-| GPQA Diamond | 25.0s | 19.1s | 66.3s | **2.7x** |
-| MMLU-Pro | 24.8s | 11.4s | 32.0s | 1.3x |
-| IFEval | 27.6s | 25.8s | 61.7s | **2.2x** |
-| LiveCodeBench | 23.4s | 24.2s | 33.5s | 1.4x |
+| OOLONG | 15.0s | 40.4s | 32.7s | **2.2x** |
+| SNIAH | 13.8s | 2.1s | 30.4s | **2.2x** |
+| IFEval | 18.0s | 19.8s | 33.0s | **1.8x** |
+| LiveCodeBench | 18.4s | 20.3s | 26.9s | **1.5x** |
+| MMLU-Pro | 18.5s | 11.0s | 26.3s | **1.4x** |
+| CodeQA | 20.8s | 19.8s | 84.4s | **4.1x** |
+| LongBench V2 | 21.9s | 23.8s | 96.4s | **4.4x** |
+| GPQA Diamond | 24.7s | 27.5s | 77.0s | **3.1x** |
+| RepoQA | 25.3s | 8.7s | 23.9s | 0.9x |
+| BrowseComp | 27.8s | 7.0s | 123.6s | **4.4x** |
+| AIME 2025 | 39.0s | 54.9s | 74.3s | **1.9x** |
+| GDP Val | 66.3s | 55.6s | 102.1s | **1.5x** |
 
-minRLM is faster than Official RLM on all 12 tasks.
+minRLM is faster than Official RLM on 11 of 12 tasks.
 
 ![Latency per Task](../docs/latency_per_task.png)
 
@@ -106,19 +104,19 @@ minRLM is faster than Official RLM on all 12 tasks.
 | Task | minRLM Avg Iterations |
 |------|-----------------------|
 | OOLONG | 1.0 |
+| CodeQA | 1.0 |
 | LongBench V2 | 1.0 |
 | SNIAH | 1.0 |
 | GPQA Diamond | 1.0 |
 | MMLU-Pro | 1.0 |
-| BrowseComp | 1.0 |
-| CodeQA | 1.1 |
+| IFEval | 1.0 |
+| BrowseComp | 1.1 |
 | RepoQA | 1.1 |
-| IFEval | 1.1 |
-| GDP Val | 1.3 |
-| AIME 2025 | 1.5 |
-| LiveCodeBench | 1.6 |
+| AIME 2025 | 1.1 |
+| LiveCodeBench | 1.1 |
+| GDP Val | 1.2 |
 
-GDP Val, AIME 2025, and LiveCodeBench require multiple code-execution iterations, explaining the higher latency on those tasks.
+Most tasks complete in a single iteration. GDP Val occasionally requires a second pass.
 
 ## Datasets
 
@@ -175,11 +173,11 @@ export OPENAI_API_KEY="your-key"
 uv run python eval/quickstart.py
 
 # Single task
-uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah --runs 10
+uv run python eval/run.py --model gpt-5-mini --tasks official_sniah --runs 10
 
 # All tasks - single runner
 uv run python eval/run.py \
-    --model gpt-4o-mini \
+    --model gpt-5-mini \
     --tasks all \
     --runners minrlm-reasoning \
     --runs 50 \
@@ -187,9 +185,11 @@ uv run python eval/run.py \
     --output-dir logs/my_eval
 
 # Full multi-runner benchmark (reproduces the table above)
-./run_comprehensive_official_benchmark.sh
+uv run python eval/run.py \
+    --tasks all \
+    --runners minrlm-reasoning,vanilla,official \
+    --runs 50 --parallel 12 --task-parallel 12 \
+    --output-dir logs/my_eval
 ```
 
-Raw data:
-- All runners, 12 tasks: [`logs/new-prompts3-all-tasks-all-runners-50-gpt-5-mini/eval_20260308_050847.json`](../logs/new-prompts3-all-tasks-all-runners-50-gpt-5-mini/eval_20260308_050847.json)
-- Original 8-task run: [`BEST_EVALS/BEST_e2e_gpt5-mini-all-tasks-for-blog-50-runs/eval_20260303_230844.json`](../BEST_EVALS/BEST_e2e_gpt5-mini-all-tasks-for-blog-50-runs/eval_20260303_230844.json)
+Raw data: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json)

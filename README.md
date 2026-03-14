@@ -8,11 +8,11 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 **The solution**: Data stays in a Python REPL as `input_0`. The model writes code to search, filter, and aggregate. The raw data never enters the conversation - the LLM decides what to look at through code, pulls what it needs, and runs attention only on what matters.
 
-**The proof**: 1,800-eval benchmark on gpt-5-mini across 12 tasks — **3.1x fewer tokens**, **1.5x cheaper**, comparable accuracy (70.2% vs 71.7% vanilla). Enables tasks vanilla can't run: BrowseComp (54% vs 6% — vanilla hits the context limit). **7.2x fewer tokens** than the official RLM at the same accuracy.
+**The proof**: 1,800-eval benchmark on gpt-5-mini across 12 tasks — **72.7% accuracy** (vs 69.5% vanilla, 69.7% official RLM), **2.6x fewer tokens** than vanilla, **3.6x fewer** than official, **1.7x cheaper** than vanilla. Enables tasks vanilla can't run: BrowseComp (62% vs 16% — vanilla hits the context limit).
 
 **Improve every LLM in production, today.** If your application passes documents, logs, tables, or code to an LLM, minRLM is the fastest ROI you can find. The context window is the real bottleneck — not the model. Swap the client, keep everything else. Works with OpenAI, Anthropic, and any OpenAI-compatible API. Ships in an afternoon, scales to any context size.
 
-**How is this different from agents?** An RLM is an agent with exactly one tool (Python REPL) that never sees the entire raw input. It tells the model *"you have `input_0` with 500K chars"* and lets it write code to answer the question. Some agents already do this internally - Claude Code processes web search results through code, Cursor and Claude Code chunk large files instead of pasting them whole. But these are proprietary backend optimizations. RLMs make this a commodity: agentic exploration of data in a single LLM call, where context is dynamic and determined at runtime based on the task and data.
+**How is this different from agents?** An RLM is an agent with exactly one tool (Python REPL) that never sees the entire raw input. It tells the model *"you have `input_0` with 500K chars"* and lets it write code to answer the question. Some agents already do this internally — Claude Code processes web search results through code, Cursor and Claude Code chunk large files instead of pasting them whole. But these are proprietary backend optimizations. RLMs make this a commodity: agentic exploration of data in a single LLM call, where context is dynamic and determined at runtime based on the task and data.
 
 ---
 
@@ -33,11 +33,11 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 |  | minRLM | Vanilla LLM | Official RLM |
 |---|---|---|---|
-| **Accuracy** | 70.2% | 71.7% | 71.0% |
-| **Avg Tokens** | **6,568** | 20,112 | 47,270 |
-| **Total Cost** | **$2.97** | $4.57 | $11.68 |
+| **Accuracy** | **72.7%** | 69.5% | 69.7% |
+| **Avg Tokens** | **8,151** | 20,967 | 29,327 |
+| **Total Cost** | **$2.86** | $4.74 | $7.92 |
 
-**3.1x fewer tokens** than vanilla | **7.2x fewer** than official | **1.5x cheaper** than vanilla | **3.9x cheaper** than official
+**2.6x fewer tokens** than vanilla | **3.6x fewer** than official | **1.7x cheaper** than vanilla | **2.8x cheaper** than official
 
 ![Summary Dashboard](docs/summary_dashboard.png)
 
@@ -59,20 +59,20 @@ A robust implementation of [Recursive Language Models](https://arxiv.org/abs/251
 
 | Task | minRLM | Vanilla | Official | minRLM Tokens | vs Official Tokens |
 |------|--------|---------|----------|---------------|-------------------|
-| SNIAH | **100%** | 100% | 96% | 6,265 | **2.8x fewer** |
-| MMLU-Pro | **96%** | 96% | 88% | 4,606 | **2.4x fewer** |
-| Oolong | 92% | 94% | **98%** | 4,883 | **3.2x fewer** |
-| AIME 2025 | 80% | **96%** | 86% | 6,069 | **2.6x fewer** |
-| RepoQA | 76% | **98%** | 94% | 7,960 | **2.8x fewer** |
-| GPQA Diamond | **74%** | 72% | 64% | 5,116 | **2.9x fewer** |
-| IFEval | 70% | **78%** | 66% | 4,800 | **3.6x fewer** |
-| LiveCodeBench | 62% | **70%** | 62% | 7,196 | **1.3x fewer** |
-| BrowseComp | 54% | 6% | **62%** | 7,467 | **13.5x fewer** |
-| GDP Val | 52% | 52% | 52% | 10,352 | **4.7x fewer** |
-| CodeQA | 46% | **50%** | 40% | 6,909 | **24.5x fewer** |
-| LongBench V2 | 40% | **48%** | 44% | 7,193 | **17.4x fewer** |
+| SNIAH | **94%** | 100% | 76% | 6,328 | **2.6x fewer** |
+| OOLONG | **92%** | 78% | 80% | 6,184 | **2.3x fewer** |
+| GDP Val | **86%** | 54% | 50% | 12,007 | **1.7x fewer** |
+| IFEval | **84%** | 78% | 78% | 5,963 | **1.6x fewer** |
+| MMLU-Pro | 82% | **90%** | 86% | 6,341 | **1.3x fewer** |
+| LiveCodeBench | **80%** | 64% | 60% | 7,106 | **1.3x fewer** |
+| AIME 2025 | 74% | **88%** | 84% | 7,951 | **1.4x fewer** |
+| GPQA Diamond | 70% | 66% | **74%** | 6,679 | **2.1x fewer** |
+| BrowseComp | 62% | 16% | **66%** | 10,740 | **6.4x fewer** |
+| RepoQA | 62% | **98%** | 96% | 8,026 | **2.2x fewer** |
+| LongBench V2 | 46% | **56%** | 48% | 10,767 | **7.8x fewer** |
+| CodeQA | 40% | **46%** | 38% | 9,724 | **8.0x fewer** |
 
-minRLM uses fewer tokens than Official RLM on **every task** (1.3x–24.5x). Vanilla fails on BrowseComp (6%) because the context exceeds the token limit.
+minRLM uses fewer tokens than Official RLM on **every task** (1.3x-8.0x). Vanilla fails on BrowseComp (16%) because the context exceeds the token limit.
 
 Full results and reproduction: [`eval/README.md`](eval/README.md)
 
@@ -199,12 +199,12 @@ LLM-generated code runs in an isolated Docker container with a custom [seccomp](
 from minrlm import RLM, check_docker_available
 
 # Auto-detects Docker
-rlm = RLM(model="gpt-4o-mini")
+rlm = RLM(model="gpt-5-mini")
 
 # Explicit control
 if check_docker_available():
     rlm = RLM(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         use_docker=True,
         docker_memory="256m",
         docker_timeout=60,
@@ -286,7 +286,7 @@ export OPENAI_API_KEY="your-key"
 uv run python eval/quickstart.py
 
 # Single task, 10 runs
-uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah --runs 10
+uv run python eval/run.py --model gpt-5-mini --tasks official_sniah --runs 10
 
 # All tasks, single runner, 50 runs each
 uv run python eval/run.py \
@@ -298,7 +298,11 @@ uv run python eval/run.py \
     --output-dir logs/my_eval
 
 # Full multi-runner benchmark (reproduces the table above)
-./run_comprehensive_official_benchmark.sh
+uv run python eval/run.py \
+    --tasks all \
+    --runners minrlm-reasoning,vanilla,official \
+    --runs 50 --parallel 12 --task-parallel 12 \
+    --output-dir logs/my_eval
 ```
 
 ### Visualize results
@@ -365,7 +369,7 @@ from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
 response = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     messages=[{"role": "user", "content": "Print powers of 2 up to 1M"}],
 )
 ```
@@ -376,7 +380,7 @@ Environment variables for the proxy:
 
 ```bash
 export OPENAI_API_KEY="your-key"
-export RLM_MODEL="gpt-4o-mini"
+export RLM_MODEL="gpt-5-mini"
 export RLM_USE_DOCKER="true"
 export PORT="8000"
 export MINRLM_VERBOSE="1"
@@ -387,7 +391,7 @@ export MINRLM_VERBOSE="1"
 ## Why RLMs?
 
 - **No context window limit** - data lives in the REPL, not the prompt. 10M chars costs the same as 10K
-- **Flat token cost** - ~2-5K tokens regardless of input size
+- **Flat token cost** - ~5-8K tokens regardless of input size
 - **Dynamic context** - the LLM decides what to look at based on the task, not you
 - **Visible logic** - generated Python you can read, inspect, and reuse
 - **O(n) operations** - substring search and iteration, not O(n²) attention
@@ -397,7 +401,7 @@ export MINRLM_VERBOSE="1"
 
 ## Credits
 
-**minrlm** is built by [Avi Lumelsky](https://github.com/avilum). This is an independent implementation - not a fork of the official code. The prompts, reasoning engine, eval framework, Docker sandboxing, and proxy server are all original work. On the official benchmarks, minrlm uses **8.0x fewer tokens** than the paper's reference implementation at comparable accuracy.
+**minrlm** is built by [Avi Lumelsky](https://github.com/avilum). This is an independent implementation - not a fork of the official code. The prompts, reasoning engine, eval framework, Docker sandboxing, and proxy server are all original work. On the official benchmarks, minrlm uses **3.6x fewer tokens** than the paper's reference implementation at higher accuracy (72.7% vs 69.7%).
 
 The RLM concept comes from Zhang, Kraska, and Khattab:
 
@@ -413,7 +417,7 @@ The RLM concept comes from Zhang, Kraska, and Khattab:
 }
 ```
 
-Paper: [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601)  
+Paper: [arxiv.org/abs/2512.24601](https://arxiv.org/abs/2512.24601)
 Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm)
 
 ## License
@@ -422,5 +426,5 @@ MIT
 
 ---
 
-> I'm a security researcher. This is far from production-grade security - but it's fucking cool.  
+> I'm a security researcher. This is far from production-grade security - but it's fucking cool.
 > Use Docker mode (default when Docker is installed) - the custom seccomp policy blocks network syscalls and most dangerous operations. For extra isolation, use [gVisor](https://gvisor.dev/) as the Docker runtime.

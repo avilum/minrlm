@@ -99,11 +99,7 @@ def get_benchmark_options() -> dict[str, dict]:
             1048576,
             10485760,
         ]:
-            label = (
-                f"{size // 1024}K"
-                if size < 1024 * 1024
-                else f"{size // (1024 * 1024)}M"
-            )
+            label = f"{size // 1024}K" if size < 1024 * 1024 else f"{size // (1024 * 1024)}M"
             options[f"SCALING - {label}"] = {
                 "task": "official_sniah",
                 "context_size": size,
@@ -208,9 +204,7 @@ def get_available_models(base_url: str = None) -> list[str]:
                 chat_models.append(model_id)
             # Include gpt-4 (but not gpt-4-base, gpt-4-vision, etc.)
             elif m_lower == "gpt-4" or (
-                m_lower.startswith("gpt-4-")
-                and "base" not in m_lower
-                and "vision" not in m_lower
+                m_lower.startswith("gpt-4-") and "base" not in m_lower and "vision" not in m_lower
             ):
                 chat_models.append(model_id)
             # Include gpt-3.5-turbo variants
@@ -227,9 +221,7 @@ def get_available_models(base_url: str = None) -> list[str]:
                 is_explicit_base = m_lower.endswith("-base")
                 # Decimal-versioned names without a chat suffix are base/completion models
                 has_decimal_version = bool(_re.search(r"gpt-5\.\d", m_lower))
-                if not is_explicit_base and (
-                    has_chat_suffix or not has_decimal_version
-                ):
+                if not is_explicit_base and (has_chat_suffix or not has_decimal_version):
                     chat_models.append(model_id)
 
         # Sort: latest versions first
@@ -259,9 +251,7 @@ class RunResult:
     cost_usd: float | None = None
 
 
-def run_vanilla_llm(
-    task: str, context: str, model: str, check_fn: callable = None
-) -> RunResult:
+def run_vanilla_llm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
     """Run with direct LLM call."""
     client = OpenAI()
 
@@ -318,9 +308,7 @@ def run_vanilla_llm(
         )
 
 
-def run_our_rlm(
-    task: str, context: str, model: str, check_fn: callable = None
-) -> RunResult:
+def run_our_rlm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
     """Run with minRLM."""
     trace_parts = ["## minRLM\n\n"]
     if context:
@@ -331,9 +319,7 @@ def run_our_rlm(
             trace_parts.append(f"### Iteration {data['iteration']}\n\n")
         elif event == "llm_response":
             has_code = data.get("has_code", False)
-            trace_parts.append(
-                f"**LLM Response** ({len(data.get('response', ''))} chars):\n"
-            )
+            trace_parts.append(f"**LLM Response** ({len(data.get('response', ''))} chars):\n")
             if has_code:
                 trace_parts.append("Contains code block\n\n")
             else:
@@ -374,9 +360,7 @@ def run_our_rlm(
 
         cost = calculate_cost(model, result.input_tokens, result.output_tokens)
 
-        trace_parts.append(
-            f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n"
-        )
+        trace_parts.append(f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n")
         trace_parts.append(
             f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out = {result.total_tokens:,} total"
         )
@@ -410,29 +394,21 @@ def run_our_rlm(
         )
 
 
-def run_reasoning_rlm(
-    task: str, context: str, model: str, check_fn: callable = None
-) -> RunResult:
+def run_reasoning_rlm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
     """Run with RLMReasoning (Reasoning approach)."""
     trace_parts = ["## minRLM with Reasoning\n\n"]
     if context:
-        trace_parts.append(
-            f"Processing {len(context):,} chars with reasoning-first approach...\n\n"
-        )
+        trace_parts.append(f"Processing {len(context):,} chars with reasoning-first approach...\n\n")
 
     def on_step(event: str, data: dict):
         if event == "thinking":
             trace_parts.append(f"### Iteration {data['iteration']}\n\n")
         elif event == "reasoning":
             reasoning = data.get("reasoning", "")
-            trace_parts.append(
-                f"**Reasoning:**\n> {reasoning[:500]}{'...' if len(reasoning) > 500 else ''}\n\n"
-            )
+            trace_parts.append(f"**Reasoning:**\n> {reasoning[:500]}{'...' if len(reasoning) > 500 else ''}\n\n")
         elif event == "llm_response":
             has_code = data.get("has_code", False)
-            trace_parts.append(
-                f"**LLM Response** ({len(data.get('response', ''))} chars):\n"
-            )
+            trace_parts.append(f"**LLM Response** ({len(data.get('response', ''))} chars):\n")
             if has_code:
                 trace_parts.append("Contains code block\n\n")
             else:
@@ -477,9 +453,7 @@ def run_reasoning_rlm(
             trace_parts.append(
                 f"\n**Reasoning Summary:** {result.reasoning[:300]}{'...' if len(result.reasoning) > 300 else ''}\n"
             )
-        trace_parts.append(
-            f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n"
-        )
+        trace_parts.append(f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n")
         trace_parts.append(
             f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out = {result.total_tokens:,} total"
         )
@@ -513,9 +487,7 @@ def run_reasoning_rlm(
         )
 
 
-def run_official_rlm(
-    task: str, context: str, model: str, check_fn: callable = None
-) -> RunResult:
+def run_official_rlm(task: str, context: str, model: str, check_fn: callable = None) -> RunResult:
     """Run with official RLM from github.com/alexzhang13/rlm via uv --with."""
     trace = "## Official RLM\n\n"
     if context:
@@ -791,9 +763,7 @@ def _rlm_trace_event(event: str, data: dict, include_reasoning: bool = False) ->
     return ""
 
 
-def _stream_rlm_runner(
-    label, task, context, model, check_fn, rlm_factory, include_reasoning=False
-):
+def _stream_rlm_runner(label, task, context, model, check_fn, rlm_factory, include_reasoning=False):
     """
     Generic streaming generator for on_step-based RLM runners (minRLM, minRLM-reasoning).
 
@@ -817,11 +787,7 @@ def _stream_rlm_runner(
     def run() -> None:
         try:
             rlm = rlm_factory(on_step)
-            res = (
-                rlm.completion(task=task, context=context)
-                if context
-                else rlm.completion(task=task)
-            )
+            res = rlm.completion(task=task, context=context) if context else rlm.completion(task=task)
             result_holder[0] = res
         except Exception as e:
             exc_holder[0] = e
@@ -840,14 +806,17 @@ def _stream_rlm_runner(
     elapsed = time.time() - start
 
     if exc_holder[0] or result_holder[0] is None:
-        yield "".join(trace_parts), RunResult(
-            response="",
-            correct=False,
-            tokens=0,
-            input_tokens=0,
-            output_tokens=0,
-            time_seconds=elapsed,
-            trace="".join(trace_parts),
+        yield (
+            "".join(trace_parts),
+            RunResult(
+                response="",
+                correct=False,
+                tokens=0,
+                input_tokens=0,
+                output_tokens=0,
+                time_seconds=elapsed,
+                trace="".join(trace_parts),
+            ),
         )
         return
 
@@ -858,15 +827,10 @@ def _stream_rlm_runner(
 
     reasoning = getattr(result, "reasoning", "")
     if reasoning:
-        trace_parts.append(
-            f"\n**Reasoning Summary:** {reasoning[:300]}{'...' if len(reasoning) > 300 else ''}\n"
-        )
+        trace_parts.append(f"\n**Reasoning Summary:** {reasoning[:300]}{'...' if len(reasoning) > 300 else ''}\n")
+    trace_parts.append(f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n")
     trace_parts.append(
-        f"\n**Final:** `{response[:200]}{'...' if len(response) > 200 else ''}`\n"
-    )
-    trace_parts.append(
-        f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out"
-        f" = {result.total_tokens:,} total"
+        f"**Tokens:** {result.input_tokens:,} in + {result.output_tokens:,} out = {result.total_tokens:,} total"
     )
     if cost is not None:
         trace_parts.append(f" | **Cost:** ${cost:.6f}")
@@ -874,16 +838,19 @@ def _stream_rlm_runner(
     if check_fn:
         trace_parts.append(f"{'✅ Correct' if correct else '❌ Incorrect'}\n\n")
 
-    yield "".join(trace_parts), RunResult(
-        response=response,
-        correct=correct,
-        tokens=result.total_tokens,
-        input_tokens=result.input_tokens,
-        output_tokens=result.output_tokens,
-        time_seconds=elapsed,
-        iterations=result.iterations,
-        cost_usd=cost,
-        trace="".join(trace_parts),
+    yield (
+        "".join(trace_parts),
+        RunResult(
+            response=response,
+            correct=correct,
+            tokens=result.total_tokens,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            time_seconds=elapsed,
+            iterations=result.iterations,
+            cost_usd=cost,
+            trace="".join(trace_parts),
+        ),
     )
 
 
@@ -906,9 +873,7 @@ def stream_our_rlm(task: str, context: str, model: str, check_fn=None):
         context=context,
         model=model,
         check_fn=check_fn,
-        rlm_factory=lambda on_step: RLMBase(
-            model=model, max_iterations=10, on_step=on_step
-        ),
+        rlm_factory=lambda on_step: RLMBase(model=model, max_iterations=10, on_step=on_step),
         include_reasoning=False,
     )
 
@@ -921,9 +886,7 @@ def stream_reasoning_rlm(task: str, context: str, model: str, check_fn=None):
         context=context,
         model=model,
         check_fn=check_fn,
-        rlm_factory=lambda on_step: RLM(
-            model=model, max_iterations=10, on_step=on_step
-        ),
+        rlm_factory=lambda on_step: RLM(model=model, max_iterations=10, on_step=on_step),
         include_reasoning=True,
     )
 
@@ -932,8 +895,7 @@ def stream_official_rlm(task: str, context: str, model: str, check_fn=None):
     """Streaming generator for Official RLM — reads <<<ITER>>> markers from subprocess stdout."""
     trace = "## Official RLM\n\n"
     trace += (
-        f"Processing {len(context):,} chars via "
-        f"[github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).\n\n"
+        f"Processing {len(context):,} chars via [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).\n\n"
         if context
         else "Running via [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).\n\n"
     )
@@ -1077,17 +1039,13 @@ except Exception as e:
                     it_time = it.get("iteration_time")
                     time_str = f" ({it_time:.1f}s)" if it_time else ""
                     trace += f"### Iteration {it_num}{time_str}\n\n"
-                    trace += (
-                        f"**LLM Response** ({it.get('response_len', 0):,} chars):\n"
-                    )
+                    trace += f"**LLM Response** ({it.get('response_len', 0):,} chars):\n"
                     if it.get("has_code"):
                         trace += "Contains code block\n\n"
                         for block in it.get("code_blocks", []):
                             trace += f"**Executing Code:**\n```python\n{block['code']}\n```\n\n"
                             if block.get("stderr"):
-                                trace += (
-                                    f"❌ **Error:**\n```\n{block['stderr']}\n```\n\n"
-                                )
+                                trace += f"❌ **Error:**\n```\n{block['stderr']}\n```\n\n"
                             if block.get("stdout"):
                                 trace += f"**stdout:**\n```\n{block['stdout']}\n```\n\n"
                             if block.get("final_answer") is not None:
@@ -1132,39 +1090,48 @@ except Exception as e:
             if check_fn:
                 trace += f"{'✅ Correct' if correct else '❌ Incorrect'}\n\n"
 
-            yield trace, RunResult(
-                response=resp_text,
-                correct=correct,
-                tokens=total_tokens,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                time_seconds=elapsed,
-                iterations=iterations,
-                cost_usd=cost,
-                trace=trace,
+            yield (
+                trace,
+                RunResult(
+                    response=resp_text,
+                    correct=correct,
+                    tokens=total_tokens,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    time_seconds=elapsed,
+                    iterations=iterations,
+                    cost_usd=cost,
+                    trace=trace,
+                ),
             )
         else:
             trace += "**Error:** No result received from subprocess.\n"
-            yield trace, RunResult(
+            yield (
+                trace,
+                RunResult(
+                    response="",
+                    correct=False,
+                    tokens=0,
+                    input_tokens=0,
+                    output_tokens=0,
+                    time_seconds=elapsed,
+                    trace=trace,
+                ),
+            )
+
+    except Exception as e:
+        trace += f"**Error:** {e}\n"
+        yield (
+            trace,
+            RunResult(
                 response="",
                 correct=False,
                 tokens=0,
                 input_tokens=0,
                 output_tokens=0,
-                time_seconds=elapsed,
+                time_seconds=time.time() - start,
                 trace=trace,
-            )
-
-    except Exception as e:
-        trace += f"**Error:** {e}\n"
-        yield trace, RunResult(
-            response="",
-            correct=False,
-            tokens=0,
-            input_tokens=0,
-            output_tokens=0,
-            time_seconds=time.time() - start,
-            trace=trace,
+            ),
         )
     finally:
         for f in [context_file, task_file]:
@@ -1253,10 +1220,7 @@ def build_charts(results_list: list) -> tuple:
     if not results_list:
         return None, None
 
-    data = [
-        {"Method": name, "Tokens": float(r.tokens), "Time": float(r.time_seconds)}
-        for name, r in results_list
-    ]
+    data = [{"Method": name, "Tokens": float(r.tokens), "Time": float(r.time_seconds)} for name, r in results_list]
     df = pd.DataFrame(data)
 
     colors = {
@@ -1292,15 +1256,11 @@ def build_charts(results_list: list) -> tuple:
         "bargap": 0.36,
     }
 
-    tokens_fig = px.bar(
-        df, x="Method", y="Tokens", color="Method", color_discrete_map=color_map
-    )
+    tokens_fig = px.bar(df, x="Method", y="Tokens", color="Method", color_discrete_map=color_map)
     tokens_fig.update_layout(**layout_common, title="Token usage", yaxis_title="Tokens")
     tokens_fig.update_traces(marker_line_width=0, opacity=0.92)
 
-    time_fig = px.bar(
-        df, x="Method", y="Time", color="Method", color_discrete_map=color_map
-    )
+    time_fig = px.bar(df, x="Method", y="Time", color="Method", color_discrete_map=color_map)
     time_fig.update_layout(**layout_common, title="Time (s)", yaxis_title="Seconds")
     time_fig.update_traces(marker_line_width=0, opacity=0.92)
 
@@ -1464,7 +1424,8 @@ def build_app():
             button_primary_background_fill_hover_dark="#2563eb",
         ),
     ) as demo:
-        gr.HTML("""
+        gr.HTML(
+            """
         <header class="app-header">
             <h1>RLM Visualizer</h1>
             <p>
@@ -1478,14 +1439,17 @@ def build_app():
                 <a href="https://github.com/avilum/minrlm" target="_blank">GitHub</a>
             </div>
         </header>
-        """)
+        """
+        )
 
         with gr.Accordion("About", open=False):
-            gr.Markdown("""
+            gr.Markdown(
+                """
             **RLM** = Recursive Language Model. The model writes Python code to search/process data in a REPL; data never enters context—only metadata. Token usage stays flat with context size.
 
             **Benchmarks (gpt-5-nano):** ~4.2× fewer tokens, ~4× cheaper; large contexts (128K+) often beat vanilla; 100% on 6M–11M where vanilla fails. [README](https://github.com/avilum/minrlm)
-            """)
+            """
+            )
 
         with gr.Row(equal_height=True):
             # Use gpt-5-mini as default (it's reliable and cost-effective)
@@ -1508,12 +1472,8 @@ def build_app():
                 with gr.Row():
                     vanilla_checkbox = gr.Checkbox(label="Vanilla", value=True, scale=1)
                     rlm_checkbox = gr.Checkbox(label="minRLM", value=True, scale=1)
-                    reasoning_checkbox = gr.Checkbox(
-                        label="minRLM with Reasoning", value=True, scale=1
-                    )
-                    official_checkbox = gr.Checkbox(
-                        label="Official", value=True, scale=1
-                    )
+                    reasoning_checkbox = gr.Checkbox(label="minRLM with Reasoning", value=True, scale=1)
+                    official_checkbox = gr.Checkbox(label="Official", value=True, scale=1)
 
         gr.HTML("<div style='height: 20px'></div>")
 
@@ -1536,23 +1496,13 @@ def build_app():
                             label="Benchmark",
                             scale=4,
                         )
-                        generate_btn = gr.Button(
-                            "New instance", variant="secondary", scale=1, min_width=120
-                        )
-                        run_eval_btn = gr.Button(
-                            "Run comparison", variant="primary", scale=1, min_width=140
-                        )
+                        generate_btn = gr.Button("New instance", variant="secondary", scale=1, min_width=120)
+                        run_eval_btn = gr.Button("Run comparison", variant="primary", scale=1, min_width=140)
 
-                task_description = gr.Markdown(
-                    "*Select a benchmark and click New instance*"
-                )
+                task_description = gr.Markdown("*Select a benchmark and click New instance*")
 
                 # Status & Results
-                eval_status_html = gr.HTML(
-                    create_status_box(
-                        "Ready", "Select a task and run", "○", "#71717a", False
-                    )
-                )
+                eval_status_html = gr.HTML(create_status_box("Ready", "Select a task and run", "○", "#71717a", False))
                 eval_results_output = gr.Markdown("")
 
                 with gr.Row(equal_height=True):
@@ -1567,23 +1517,15 @@ def build_app():
                 with gr.Accordion("Task details", open=False):
                     with gr.Row():
                         with gr.Column(scale=2):
-                            task_text = gr.Textbox(
-                                label="Task", lines=3, interactive=False
-                            )
+                            task_text = gr.Textbox(label="Task", lines=3, interactive=False)
                         with gr.Column(scale=1):
-                            expected_text = gr.Textbox(
-                                label="Expected", interactive=False
-                            )
-                    context_preview = gr.Textbox(
-                        label="Context preview", lines=5, interactive=False
-                    )
+                            expected_text = gr.Textbox(label="Expected", interactive=False)
+                    context_preview = gr.Textbox(label="Context preview", lines=5, interactive=False)
 
                 full_context = gr.State("")
 
                 def on_generate(benchmark_name):
-                    desc, task, context, expected, check_fn = generate_task_instance(
-                        benchmark_name
-                    )
+                    desc, task, context, expected, check_fn = generate_task_instance(benchmark_name)
                     preview = context[:500] + "..." if len(context) > 500 else context
                     return (
                         f"**{benchmark_name}**\n\n{desc}\n\n*Context: {len(context):,} chars*",
@@ -1632,9 +1574,7 @@ def build_app():
                 ):
                     if not task:
                         yield (
-                            create_status_box(
-                                "No Task", "Generate a task first", "📋", "#666", False
-                            ),
+                            create_status_box("No Task", "Generate a task first", "📋", "#666", False),
                             "",
                             None,
                             None,
@@ -1660,9 +1600,7 @@ def build_app():
                             )
                         )
                     if run_official:
-                        methods.append(
-                            ("Official", "🟢", "#51cf66", stream_official_rlm)
-                        )
+                        methods.append(("Official", "🟢", "#51cf66", stream_official_rlm))
 
                     if not methods:
                         yield (
@@ -1723,12 +1661,8 @@ def build_app():
                                 )
                                 latest_traces[mname] = err_trace
 
-                        running = [
-                            n for n in method_names_ordered if n not in results_dict
-                        ]
-                        finished = [
-                            n for n in method_names_ordered if n in results_dict
-                        ]
+                        running = [n for n in method_names_ordered if n not in results_dict]
+                        finished = [n for n in method_names_ordered if n in results_dict]
                         running_label = (
                             f"Running {len(running)} method{'s' if len(running) != 1 else ''} in parallel…"
                             if running
@@ -1742,15 +1676,9 @@ def build_app():
                             bool(running),
                         )
                         combined_traces = "\n---\n\n".join(
-                            latest_traces[n]
-                            for n in method_names_ordered
-                            if n in latest_traces
+                            latest_traces[n] for n in method_names_ordered if n in latest_traces
                         )
-                        partial_results = [
-                            (n, results_dict[n])
-                            for n in method_names_ordered
-                            if n in results_dict
-                        ]
+                        partial_results = [(n, results_dict[n]) for n in method_names_ordered if n in results_dict]
                         yield (
                             step_status,
                             "",
@@ -1760,44 +1688,32 @@ def build_app():
 
                     results_list = [(n, results_dict[n]) for n in method_names_ordered]
                     total_elapsed = time.time() - parallel_start
-                    traces = "\n---\n\n".join(
-                        r.trace for _, r in results_list if r.trace
-                    )
+                    traces = "\n---\n\n".join(r.trace for _, r in results_list if r.trace)
 
                     # Final output
-                    output = (
-                        f"**{benchmark_name}** · {len(context):,} chars · {model}\n\n"
+                    output = f"**{benchmark_name}** · {len(context):,} chars · {model}\n\n"
+                    output += (
+                        "| Method | Result | Input Tokens | Output Tokens | Total Tokens | Cost | Time | Iters |\n"
                     )
-                    output += "| Method | Result | Input Tokens | Output Tokens | Total Tokens | Cost | Time | Iters |\n"
-                    output += "|--------|--------|--------------|---------------|--------------|------|------|-------|\n"
+                    output += (
+                        "|--------|--------|--------------|---------------|--------------|------|------|-------|\n"
+                    )
                     for name, r in results_list:
                         status = "✅" if r.correct else "❌"
-                        cost_str = (
-                            f"${r.cost_usd:.6f}" if r.cost_usd is not None else "N/A"
-                        )
+                        cost_str = f"${r.cost_usd:.6f}" if r.cost_usd is not None else "N/A"
                         output += f"| {name} | {status} | {r.input_tokens:,} | {r.output_tokens:,} | {r.tokens:,} | {cost_str} | {r.time_seconds:.1f}s | {r.iterations} |\n"
 
                     if len(results_list) >= 2:
-                        tokens = [
-                            (n, r.tokens) for n, r in results_list if r.tokens > 0
-                        ]
-                        costs = [
-                            (n, r.cost_usd)
-                            for n, r in results_list
-                            if r.cost_usd is not None
-                        ]
+                        tokens = [(n, r.tokens) for n, r in results_list if r.tokens > 0]
+                        costs = [(n, r.cost_usd) for n, r in results_list if r.cost_usd is not None]
 
                         if tokens:
-                            best, worst = min(tokens, key=lambda x: x[1]), max(
-                                tokens, key=lambda x: x[1]
-                            )
+                            best, worst = min(tokens, key=lambda x: x[1]), max(tokens, key=lambda x: x[1])
                             if best[1] < worst[1]:
                                 output += f"\n**{_method_display_name(best[0])}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
 
                         if costs:
-                            best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(
-                                costs, key=lambda x: x[1]
-                            )
+                            best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(costs, key=lambda x: x[1])
                             if best_cost[1] < worst_cost[1]:
                                 savings = (1 - best_cost[1] / worst_cost[1]) * 100
                                 output += f"\n**{_method_display_name(best_cost[0])}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
@@ -1851,24 +1767,16 @@ def build_app():
                     placeholder="Paste document, JSON, or text. Leave empty if no context.",
                     lines=8,
                 )
-                run_custom_btn = gr.Button(
-                    "Run comparison", variant="primary", size="lg"
-                )
+                run_custom_btn = gr.Button("Run comparison", variant="primary", size="lg")
 
-                custom_status_html = gr.HTML(
-                    create_status_box(
-                        "Ready", "Enter a task and run", "○", "#71717a", False
-                    )
-                )
+                custom_status_html = gr.HTML(create_status_box("Ready", "Enter a task and run", "○", "#71717a", False))
 
                 with gr.Group():
                     custom_results_output = gr.Markdown("")
 
                 with gr.Row(equal_height=True):
                     with gr.Column():
-                        custom_tokens_plot = gr.Plot(
-                            label="Token usage", show_label=True
-                        )
+                        custom_tokens_plot = gr.Plot(label="Token usage", show_label=True)
                     with gr.Column():
                         custom_time_plot = gr.Plot(label="Time", show_label=True)
 
@@ -1876,9 +1784,7 @@ def build_app():
                     custom_traces_output = gr.Markdown("*Run a task to see traces.*")
 
                 with gr.Accordion("Responses", open=False):
-                    custom_responses = gr.Markdown(
-                        "*Responses appear here after running.*"
-                    )
+                    custom_responses = gr.Markdown("*Responses appear here after running.*")
 
                 def run_custom_task(
                     task,
@@ -1891,9 +1797,7 @@ def build_app():
                 ):
                     if not task.strip():
                         yield (
-                            create_status_box(
-                                "No Task", "Enter a task prompt", "✏️", "#666", False
-                            ),
+                            create_status_box("No Task", "Enter a task prompt", "✏️", "#666", False),
                             "",
                             None,
                             None,
@@ -1920,9 +1824,7 @@ def build_app():
                             )
                         )
                     if run_official:
-                        methods.append(
-                            ("Official", "🟢", "#51cf66", stream_official_rlm)
-                        )
+                        methods.append(("Official", "🟢", "#51cf66", stream_official_rlm))
 
                     if not methods:
                         yield (
@@ -1941,9 +1843,7 @@ def build_app():
                         )
                         return
 
-                    context_info = (
-                        f"{len(context):,} chars" if context else "no context"
-                    )
+                    context_info = f"{len(context):,} chars" if context else "no context"
                     method_names_ordered = [name for name, _, _, _ in methods]
                     parallel_start = time.time()
                     update_q = queue.Queue()
@@ -1987,12 +1887,8 @@ def build_app():
                                 )
                                 latest_traces[mname] = err_trace
 
-                        running = [
-                            n for n in method_names_ordered if n not in results_dict
-                        ]
-                        finished = [
-                            n for n in method_names_ordered if n in results_dict
-                        ]
+                        running = [n for n in method_names_ordered if n not in results_dict]
+                        finished = [n for n in method_names_ordered if n in results_dict]
                         running_label = (
                             f"Running {len(running)} method{'s' if len(running) != 1 else ''} in parallel…"
                             if running
@@ -2006,15 +1902,9 @@ def build_app():
                             bool(running),
                         )
                         combined_traces = "\n---\n\n".join(
-                            latest_traces[n]
-                            for n in method_names_ordered
-                            if n in latest_traces
+                            latest_traces[n] for n in method_names_ordered if n in latest_traces
                         )
-                        partial_results = [
-                            (n, results_dict[n])
-                            for n in method_names_ordered
-                            if n in results_dict
-                        ]
+                        partial_results = [(n, results_dict[n]) for n in method_names_ordered if n in results_dict]
                         yield (
                             step_status,
                             "",
@@ -2025,41 +1915,27 @@ def build_app():
 
                     results_list = [(n, results_dict[n]) for n in method_names_ordered]
                     total_elapsed = time.time() - parallel_start
-                    traces = "\n---\n\n".join(
-                        r.trace for _, r in results_list if r.trace
-                    )
+                    traces = "\n---\n\n".join(r.trace for _, r in results_list if r.trace)
 
                     # Final output table
                     output = f"**Custom Task** · {context_info} · {model}\n\n"
                     output += "| Method | Input Tokens | Output Tokens | Total Tokens | Cost | Time | Iters |\n"
                     output += "|--------|--------------|---------------|--------------|------|------|-------|\n"
                     for name, r in results_list:
-                        cost_str = (
-                            f"${r.cost_usd:.6f}" if r.cost_usd is not None else "N/A"
-                        )
+                        cost_str = f"${r.cost_usd:.6f}" if r.cost_usd is not None else "N/A"
                         output += f"| {name} | {r.input_tokens:,} | {r.output_tokens:,} | {r.tokens:,} | {cost_str} | {r.time_seconds:.1f}s | {r.iterations} |\n"
 
                     if len(results_list) >= 2:
-                        tokens = [
-                            (n, r.tokens) for n, r in results_list if r.tokens > 0
-                        ]
-                        costs = [
-                            (n, r.cost_usd)
-                            for n, r in results_list
-                            if r.cost_usd is not None
-                        ]
+                        tokens = [(n, r.tokens) for n, r in results_list if r.tokens > 0]
+                        costs = [(n, r.cost_usd) for n, r in results_list if r.cost_usd is not None]
 
                         if tokens:
-                            best, worst = min(tokens, key=lambda x: x[1]), max(
-                                tokens, key=lambda x: x[1]
-                            )
+                            best, worst = min(tokens, key=lambda x: x[1]), max(tokens, key=lambda x: x[1])
                             if best[1] < worst[1]:
                                 output += f"\n**{_method_display_name(best[0])}** used {(1 - best[1] / worst[1]) * 100:.0f}% fewer tokens."
 
                         if costs:
-                            best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(
-                                costs, key=lambda x: x[1]
-                            )
+                            best_cost, worst_cost = min(costs, key=lambda x: x[1]), max(costs, key=lambda x: x[1])
                             if best_cost[1] < worst_cost[1]:
                                 savings = (1 - best_cost[1] / worst_cost[1]) * 100
                                 output += f"\n**{_method_display_name(best_cost[0])}** is {savings:.0f}% cheaper (${best_cost[1]:.6f} vs ${worst_cost[1]:.6f})."
@@ -2067,15 +1943,13 @@ def build_app():
                     # Build responses display
                     responses_md = "### Responses\n\n"
                     for name, r in results_list:
-                        responses_md += f"**{name}:**\n```\n{r.response[:2000]}{'...' if len(r.response) > 2000 else ''}\n```\n\n"
+                        responses_md += (
+                            f"**{name}:**\n```\n{r.response[:2000]}{'...' if len(r.response) > 2000 else ''}\n```\n\n"
+                        )
 
-                    final_status = create_status_box(
-                        "Done", f"{total_elapsed:.1f}s total", "✓", "#22c55e", False
-                    )
+                    final_status = create_status_box("Done", f"{total_elapsed:.1f}s total", "✓", "#22c55e", False)
 
-                    yield final_status, output, *build_charts(
-                        results_list
-                    ), traces, responses_md
+                    yield final_status, output, *build_charts(results_list), traces, responses_md
 
                 run_custom_btn.click(
                     fn=run_custom_task,
@@ -2112,13 +1986,15 @@ def build_app():
             ],
         )
 
-        gr.HTML("""
+        gr.HTML(
+            """
         <footer class="app-footer">
             <a href="https://gradio.app" target="_blank">Gradio</a> ·
             <a href="https://arxiv.org/abs/2512.24601" target="_blank">Paper</a> ·
             <a href="https://github.com/avilum/minrlm" target="_blank">GitHub</a>
         </footer>
-        """)
+        """
+        )
 
     return demo
 

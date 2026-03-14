@@ -27,10 +27,9 @@ from __future__ import annotations
 
 import json
 import sys
+import warnings
 from pathlib import Path
 from typing import Any
-
-import warnings
 
 import matplotlib
 
@@ -65,11 +64,21 @@ plt.rcParams.update(
 
 # Runner display metadata — handles all known name variants
 _RUNNER_META: dict[str, dict[str, Any]] = {
-    "vanilla":          {"label": "Vanilla LLM",   "color": "#2980B9", "marker": "o", "zorder": 2},
-    "official":         {"label": "Official RLM",  "color": "#E74C3C", "marker": "^", "zorder": 3},
-    "minrlm":           {"label": "minRLM",        "color": "#27AE60", "marker": "s", "zorder": 4},
-    "ours":             {"label": "minRLM",        "color": "#27AE60", "marker": "s", "zorder": 4},
-    "minrlm-reasoning": {"label": "minRLM",        "color": "#27AE60", "marker": "D", "zorder": 5},
+    "vanilla": {"label": "Vanilla LLM", "color": "#2980B9", "marker": "o", "zorder": 2},
+    "official": {
+        "label": "Official RLM",
+        "color": "#E74C3C",
+        "marker": "^",
+        "zorder": 3,
+    },
+    "minrlm": {"label": "minRLM", "color": "#27AE60", "marker": "s", "zorder": 4},
+    "ours": {"label": "minRLM", "color": "#27AE60", "marker": "s", "zorder": 4},
+    "minrlm-reasoning": {
+        "label": "minRLM",
+        "color": "#27AE60",
+        "marker": "D",
+        "zorder": 5,
+    },
 }
 
 _PREFERRED_ORDER = ["vanilla", "official", "minrlm", "ours", "minrlm-reasoning"]
@@ -139,7 +148,9 @@ def plot_accuracy_per_task(
         offsets = y + (i - (n_runners - 1) / 2) * bar_h
 
         bars = ax.barh(
-            offsets, accs, bar_h * 0.85,
+            offsets,
+            accs,
+            bar_h * 0.85,
             label=_label(runner),
             color=_color(runner),
             xerr=errs if max(errs) > 0 else None,
@@ -153,7 +164,9 @@ def plot_accuracy_per_task(
                     min(val + 1.5, 103),
                     bar.get_y() + bar.get_height() / 2,
                     f"{val:.0f}%",
-                    va="center", ha="left", fontsize=9,
+                    va="center",
+                    ha="left",
+                    fontsize=9,
                 )
 
     ax.set_xlabel("Accuracy (%)")
@@ -200,14 +213,27 @@ def plot_tokens_per_task(
         toks = [agg[t][runner].avg_total_tokens if runner in agg[t] else 0 for t in tasks]
         xs = x + (i - (n_runners - 1) / 2) * bar_w
         # Skip zero-value bars (log(0) = -inf breaks the axis); record them for N/A annotation
-        valid_xs   = [xi for xi, v in zip(xs, toks) if v > 0]
-        valid_toks = [v  for v in toks if v > 0]
-        ax.bar(valid_xs, valid_toks, bar_w * 0.85,
-               label=_label(runner), color=_color(runner), alpha=0.88)
+        valid_xs = [xi for xi, v in zip(xs, toks) if v > 0]
+        valid_toks = [v for v in toks if v > 0]
+        ax.bar(
+            valid_xs,
+            valid_toks,
+            bar_w * 0.85,
+            label=_label(runner),
+            color=_color(runner),
+            alpha=0.88,
+        )
         for xi, val in zip(xs, toks):
             if val > 0:
-                ax.text(xi, val * 1.08, f"{int(val):,}",
-                        ha="center", va="bottom", fontsize=8, rotation=45)
+                ax.text(
+                    xi,
+                    val * 1.08,
+                    f"{int(val):,}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                    rotation=45,
+                )
             else:
                 na_annotations.append((xi, _color(runner)))
 
@@ -220,10 +246,18 @@ def plot_tokens_per_task(
     # Place N/A labels using axes-fraction transform so they sit just above the x-axis
     # regardless of the log-scale y limits (avoids canvas expansion)
     for xi, color in na_annotations:
-        ax.annotate("N/A", xy=(xi, 0), xycoords=("data", "axes fraction"),
-                    xytext=(0, 4), textcoords="offset points",
-                    ha="center", va="bottom", fontsize=7,
-                    color=color, style="italic")
+        ax.annotate(
+            "N/A",
+            xy=(xi, 0),
+            xycoords=("data", "axes fraction"),
+            xytext=(0, 4),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            color=color,
+            style="italic",
+        )
     ax.legend(framealpha=0.9)
     plt.tight_layout()
     if output_path:
@@ -260,10 +294,15 @@ def plot_latency_per_task(
         errs = [agg[t][runner].std_time_seconds if runner in agg[t] else 0 for t in tasks]
         xs = x + (i - (n_runners - 1) / 2) * bar_w
         bars = ax.bar(
-            xs, times, bar_w * 0.85,
-            label=_label(runner), color=_color(runner), alpha=0.88,
+            xs,
+            times,
+            bar_w * 0.85,
+            label=_label(runner),
+            color=_color(runner),
+            alpha=0.88,
             yerr=errs if max(errs) > 0 else None,
-            capsize=3, error_kw={"elinewidth": 1.2},
+            capsize=3,
+            error_kw={"elinewidth": 1.2},
         )
         for bar, val in zip(bars, times):
             if val > 0:
@@ -271,7 +310,9 @@ def plot_latency_per_task(
                     bar.get_x() + bar.get_width() / 2,
                     bar.get_height() + max(errs) * 0.1 + 0.5,
                     f"{val:.0f}s",
-                    ha="center", va="bottom", fontsize=8,
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
                 )
 
     ax.set_ylabel("Avg Latency (seconds)")
@@ -317,14 +358,23 @@ def plot_cost_per_task(
             m = agg[t].get(runner)
             costs_milli.append((m.avg_cost_usd or 0) * 1000 if m else 0)
         xs = x + (i - (n_runners - 1) / 2) * bar_w
-        bars = ax.bar(xs, costs_milli, bar_w * 0.85, label=_label(runner), color=_color(runner), alpha=0.88)
+        bars = ax.bar(
+            xs,
+            costs_milli,
+            bar_w * 0.85,
+            label=_label(runner),
+            color=_color(runner),
+            alpha=0.88,
+        )
         for bar, val in zip(bars, costs_milli):
             if val > 0.01:
                 ax.text(
                     bar.get_x() + bar.get_width() / 2,
                     bar.get_height() + 0.02,
                     f"${val:.2f}",
-                    ha="center", va="bottom", fontsize=8,
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
                 )
 
     ax.set_ylabel("Cost per Query  (milli-USD = $/1000 queries)")
@@ -358,7 +408,11 @@ def plot_accuracy_vs_cost(
 
     # Per-runner label offsets to reduce overlap
     _label_offsets = [
-        (6, 4), (6, -14), (-70, 4), (-70, -14), (6, 14),
+        (6, 4),
+        (6, -14),
+        (-70, 4),
+        (-70, -14),
+        (6, 14),
     ]
 
     fig, ax = plt.subplots(figsize=(11, 7))
@@ -374,24 +428,48 @@ def plot_accuracy_vs_cost(
         if not xs:
             continue
         meta = _meta(runner)
-        ax.scatter(xs, ys, s=110, color=meta["color"], marker=meta["marker"],
-                   label=_label(runner), zorder=meta["zorder"], alpha=0.9,
-                   edgecolors="white", linewidths=0.7)
+        ax.scatter(
+            xs,
+            ys,
+            s=110,
+            color=meta["color"],
+            marker=meta["marker"],
+            label=_label(runner),
+            zorder=meta["zorder"],
+            alpha=0.9,
+            edgecolors="white",
+            linewidths=0.7,
+        )
         ox, oy = _label_offsets[ri % len(_label_offsets)]
         for x_pt, y_pt, lbl in zip(xs, ys, labels_pt):
-            ax.annotate(lbl, (x_pt, y_pt),
-                        textcoords="offset points", xytext=(ox, oy),
-                        fontsize=8, color=meta["color"], alpha=0.85,
-                        arrowprops={"arrowstyle": "-", "color": meta["color"],
-                                    "alpha": 0.3, "lw": 0.7})
+            ax.annotate(
+                lbl,
+                (x_pt, y_pt),
+                textcoords="offset points",
+                xytext=(ox, oy),
+                fontsize=8,
+                color=meta["color"],
+                alpha=0.85,
+                arrowprops={
+                    "arrowstyle": "-",
+                    "color": meta["color"],
+                    "alpha": 0.3,
+                    "lw": 0.7,
+                },
+            )
 
     ax.set_xlabel("Avg Cost per Query (milli-USD)")
     ax.set_ylabel("Accuracy (%)")
     ax.set_title(title, fontweight="bold", pad=12)
     ax.set_ylim(-5, 110)
-    ax.annotate("← cheaper + more accurate →\n(ideal: top-left)",
-                xy=(0.02, 0.97), xycoords="axes fraction",
-                fontsize=9, color="gray", va="top")
+    ax.annotate(
+        "← cheaper + more accurate →\n(ideal: top-left)",
+        xy=(0.02, 0.97),
+        xycoords="axes fraction",
+        fontsize=9,
+        color="gray",
+        va="top",
+    )
     ax.legend(framealpha=0.9)
     plt.tight_layout()
     if output_path:
@@ -415,7 +493,11 @@ def plot_accuracy_vs_latency(
     runners = _sort_runners({r.runner_name for r in results})
 
     _label_offsets = [
-        (6, 4), (6, -14), (-70, 4), (-70, -14), (6, 14),
+        (6, 4),
+        (6, -14),
+        (-70, 4),
+        (-70, -14),
+        (6, 14),
     ]
 
     fig, ax = plt.subplots(figsize=(11, 7))
@@ -431,24 +513,48 @@ def plot_accuracy_vs_latency(
         if not xs:
             continue
         meta = _meta(runner)
-        ax.scatter(xs, ys, s=110, color=meta["color"], marker=meta["marker"],
-                   label=_label(runner), zorder=meta["zorder"], alpha=0.9,
-                   edgecolors="white", linewidths=0.7)
+        ax.scatter(
+            xs,
+            ys,
+            s=110,
+            color=meta["color"],
+            marker=meta["marker"],
+            label=_label(runner),
+            zorder=meta["zorder"],
+            alpha=0.9,
+            edgecolors="white",
+            linewidths=0.7,
+        )
         ox, oy = _label_offsets[ri % len(_label_offsets)]
         for x_pt, y_pt, lbl in zip(xs, ys, labels_pt):
-            ax.annotate(lbl, (x_pt, y_pt),
-                        textcoords="offset points", xytext=(ox, oy),
-                        fontsize=8, color=meta["color"], alpha=0.85,
-                        arrowprops={"arrowstyle": "-", "color": meta["color"],
-                                    "alpha": 0.3, "lw": 0.7})
+            ax.annotate(
+                lbl,
+                (x_pt, y_pt),
+                textcoords="offset points",
+                xytext=(ox, oy),
+                fontsize=8,
+                color=meta["color"],
+                alpha=0.85,
+                arrowprops={
+                    "arrowstyle": "-",
+                    "color": meta["color"],
+                    "alpha": 0.3,
+                    "lw": 0.7,
+                },
+            )
 
     ax.set_xlabel("Avg Latency (seconds)")
     ax.set_ylabel("Accuracy (%)")
     ax.set_title(title, fontweight="bold", pad=12)
     ax.set_ylim(-5, 110)
-    ax.annotate("← faster + more accurate →\n(ideal: top-left)",
-                xy=(0.02, 0.97), xycoords="axes fraction",
-                fontsize=9, color="gray", va="top")
+    ax.annotate(
+        "← faster + more accurate →\n(ideal: top-left)",
+        xy=(0.02, 0.97),
+        xycoords="axes fraction",
+        fontsize=9,
+        color="gray",
+        va="top",
+    )
     ax.legend(framealpha=0.9)
     plt.tight_layout()
     if output_path:
@@ -510,15 +616,36 @@ def plot_token_savings(
         for bar, val in zip(bars, ratios):
             bx = bar.get_x() + bar.get_width() / 2
             if val >= 1.1:
-                ax.text(bx, bar.get_height() + 0.05, f"{val:.1f}×",
-                        ha="center", va="bottom", fontsize=9, fontweight="bold")
+                ax.text(
+                    bx,
+                    bar.get_height() + 0.05,
+                    f"{val:.1f}×",
+                    ha="center",
+                    va="bottom",
+                    fontsize=9,
+                    fontweight="bold",
+                )
             elif 0 < val < 1.0:
                 # minRLM uses MORE tokens on this task (e.g. GDPVAL infrastructure overhead)
-                ax.text(bx, bar.get_height() + 0.05, f"⬆ {1/val:.1f}×\noverhead",
-                        ha="center", va="bottom", fontsize=7, color="#C0392B",
-                        linespacing=1.3)
+                ax.text(
+                    bx,
+                    bar.get_height() + 0.05,
+                    f"⬆ {1 / val:.1f}×\noverhead",
+                    ha="center",
+                    va="bottom",
+                    fontsize=7,
+                    color="#C0392B",
+                    linespacing=1.3,
+                )
 
-    ax.axhline(1.0, color="gray", linestyle="--", alpha=0.5, linewidth=1.5, label="Break-even (1×)")
+    ax.axhline(
+        1.0,
+        color="gray",
+        linestyle="--",
+        alpha=0.5,
+        linewidth=1.5,
+        label="Break-even (1×)",
+    )
     ax.set_ylabel("Token savings factor (higher = fewer tokens)")
     ax.set_title(title, fontweight="bold", pad=12)
     ax.set_xticks(x)
@@ -552,13 +679,13 @@ def plot_summary_dashboard(
 
     # GridSpec: 2 rows — top row 3 equal cols, bottom row full width
     from matplotlib.gridspec import GridSpec
-    gs = GridSpec(2, 3, figure=fig, hspace=0.45, wspace=0.35,
-                  height_ratios=[1.6, 1])
+
+    gs = GridSpec(2, 3, figure=fig, hspace=0.45, wspace=0.35, height_ratios=[1.6, 1])
 
     ax_acc = fig.add_subplot(gs[0, 0])
     ax_tok = fig.add_subplot(gs[0, 1])
     ax_lat = fig.add_subplot(gs[0, 2])
-    ax_txt = fig.add_subplot(gs[1, :])   # spans all 3 columns
+    ax_txt = fig.add_subplot(gs[1, :])  # spans all 3 columns
     ax_txt.axis("off")
 
     def _bars(ax: plt.Axes, values: list[float], ylabel: str, fmt: str, title_: str) -> None:
@@ -570,7 +697,10 @@ def plot_summary_dashboard(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + vmax * 0.02,
                 fmt.format(val),
-                ha="center", va="bottom", fontsize=12, fontweight="bold",
+                ha="center",
+                va="bottom",
+                fontsize=12,
+                fontweight="bold",
             )
         ax.set_xticks(range(len(runners)))
         ax.set_xticklabels([_label(r) for r in runners], fontsize=11)
@@ -604,36 +734,50 @@ def plot_summary_dashboard(
             van_tok = van_d.get("avg_tokens_per_task", 0)
             van_acc = van_d.get("overall_accuracy", 0)
             if van_tok > our_tok:
-                bullets.append(f"{van_tok/our_tok:.1f}× fewer tokens than Vanilla")
+                bullets.append(f"{van_tok / our_tok:.1f}× fewer tokens than Vanilla")
             if our_acc >= van_acc:
                 bullets.append(f"matches or beats Vanilla accuracy ({our_acc:.1f}% vs {van_acc:.1f}%)")
         if off_d:
             off_tok = off_d.get("avg_tokens_per_task", 0)
             off_acc = off_d.get("overall_accuracy", 0)
             if off_tok > our_tok:
-                bullets.append(f"{off_tok/our_tok:.1f}× fewer tokens than Official RLM")
+                bullets.append(f"{off_tok / our_tok:.1f}× fewer tokens than Official RLM")
             if our_acc >= off_acc:
                 bullets.append(f"matches or beats Official RLM ({our_acc:.1f}% vs {off_acc:.1f}%)")
         our_cost = our_d.get("total_cost_usd")
         van_cost = van_d.get("total_cost_usd") if van_d else None
         if our_cost and van_cost and van_cost > 0:
-            bullets.append(f"{van_cost/our_cost:.1f}× cheaper than Vanilla")
+            bullets.append(f"{van_cost / our_cost:.1f}× cheaper than Vanilla")
 
         for b in bullets:
             lines.append(f"✓  {_label(our)}  {b}")
 
     ax_txt.text(
-        0.5, 0.55, "\n".join(lines),
+        0.5,
+        0.55,
+        "\n".join(lines),
         transform=ax_txt.transAxes,
-        fontsize=12, ha="center", va="center",
-        bbox={"boxstyle": "round,pad=0.9", "facecolor": "#EAF4FB",
-              "alpha": 0.9, "edgecolor": "#2980B9"},
+        fontsize=12,
+        ha="center",
+        va="center",
+        bbox={
+            "boxstyle": "round,pad=0.9",
+            "facecolor": "#EAF4FB",
+            "alpha": 0.9,
+            "edgecolor": "#2980B9",
+        },
     )
 
     # Runner legend
     legend_patches = [mpatches.Patch(color=_color(r), label=_label(r)) for r in runners]
-    fig.legend(handles=legend_patches, loc="lower center", ncol=len(runners),
-               framealpha=0.9, fontsize=11, bbox_to_anchor=(0.5, -0.01))
+    fig.legend(
+        handles=legend_patches,
+        loc="lower center",
+        ncol=len(runners),
+        framealpha=0.9,
+        fontsize=11,
+        bbox_to_anchor=(0.5, -0.01),
+    )
 
     plt.tight_layout(rect=(0, 0.04, 1, 0.97))
     if output_path:
@@ -666,16 +810,56 @@ def plot_all(
             saved.append(path)
             plt.close(fig)
         else:
-            print(f"    (skipped — data not available)", flush=True)
+            print("    (skipped — data not available)", flush=True)
 
-    _run("accuracy_per_task",    plot_accuracy_per_task,    results, title=f"{title_prefix} — Accuracy by Task")
-    _run("tokens_per_task",      plot_tokens_per_task,      results, title=f"{title_prefix} — Avg Tokens per Task")
-    _run("latency_per_task",     plot_latency_per_task,     results, title=f"{title_prefix} — Avg Latency per Task")
-    _run("cost_per_task",        plot_cost_per_task,        results, title=f"{title_prefix} — Avg Cost per Query")
-    _run("accuracy_vs_cost",     plot_accuracy_vs_cost,     results, title=f"{title_prefix} — Accuracy vs Cost")
-    _run("accuracy_vs_latency",  plot_accuracy_vs_latency,  results, title=f"{title_prefix} — Accuracy vs Latency")
-    _run("token_savings",        plot_token_savings,        results, title=f"{title_prefix} — Token Savings vs Baselines")
-    _run("summary_dashboard",    plot_summary_dashboard,    results, title=f"{title_prefix} — Dashboard")
+    _run(
+        "accuracy_per_task",
+        plot_accuracy_per_task,
+        results,
+        title=f"{title_prefix} — Accuracy by Task",
+    )
+    _run(
+        "tokens_per_task",
+        plot_tokens_per_task,
+        results,
+        title=f"{title_prefix} — Avg Tokens per Task",
+    )
+    _run(
+        "latency_per_task",
+        plot_latency_per_task,
+        results,
+        title=f"{title_prefix} — Avg Latency per Task",
+    )
+    _run(
+        "cost_per_task",
+        plot_cost_per_task,
+        results,
+        title=f"{title_prefix} — Avg Cost per Query",
+    )
+    _run(
+        "accuracy_vs_cost",
+        plot_accuracy_vs_cost,
+        results,
+        title=f"{title_prefix} — Accuracy vs Cost",
+    )
+    _run(
+        "accuracy_vs_latency",
+        plot_accuracy_vs_latency,
+        results,
+        title=f"{title_prefix} — Accuracy vs Latency",
+    )
+    _run(
+        "token_savings",
+        plot_token_savings,
+        results,
+        title=f"{title_prefix} — Token Savings vs Baselines",
+    )
+    _run(
+        "summary_dashboard",
+        plot_summary_dashboard,
+        results,
+        title=f"{title_prefix} — Dashboard",
+    )
 
     return saved
 

@@ -45,12 +45,12 @@ import atexit
 import gc
 import logging
 import resource
+import shutil
 import signal
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-import shutil
 
 
 def get_memory_mb() -> float:
@@ -74,9 +74,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 from eval.metrics import EvalResult, calculate_cost, compute_statistics, save_results
+from eval.plotting import plot_comprehensive_dashboard
 from eval.runners import RUNNER_REGISTRY, RunResult, get_runner
 from eval.tasks import TASK_REGISTRY, get_task
-from eval.plotting import plot_comprehensive_dashboard
 
 # =============================================================================
 # Logging Setup
@@ -107,7 +107,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--model", "-m", default="gpt-5-mini", help="Model to use for evaluation (e.g., gpt-5-mini, gpt-4o, gpt-4-turbo)"
+        "--model",
+        "-m",
+        default="gpt-5-mini",
+        help="Model to use for evaluation (e.g., gpt-5-mini, gpt-4o, gpt-4-turbo)",
     )
 
     parser.add_argument(
@@ -129,15 +132,30 @@ Examples:
     )
 
     parser.add_argument(
-        "--runs", "-n", type=int, default=1, help="Number of runs per task/runner combination (default: 1)"
+        "--runs",
+        "-n",
+        type=int,
+        default=1,
+        help="Number of runs per task/runner combination (default: 1)",
     )
 
-    parser.add_argument("--output-dir", "-o", default="eval/results", help="Output directory for results and plots")
-
-    parser.add_argument("--log-dir", default=None, help="Directory to save RLM execution logs (default: <output-dir>/logs)")
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default="eval/results",
+        help="Output directory for results and plots",
+    )
 
     parser.add_argument(
-        "--skip-official", action="store_true", help="Skip official RLM runner (useful if not installed)"
+        "--log-dir",
+        default=None,
+        help="Directory to save RLM execution logs (default: <output-dir>/logs)",
+    )
+
+    parser.add_argument(
+        "--skip-official",
+        action="store_true",
+        help="Skip official RLM runner (useful if not installed)",
     )
 
     parser.add_argument(
@@ -158,7 +176,12 @@ Examples:
         help="Use paper's context sizes for scaling (8K to 1M, as in Figure 1)",
     )
 
-    parser.add_argument("--context-size", type=int, default=50000, help="Default context size for non-scaling tasks")
+    parser.add_argument(
+        "--context-size",
+        type=int,
+        default=50000,
+        help="Default context size for non-scaling tasks",
+    )
 
     parser.add_argument(
         "--official-data-dir",
@@ -349,7 +372,16 @@ def run_evaluation(
         # Handle scaling task specially
         if task_name == "scaling":
             # Default: Test up to 1M as per paper (Figure 1)
-            sizes = context_sizes or [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576]
+            sizes = context_sizes or [
+                8192,
+                16384,
+                32768,
+                65536,
+                131072,
+                262144,
+                524288,
+                1048576,
+            ]
             for size in sizes:
                 results = _run_task_evaluations(
                     task_name=f"scaling_{size}",
@@ -429,7 +461,7 @@ def run_evaluation(
             oolong_sizes = context_sizes or [131072]
             for size in oolong_sizes:
                 results = _run_task_evaluations(
-                    task_name=f"oolong_{size // 1024}k" if len(oolong_sizes) > 1 else "oolong",
+                    task_name=(f"oolong_{size // 1024}k" if len(oolong_sizes) > 1 else "oolong"),
                     task_kwargs={"context_size": size},
                     runners=active_runners,
                     model=model,
@@ -509,7 +541,10 @@ def _get_base_task_name(task_name: str) -> str:
         return "scaling"
     elif task_name.startswith("long_context_"):
         return "long_context"
-    elif task_name.startswith("multi_needle_") and task_name not in ("multi_needle", "multi_needle_long"):
+    elif task_name.startswith("multi_needle_") and task_name not in (
+        "multi_needle",
+        "multi_needle_long",
+    ):
         return "multi_needle_long"
     elif task_name.startswith("json_extraction_"):
         return "json_extraction"
@@ -664,7 +699,9 @@ def _run_task_evaluations(
     workers = min(task_parallel, runs)
     if verbose:
         log.info(f"\n{'=' * 60}")
-        log.info(f"TASK: {task_name.upper()} (task_parallel: {workers}, runner_parallel: {min(len(runners), max_parallel)})")
+        log.info(
+            f"TASK: {task_name.upper()} (task_parallel: {workers}, runner_parallel: {min(len(runners), max_parallel)})"
+        )
         log.info(f"{'=' * 60}")
 
     run_pbar = tqdm(total=runs, desc=f"{task_name}", leave=False, disable=not verbose)

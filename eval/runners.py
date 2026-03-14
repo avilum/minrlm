@@ -151,7 +151,12 @@ class OursRunner(BaseRunner):
     description = "minRLM implementation"
 
     def __init__(
-        self, model: str, max_iterations: int = 10, log_dir: str | None = None, use_docker: bool | None = None, **kwargs
+        self,
+        model: str,
+        max_iterations: int = 10,
+        log_dir: str | None = None,
+        use_docker: bool | None = None,
+        **kwargs,
     ):
         super().__init__(model, **kwargs)
         self.max_iterations = max_iterations

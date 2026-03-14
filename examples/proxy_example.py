@@ -54,9 +54,7 @@ print(f"Tokens used: {response.usage.total_tokens}\n")
 # Example 3: Large context automatically detected
 # The proxy automatically treats messages with >50K chars as context
 print("Example 3: Large context (auto-detected)")
-large_data = "Employee data:\n" + "\n".join(
-    [f"EMP-{i:04d}: Employee {i}" for i in range(2000)]
-)
+large_data = "Employee data:\n" + "\n".join([f"EMP-{i:04d}: Employee {i}" for i in range(2000)])
 
 response = client.chat.completions.create(
     model="gpt-5-nano",
@@ -87,14 +85,10 @@ large_employee_data = {
             "id": f"EMP-{i:04d}",
             "name": f"Employee {i}",
             "email": f"employee.{i}@techcorp.com",
-            "department": (
-                "Engineering" if i % 3 == 0 else "Sales" if i % 3 == 1 else "Marketing"
-            ),
+            "department": ("Engineering" if i % 3 == 0 else "Sales" if i % 3 == 1 else "Marketing"),
             "salary": 50000 + (i * 100),
             "start_date": f"2020-{(i % 12) + 1:02d}-{(i % 28) + 1:02d}",
-            "skills": ["Python", "JavaScript", "SQL", "Docker", "Kubernetes"][
-                : (i % 5) + 1
-            ],
+            "skills": ["Python", "JavaScript", "SQL", "Docker", "Kubernetes"][: (i % 5) + 1],
             "projects": [
                 {
                     "name": f"Project {j}",
@@ -107,7 +101,7 @@ large_employee_data = {
                 {
                     "year": 2020 + (k % 4),
                     "rating": 3 + (k % 2),
-                    "comments": f"Excellent performance in Q{k+1}",
+                    "comments": f"Excellent performance in Q{k + 1}",
                 }
                 for k in range((i % 2) + 1)
             ],
