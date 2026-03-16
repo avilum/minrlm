@@ -1,6 +1,6 @@
 [project]
 name = "minrlm"
-version = "0.1.0"
+version = "0.1.2"
 description = "Minimal Recursive Language Model - Let LLMs think through code"
 readme = "README.md"
 license = "MIT"
@@ -50,6 +50,9 @@ dev = [
 all = [
     "minrlm[eval,visualizer,proxy,dev]",
 ]
+
+[project.scripts]
+minrlm = "minrlm.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/avilum/minrlm"

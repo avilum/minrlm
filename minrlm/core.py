@@ -30,6 +30,7 @@ from .prompts import (
 
 # Suppress HTTP request logging
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("openai").setLevel(logging.WARNING)
 
 # Context chars to show before/after each search() match

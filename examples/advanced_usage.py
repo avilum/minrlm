@@ -188,8 +188,9 @@ print(
   # - Read-only filesystem (except /tmp)
   # - Execution timeout
 
-  # Note: sub_llm() is NOT available in Docker mode.
-  # Use non-Docker mode for recursive LLM calls.
+  # Note: sub_llm() IS supported in Docker mode via a retry protocol.
+  # The container signals sub_llm requests to the host, which calls
+  # the real LLM and re-runs the container with cached results.
 """
 )
 

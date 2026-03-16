@@ -1,10 +1,28 @@
 # Benchmark Results
 
+4,800 evaluations across 3 models, 12 tasks, and up to 3 runners per model.
+
+## Model Scaling
+
+| | GPT-5-nano | GPT-5-mini | GPT-5.2 |
+|---|---|---|---|
+| **minRLM Accuracy** | 53.7% | **72.7%** | **78.2%** |
+| **Vanilla Accuracy** | 63.2% | 69.5% | 48.2% |
+| **Official RLM Accuracy** | 43.3% | 69.7% | - |
+| **minRLM vs Vanilla** | -9.5pp | +3.2pp | **+30.0pp** |
+| **Evaluations** | 1,800 | 1,800 | 1,200 |
+
+The RLM advantage grows with model capability: from -9.5pp on the small model, to +3.2pp on the mid-tier, to +30pp on the frontier model.
+
+---
+
+## GPT-5-mini (Primary Benchmark)
+
 **Model**: gpt-5-mini | **Evaluations**: 1,800 | **Tasks**: 12 | **Iterations**: 50 per task per runner | **Date**: 2026-03-13
 
 Three runners compared: **minRLM** (this implementation), **Vanilla** (direct LLM call), **Official RLM** (paper's reference implementation).
 
-## Summary
+### Summary
 
 | | minRLM | Vanilla LLM | Official RLM |
 |---|---|---|---|
@@ -18,7 +36,7 @@ Three runners compared: **minRLM** (this implementation), **Vanilla** (direct LL
 
 ![Summary Dashboard](../docs/summary_dashboard.png)
 
-## Accuracy by Task
+### Accuracy by Task
 
 | Task | minRLM | Vanilla | Official | N |
 |------|--------|---------|----------|---|
@@ -39,7 +57,7 @@ minRLM is the top scorer on 6 of 12 tasks (OOLONG, GDP Val, IFEval, LiveCodeBenc
 
 ![Accuracy per Task](../docs/accuracy_per_task.png)
 
-## Token Efficiency by Task
+### Token Efficiency by Task
 
 Sorted by minRLM savings vs Official RLM.
 
@@ -64,7 +82,7 @@ Sorted by minRLM savings vs Official RLM.
 
 ![Token Savings](../docs/token_savings.png)
 
-## Cost by Task
+### Cost by Task
 
 50 evaluations per runner per task.
 
@@ -76,7 +94,7 @@ minRLM is cheaper than Official RLM on every task. minRLM is cheaper than Vanill
 
 ![Accuracy vs Cost](../docs/accuracy_vs_cost.png)
 
-## Latency by Task
+### Latency by Task
 
 | Task | minRLM | Vanilla | Official | Faster than Official |
 |------|--------|---------|----------|----------------------|
@@ -99,7 +117,7 @@ minRLM is faster than Official RLM on 11 of 12 tasks.
 
 ![Accuracy vs Latency](../docs/accuracy_vs_latency.png)
 
-## Iterations by Task
+### Iterations by Task
 
 | Task | minRLM Avg Iterations |
 |------|-----------------------|
@@ -117,6 +135,84 @@ minRLM is faster than Official RLM on 11 of 12 tasks.
 | GDP Val | 1.2 |
 
 Most tasks complete in a single iteration. GDP Val occasionally requires a second pass.
+
+---
+
+## GPT-5.2
+
+**Model**: gpt-5.2 | **Evaluations**: 1,200 | **Tasks**: 12 | **Iterations**: 50 per task per runner | **Date**: 2026-03-15
+
+Two runners compared: **minRLM** and **Vanilla**. No official RLM runner for this model.
+
+### Summary
+
+| | minRLM | Vanilla LLM |
+|---|---|---|
+| **Accuracy** | **78.2%** | 48.2% |
+| **Avg Tokens** | 8,096 | 14,196 |
+| **Avg Latency** | 20.4s | 8.0s |
+| **Total Cost (600 evals)** | $18.93 | $16.50 |
+
+**minRLM vs Vanilla**: +30.0pp accuracy, 1.8x fewer tokens.
+
+### Accuracy by Task
+
+| Task | minRLM | Vanilla | N |
+|------|--------|---------|---|
+| SNIAH | 100% | 100% | 50 |
+| AIME 2025 | **96%** | 0% | 50 |
+| OOLONG | **96%** | 64% | 50 |
+| MMLU-Pro | **92%** | 42% | 50 |
+| RepoQA | 84% | **98%** | 50 |
+| IFEval | **82%** | 76% | 50 |
+| GPQA Diamond | **76%** | 46% | 50 |
+| GDP Val | **74%** | 50% | 50 |
+| BrowseComp | **72%** | 14% | 50 |
+| LiveCodeBench | **66%** | 42% | 50 |
+| CodeQA | **56%** | 20% | 50 |
+| LongBench V2 | **44%** | 26% | 50 |
+
+minRLM wins 10 of 12 tasks. Vanilla wins only on RepoQA (full-context retrieval) and ties on SNIAH. AIME 2025 is the most dramatic flip: 96% vs 0%.
+
+---
+
+## GPT-5-nano
+
+**Model**: gpt-5-nano | **Evaluations**: 1,800 | **Tasks**: 12 | **Iterations**: 50 per task per runner | **Date**: 2026-03-14
+
+Three runners compared: **minRLM**, **Vanilla**, **Official RLM**.
+
+### Summary
+
+| | minRLM | Vanilla LLM | Official RLM |
+|---|---|---|---|
+| **Accuracy** | 53.7% | **63.2%** | 43.3% |
+| **Avg Tokens** | 13,811 | 18,137 | 27,176 |
+| **Avg Latency** | 14.3s | 23.5s | 81.2s |
+| **Total Cost (600 evals)** | **$0.74** | $1.16 | $2.68 |
+
+On the smallest model, vanilla LLM outperforms both RLM implementations. minRLM still beats the official RLM by +10.4pp while costing 3.6x less.
+
+### Accuracy by Task
+
+| Task | minRLM | Vanilla | Official | N |
+|------|--------|---------|----------|---|
+| SNIAH | **90%** | 100% | 56% | 50 |
+| GDP Val | **82%** | 60% | 42% | 50 |
+| MMLU-Pro | 80% | **92%** | 70% | 50 |
+| OOLONG | **76%** | 70% | 34% | 50 |
+| IFEval | 70% | **74%** | 48% | 50 |
+| AIME 2025 | 68% | **86%** | **80%** | 50 |
+| GPQA Diamond | 56% | **68%** | 58% | 50 |
+| CodeQA | **38%** | 28% | 36% | 50 |
+| BrowseComp | **36%** | 14% | 28% | 50 |
+| LongBench V2 | 32% | **34%** | 24% | 50 |
+| RepoQA | 14% | **96%** | 32% | 50 |
+| LiveCodeBench | 2% | **36%** | 12% | 50 |
+
+minRLM wins on 5 of 12 tasks (SNIAH, GDP Val, OOLONG, CodeQA, BrowseComp). The small model struggles most with code generation (LiveCodeBench: 2%) and code retrieval (RepoQA: 14%).
+
+---
 
 ## Datasets
 
@@ -138,7 +234,7 @@ Most tasks complete in a single iteration. GDP Val occasionally requires a secon
 ### Downloading datasets
 
 GDP Val, AIME 2025, GPQA Diamond, MMLU-Pro, IFEval, and LiveCodeBench are auto-downloaded at runtime.
-GPQA Diamond is a gated dataset — you must accept the license at [huggingface.co/datasets/Idavidrein/gpqa](https://huggingface.co/datasets/Idavidrein/gpqa) and run `huggingface-cli login` first.
+GPQA Diamond is a gated dataset - you must accept the license at [huggingface.co/datasets/Idavidrein/gpqa](https://huggingface.co/datasets/Idavidrein/gpqa) and run `huggingface-cli login` first.
 
 The remaining datasets must be pre-downloaded to `evals/data/`:
 
@@ -161,10 +257,35 @@ for name, (repo, config) in datasets.items():
 "
 ```
 
+## Try it (zero-install)
+
+```bash
+export OPENAI_API_KEY="your-key"
+
+# Just a task
+uvx minrlm "What is the sum of the first 100 primes?"
+
+# Task + file as context
+uvx minrlm "How many ERROR lines in the last hour?" ./server.log
+
+# Pipe context from stdin
+cat huge_dataset.csv | uvx minrlm "Which product had the highest return rate?"
+
+# Show generated code (-s) and token stats (-v)
+uvx minrlm -sv "Return the sum of all primes up to 1,000,000."
+# -> Sieve of Eratosthenes in 6,215 tokens, 1 iteration
+# -> Answer: 37550402023
+
+uvx minrlm -sv "Return all primes up to 1,000,000, reversed. Return a list of numbers."
+# -> 999983, 999979, 999961, 999959, 999953, ...
+# -> Tokens: 6,258 | Output: 616,964 chars (~154K tokens) | 25x savings
+```
+
 ## Reproduction
 
 ```bash
 # Install eval dependencies
+git clone https://github.com/avilum/minrlm && cd minrlm
 uv sync --extra eval
 
 export OPENAI_API_KEY="your-key"
@@ -184,12 +305,23 @@ uv run python eval/run.py \
     --parallel 5 \
     --output-dir logs/my_eval
 
-# Full multi-runner benchmark (reproduces the table above)
+# Full multi-runner benchmark (reproduces the GPT-5-mini table above)
 uv run python eval/run.py \
     --tasks all \
     --runners minrlm-reasoning,vanilla,official \
     --runs 50 --parallel 12 --task-parallel 12 \
     --output-dir logs/my_eval
+
+# Cross-model (swap --model for gpt-5-nano or gpt-5.2)
+uv run python eval/run.py \
+    --model gpt-5.2 \
+    --tasks all \
+    --runners minrlm-reasoning,vanilla \
+    --runs 50 --parallel 12 --task-parallel 12 \
+    --output-dir logs/my_eval_gpt52
 ```
 
-Raw data: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json)
+Raw data:
+- GPT-5-mini: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json)
+- GPT-5.2: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5.2-50-runs-after-opus-46/eval_20260315_184830.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5.2-50-runs-after-opus-46/eval_20260315_184830.json)
+- GPT-5-nano: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-nano-50-runs-after-opus-46/eval_20260314_024652.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-nano-50-runs-after-opus-46/eval_20260314_024652.json)

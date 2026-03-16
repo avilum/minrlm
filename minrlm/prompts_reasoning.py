@@ -5,12 +5,18 @@ Competition-grade, compact prompts for Python REPL agents.
 
 from __future__ import annotations
 
+# We use zlib for entropy profile of context, helps in identifying unique content in the context using entropy.
 import zlib
 from dataclasses import dataclass
 from typing import Final
 
+# This can be fine-grained per use case. How many sections to split the context into.
 _ENTROPY_NUM_SECTIONS: Final[int] = 20
+
+# The minimum context length to compute the entropy profile.
 _ENTROPY_MIN_CONTEXT: Final[int] = 2_000
+
+# The size of the micro-chunk to compute the entropy profile.
 _ENTROPY_MICRO_CHUNK: Final[int] = 500
 
 

@@ -49,7 +49,10 @@ log = logging.getLogger(__name__)
 
 # Enable debug logging if MINRLM_VERBOSE is set
 if os.environ.get("MINRLM_VERBOSE"):
-    logging.basicConfig(level=logging.DEBUG, format="[DockerREPL] %(message)s", stream=sys.stderr)
+    log.setLevel(logging.DEBUG)
+    _handler = logging.StreamHandler(sys.stderr)
+    _handler.setFormatter(logging.Formatter("[DockerREPL] %(message)s"))
+    log.addHandler(_handler)
 
 # ---------------------------------------------------------------------------
 # Process-wide container registry — ensures all containers spawned by this
@@ -351,9 +354,13 @@ class DockerREPL:
     - Windows: Via Docker Desktop (Linux containers mode)
 
     Limitations:
-    - sub_llm() is NOT supported (no callback to host)
     - State is not persisted between executions
     - Complex objects cannot be transferred back from container
+
+    Note: sub_llm() IS supported in Docker mode via a retry protocol.
+    When code calls sub_llm(), the container raises a sentinel error,
+    the host intercepts it, calls the real LLM, caches the result,
+    and re-runs the container with the cached result injected.
     """
 
     HIDDEN_KEYS = {
