@@ -155,7 +155,29 @@ uv run uvicorn examples.proxy:app --port 8000   # OpenAI-compatible proxy (uv sy
 
 ## Credits
 
-Built by [Avi Lumelsky](https://github.com/avilum). Independent implementation - not a fork. The RLM concept comes from [Zhang, Kraska, and Khattab (2025)](https://arxiv.org/abs/2512.24601). Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).
+Built by [Avi Lumelsky](https://github.com/avilum). Independent implementation - not a fork. 
+The RLM concept comes from [Zhang, Kraska, and Khattab (2025)](https://arxiv.org/abs/2512.24601). Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).
+```
+@misc{zhang2026recursivelanguagemodels,
+      title={Recursive Language Models},
+      author={Alex L. Zhang and Tim Kraska and Omar Khattab},
+      year={2026},
+      eprint={2512.24601},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2512.24601},
+}
+```
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=avilum%2Fminrlm&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=avilum/minrlm&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=avilum/minrlm&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=avilum/minrlm&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ## License
 
