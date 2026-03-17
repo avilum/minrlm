@@ -98,11 +98,23 @@ result = client.completion(
 | `sub_llm(task, context)` | Recursive LLM call on a sub-chunk |
 | `FINAL(answer)` | Return answer and stop |
 
-### Custom endpoints
+### Any OpenAI-compatible endpoint
+
+minRLM works with any provider that exposes an OpenAI-compatible API - just pass `base_url`, or inject your own `OpenAI` client:
 
 ```python
-client = RLM(model="llama-3.1-70b", base_url="http://localhost:8000/v1")
+# Local / self-hosted
+rlm = RLM(model="llama-3.1-70b", base_url="http://localhost:8000/v1")
+
+# Hugging Face Inference API
+from openai import OpenAI
+
+hf_client = OpenAI(base_url="https://router.huggingface.co/v1", api_key="hf_...")
+rlm = RLM(model="openai/gpt-oss-120b", client=hf_client)
+result = rlm.completion("How many g's in 'huggingface'?")
 ```
+
+Works with: OpenAI, Hugging Face, Anthropic (via proxy), vLLM, Ollama, LiteLLM, or anything OpenAI-compatible. See [`examples/huggingface_inference_endpoints.py`](examples/huggingface_inference_endpoints.py) for a full example.
 
 ---
 
