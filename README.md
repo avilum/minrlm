@@ -38,7 +38,7 @@ pip install minrlm   # or: uv add minrlm
 export OPENAI_API_KEY="sk-..."
 ```
 
-### CLI (zero-install)
+### CLI (one-liners with <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> python manager)
 
 ```bash
 # Just a task
@@ -69,7 +69,12 @@ uv run python examples/visualizer.py   # http://localhost:7860
 ```
 
 ### Python
+For fast experimentation, I recommend using <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> python manager.
+```
+uv run --with minrlm python
+```
 
+Usage:
 ```python
 from minrlm import RLM
 
