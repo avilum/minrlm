@@ -1621,7 +1621,10 @@ proxy = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 visualizer = [
+    { name = "datasets" },
     { name = "gradio" },
+    { name = "huggingface-hub" },
+    { name = "matplotlib" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "plotly" },
@@ -1630,10 +1633,13 @@ visualizer = [
 [package.metadata]
 requires-dist = [
     { name = "datasets", marker = "extra == 'eval'", specifier = ">=4.6.0" },
+    { name = "datasets", marker = "extra == 'visualizer'", specifier = ">=4.6.0" },
     { name = "fastapi", marker = "extra == 'proxy'", specifier = ">=0.100.0" },
     { name = "gradio", marker = "extra == 'visualizer'", specifier = ">=5.0.0" },
     { name = "huggingface-hub", marker = "extra == 'eval'", specifier = ">=1.3.5" },
+    { name = "huggingface-hub", marker = "extra == 'visualizer'", specifier = ">=1.3.5" },
     { name = "matplotlib", marker = "extra == 'eval'", specifier = ">=3.8.0" },
+    { name = "matplotlib", marker = "extra == 'visualizer'", specifier = ">=3.8.0" },
     { name = "minrlm", extras = ["eval", "visualizer", "proxy", "dev"], marker = "extra == 'all'" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
     { name = "numpy", marker = "extra == 'eval'", specifier = ">=1.24.0" },

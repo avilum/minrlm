@@ -68,6 +68,31 @@ uv sync --extra visualizer
 uv run python examples/visualizer.py   # http://localhost:7860
 ```
 
+### OpenCode
+
+Use [OpenCode](https://opencode.ai) with minRLM by pointing it at the proxy. Start the proxy, then run OpenCode with a config that defines the minRLM provider and model (e.g. `gpt-5-mini-rlm`).
+
+**1. Start the proxy** (in one terminal):
+
+```bash
+uv run --with ".[proxy]" examples/proxy.py
+# RLM Proxy initialized | model=gpt-5-mini | docker=False
+# Uvicorn running on http://0.0.0.0:8000
+```
+
+**2. Config** (e.g. `opencode/opencode.json`): set `provider.minrlm.api` to `http://localhost:8000/v1` and add a model entry like `gpt-5-mini-rlm`. See [opencode/opencode.json](opencode/opencode.json) in this repo.
+
+**3. Run OpenCode** (in another terminal):
+
+```bash
+OPENCODE_CONFIG=opencode.json opencode run "Explain what is the first prime number after 1 million"
+# > build · gpt-5-mini-rlm
+# 1000003
+# The first prime number after 1000000 is 1000003. This was found by checking successive integers...
+```
+
+**[Full tutorial: OpenCode + minRLM](docs/opencode-minrlm-tutorial.md)** — config details, example output, and troubleshooting.
+
 ### Python
 For fast experimentation, I recommend using <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> python manager.
 ```
@@ -162,7 +187,7 @@ Full results, per-task breakdowns, reproduction steps: [`eval/README.md`](eval/R
 ### Examples
 
 ```bash
-uv run python examples/minimal.py              # vanilla vs RLM side-by-side
+uv run python examples/minimal.py               # vanilla vs RLM side-by-side
 uv run python examples/advanced_usage.py        # search, sub_llm, callbacks
 uv run python examples/visualizer.py            # Gradio UI (uv sync --extra visualizer)
 uv run uvicorn examples.proxy:app --port 8000   # OpenAI-compatible proxy (uv sync --extra proxy)
