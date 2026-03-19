@@ -1,6 +1,6 @@
 ---
 name: use-minrlm
-description: Delegate large-data tasks to minRLM via `uvx minrlm` CLI. Use when working with large files (logs, CSV, JSON, code repos, documents) that are too big to fit in context, or when asked to search/aggregate/extract from large data. Also use when the user explicitly asks to use RLM or minRLM. Requires `uvx` or `uv` to be available.
+description: Delegate large-data tasks to minRLM via `uvx minrlm` CLI. Use when working with large files (logs, CSV, JSON, code repos, documents) that are too big to fit in context, or when asked to search/aggregate/extract from large data. Also use when the user explicitly asks to use RLM or minRLM. Requires `uvx` or `uv` to be available. Can also be used with python3 -m minrlm.
 ---
 
 # use-minrlm
