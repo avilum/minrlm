@@ -1,33 +1,112 @@
-# minrlm
+# minRLM
 
 **minRLM** is a token-efficient implementation of [Recursive Language Models](https://arxiv.org/abs/2512.24601). The data never enters the prompt. The cost stays flat regardless of context size. Every step is Python code you can read, rerun, and debug.
 
-**[Read the full blog post](https://avilum.github.io/minrlm/recursive-language-model.html)** - 12 tasks, 3 models, 4,800 evaluations, all the details.
+**3.6× fewer tokens** than the official RLM. **+30pp accuracy** over vanilla on GPT-5.2, winning **11 of 12 tasks**. On AIME 2025: **96% vs 0%** vanilla.
+
+**[Read the full blog post](https://avilum.github.io/minrlm/recursive-language-model.html)** — 12 tasks, 3 models, 4,800 evaluations, all the details.
+
+## How it works
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Standard LLM                                            │
+│                                                          │
+│  [System prompt]                                         │
+│  [500,000 tokens of raw context]   ← you pay for all of it
+│  [Question]                                              │
+│  → Answer (maybe right, maybe not)                      │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│  Recursive LLM (minRLM)                                  │
+│                                                          │
+│  input_0 = "<500k chars stored in REPL>"  ← never in prompt
+│  Task: "Count errors in last hour"                       │
+├──────────────────────────────────────────────────────────┤
+│  LLM writes:                                             │
+│                                                          │
+│  errors = re.findall(r'\[ERROR\].*', input_0)            │
+│  cutoff = datetime.now() - timedelta(hours=1)            │
+│  FINAL(len([e for e in errors if parse_time(e) > cutoff]))
+│                                                          │
+│  → Code runs, answer returned. ~4k tokens total.        │
+└──────────────────────────────────────────────────────────┘
+```
+
+The model writes Python to query the data; attention runs only on the results. A 7M-character document becomes as cheap as a 7K one. Not ReAct — one REPL, 1–2 iterations, no growing context.
+
+**What makes minRLM different from the [reference implementation](https://github.com/alexzhang13/rlm):**
+
+- **Entropy profiling** — compression-based entropy map of the input via `zlib`. A needle in a 7MB haystack shows up as an entropy spike; the model skips straight to it.
+- **Context preview** — head/mid/tail sample gives the model the data's structure without the full input.
+- **Task routing** — auto-detects structured data, MCQ, code retrieval, math, search & extract. Each type has a specialized code pattern.
+- **Two-pass search** — if the first pass returns "unknown", a second pass runs with new keywords from first-pass evidence.
+- **Reasoning-first** — `# REASONING:` comment before code. `from minrlm import RLM` gives you this by default.
+- **Sub-LLM delegation** — outer model gathers evidence via `search()`, passes it to `sub_llm(task, evidence)`. The sub-LLM reasons over a small, relevant context.
+- **Flat token cost** — context never enters the conversation. Only the entropy map and preview do. 1–2 iterations, done.
+- **DockerREPL** — every execution in a fresh container with seccomp. No network, no filesystem, stdlib only.
+
+When a query fails, you see exactly which search missed, which filter was wrong, which assumption broke. Every step is Python — deterministic, testable, reproducible. That's something you can't do with a vanilla LLM call.
+
+---
 
 ## Results
 
-|  | minRLM | Vanilla | Official RLM |
-|---|---|---|---|
-| **Accuracy** | **72.7%** | 69.5% | 69.7% |
-| **Tokens/query** | **8,151** | 20,967 | 29,327 |
-| **Cost (600 evals)** | **$2.86** | $4.74 | $7.92 |
+**Runners:** [minRLM](https://github.com/avilum/minrlm) · Vanilla (plain GPT-5-mini, no REPL) · [Official RLM](https://github.com/alexzhang13/rlm) (HEAD, March 2026)
 
-<sub>GPT-5-mini, 1,800 evaluations, 12 tasks, 50 runs each. Full per-task breakdown in [`eval/README.md`](eval/README.md).</sub>
+| Runner | Accuracy | Avg Tokens | Avg Latency | Total Cost (50/task) |
+|--------|----------|------------|-------------|----------------------|
+| **minRLM** | **72.7%** | **8,151** | 25.8s | **$2.86** |
+| Vanilla | 69.5% | 20,967 | 24.2s | $4.74 |
+| Official RLM | 69.7% | 29,327 | 60.9s | $7.92 |
 
-### Model scaling
+<sub>GPT-5-mini, 1,800 evaluations (50 per task × 12 tasks × 3 runners). Full per-task breakdown in [`eval/README.md`](eval/README.md).</sub>
 
-| Model | minRLM | Vanilla | Delta | Tasks won |
-|-------|--------|---------|-------|-----------|
-| GPT-5-nano | 53.7% | 63.2% | -9.5 | 4/12 |
-| GPT-5-mini | 72.7% | 69.5% | +3.2 | 7/12 |
-| GPT-5.2 | **78.2%** | 48.2% | **+30.0** | **11/12** |
+### Scaling trend
 
-The advantage grows with model capability. Details in the [blog](https://avilum.github.io/minrlm/recursive-language-model.html#scaling).
+| Model | minRLM | Vanilla | Δ | Tasks won by minRLM |
+|-------|--------|---------|---|---------------------|
+| GPT-5-nano (small) | 53.7% | 63.2% | −9.5 | 4 of 12 |
+| GPT-5-mini (mid) | 72.7% | 69.5% | +3.2 | 7 of 12 |
+| GPT-5.2 (frontier) | **78.2%** | 48.2% | **+30.0** | **11 of 12** |
+
+> **The REPL isn't a crutch for weak models — it's a lever that better models pull harder.**
+
+- **GPT-5-nano:** Vanilla wins on accuracy, but minRLM still beats official by +10.4pp at 3.6× lower cost. RLM helps most on structured decomposition (BrowseComp, GDP Val, CodeQA).
+- **GPT-5-mini:** minRLM wins overall — +3.2pp accuracy, 2.6× fewer tokens than vanilla, 3.6× fewer than official. $2.86 vs $7.92.
+- **GPT-5.2:** +30pp accuracy, 11 of 12 tasks. AIME 96% vs 0% — vanilla outputs 4 tokens (just a guess); the REPL forces the model to actually compute the answer via code. RepoQA remains the one consistent weak spot.
 
 | | | |
 |---|---|---|
 | ![Summary](docs/summary_dashboard.png) | ![Accuracy](docs/accuracy_per_task.png) | ![Tokens](docs/token_savings.png) |
 | ![Cost](docs/accuracy_vs_cost.png) | ![Latency](docs/accuracy_vs_latency.png) | ![Per Task](docs/cost_per_task.png) |
+
+---
+
+## When to use (and when not)
+
+**Use minRLM when:**
+
+- **Large context** (documents, logs, CSV, JSON) — search, aggregate, or extract without paying for the whole thing in the prompt. Cost stays roughly flat as context grows.
+- **Token and cost efficiency at scale** — a 10MB document costs about the same as a 10KB one to process.
+- **Code over data** (filter, count, search, parse) — the model writes Python in a stdlib-only sandbox.
+- **Debuggability matters** — every step is readable Python, not hidden attention patterns.
+
+**Skip it when:**
+
+- **Short context (<8K tokens)** — if everything fits in one prompt, a direct call is simpler and about as good.
+- **Pure reasoning with no data** (math, MCQ) on **small models** — the REPL can add overhead. On larger models it often helps (AIME: 96% vs 0%). When in doubt, try both.
+- **Code retrieval (RepoQA)** — the one task family where vanilla wins across all model sizes.
+- **Third-party packages needed** — the sandbox is stdlib-only (no `numpy`, `pandas`, `requests`).
+
+---
+
+## Why this matters
+
+[Context window rot](https://arxiv.org/abs/2509.21361) is real — model accuracy degrades as input grows, even when the answer is right there. Bigger windows aren't the fix. **Less input, better targeted** is.
+
+The same pattern is showing up in production: Anthropic's [web search tool](https://docs.anthropic.com/en/docs/build-with-claude/tool-use/web-search-tool) writes code to filter results, [MCP](https://modelcontextprotocol.io/) standardizes code execution access, [smolagents](https://huggingface.co/docs/smolagents/en/index) goes further. They all converge on the same idea: **let the model use code to work with data instead of attending to all of it**.
 
 ---
 
@@ -41,11 +120,11 @@ export OPENAI_API_KEY="sk-..."
 ### CLI (one-liners with <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> python manager)
 
 ```bash
-# Just a task
-uvx minrlm "What is the sum of the first 100 primes?"
-
-# Task + file as context
+# Task + file as context (data never enters the prompt)
 uvx minrlm "How many ERROR lines in the last hour?" ./server.log
+
+# Just a task — no context
+uvx minrlm "What is the sum of the first 100 primes?"
 
 # Pipe context from stdin
 cat huge_dataset.csv | uvx minrlm "Which product had the highest return rate?"
@@ -60,46 +139,14 @@ uvx minrlm -sv "Return all primes up to 1,000,000, reversed. Return a list of nu
 # -> Tokens: 6,258 | Output: 616,964 chars (~154K tokens) | 25x savings
 ```
 
-### Visualizer
-
-```bash
-git clone https://github.com/avilum/minrlm && cd minrlm
-uv sync --extra visualizer
-uv run python examples/visualizer.py   # http://localhost:7860
-```
-
-### OpenCode
-
-Use [OpenCode](https://opencode.ai) with minRLM by pointing it at the proxy. Start the proxy, then run OpenCode with a config that defines the minRLM provider and model (e.g. `gpt-5-mini-rlm`).
-
-**1. Start the proxy** (in one terminal):
-
-```bash
-uv run --with ".[proxy]" examples/proxy.py
-# RLM Proxy initialized | model=gpt-5-mini | docker=False
-# Uvicorn running on http://0.0.0.0:8000
-```
-
-**2. Config** (e.g. `opencode/opencode.json`): set `provider.minrlm.api` to `http://localhost:8000/v1` and add a model entry like `gpt-5-mini-rlm`. See [opencode/opencode.json](opencode/opencode.json) in this repo.
-
-**3. Run OpenCode** (in another terminal):
-
-```bash
-OPENCODE_CONFIG=opencode.json opencode run "Explain what is the first prime number after 1 million"
-# > build · gpt-5-mini-rlm
-# 1000003
-# The first prime number after 1000000 is 1000003. This was found by checking successive integers...
-```
-
-**[Full tutorial: OpenCode + minRLM](docs/opencode-minrlm-tutorial.md)** — config details, example output, and troubleshooting.
-
 ### Python
+
 For fast experimentation, I recommend using <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> python manager.
+
 ```
 uv run --with minrlm python
 ```
 
-Usage:
 ```python
 from minrlm import RLM
 
@@ -130,7 +177,7 @@ result = client.completion(
 
 ### Any OpenAI-compatible endpoint
 
-minRLM works with any provider that exposes an OpenAI-compatible API - just pass `base_url`, or inject your own `OpenAI` client:
+minRLM works with any provider that exposes an OpenAI-compatible API — just pass `base_url`, or inject your own `OpenAI` client:
 
 ```python
 # Local / self-hosted
@@ -146,13 +193,46 @@ result = rlm.completion("How many g's in 'huggingface'?")
 
 Works with: OpenAI, Hugging Face, Anthropic (via proxy), vLLM, Ollama, LiteLLM, or anything OpenAI-compatible. See [`examples/huggingface_inference_endpoints.py`](examples/huggingface_inference_endpoints.py) for a full example.
 
+### Visualizer
+
+```bash
+git clone https://github.com/avilum/minrlm && cd minrlm
+uv sync --extra visualizer
+uv run python examples/visualizer.py   # http://localhost:7860
+```
+
+### OpenCode
+
+Use [OpenCode](https://opencode.ai) with minRLM by pointing it at the proxy:
+
+**1. Start the proxy** (in one terminal):
+
+```bash
+uv run --with ".[proxy]" examples/proxy.py
+# RLM Proxy initialized | model=gpt-5-mini | docker=False
+# Uvicorn running on http://0.0.0.0:8000
+```
+
+**2. Config** (`opencode/opencode.json`): set `provider.minrlm.api` to `http://localhost:8000/v1` and add a model entry. See [opencode/opencode.json](opencode/opencode.json) in this repo.
+
+**3. Run OpenCode** (in another terminal):
+
+```bash
+OPENCODE_CONFIG=opencode.json opencode run "Explain what is the first prime number after 1 million"
+# > build · gpt-5-mini-rlm
+# 1000003
+# The first prime number after 1000000 is 1000003.
+```
+
+**[Full tutorial](docs/opencode-minrlm-tutorial.md)** — config details, example output, and troubleshooting.
+
 ---
 
 ## What's in this repo
 
 | Component | Location | Description |
 |-----------|----------|-------------|
-| **Client** | [`minrlm/`](minrlm/) | `RLM` class - the LLM <-> REPL loop |
+| **Client** | [`minrlm/`](minrlm/) | `RLM` class — the LLM ↔ REPL loop |
 | **DockerREPL** | [`minrlm/docker_repl.py`](minrlm/docker_repl.py) | Sandboxed execution via Docker + seccomp |
 | **Evals** | [`eval/`](eval/) | 12-task benchmark framework, 3 model sizes |
 | **Examples** | [`examples/`](examples/) | Quickstart, proxy server, Gradio UI |
@@ -195,10 +275,21 @@ uv run uvicorn examples.proxy:app --port 8000   # OpenAI-compatible proxy (uv sy
 
 ---
 
+## Future work
+
+- **More models** — Claude Opus 4.6, Gemini 2.5, open-weight models. Does the scaling trend hold across providers?
+- **Agentic pipelines** — using the RLM pattern as a retrieval step inside multi-step agent workflows.
+- **More tasks** — stress-testing edge cases and domains where the approach might break.
+
+Contributions welcome. Open an issue or PR.
+
+---
+
 ## Credits
 
-Built by [Avi Lumelsky](https://github.com/avilum). Independent implementation - not a fork. 
+Built by [Avi Lumelsky](https://github.com/avilum). Independent implementation — not a fork.
 The RLM concept comes from [Zhang, Kraska, and Khattab (2025)](https://arxiv.org/abs/2512.24601). Official implementation: [github.com/alexzhang13/rlm](https://github.com/alexzhang13/rlm).
+
 ```
 @misc{zhang2026recursivelanguagemodels,
       title={Recursive Language Models},
