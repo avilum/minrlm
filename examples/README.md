@@ -59,6 +59,12 @@ uv sync --extra proxy
 uv run uvicorn examples.proxy:app --host 0.0.0.0 --port 8000
 ```
 
+Or with uv run (installs proxy extra on the fly):
+
+```bash
+uv run --with "minrlm[proxy]" examples/proxy.py
+```
+
 ```python
 from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
@@ -67,6 +73,8 @@ response = client.chat.completions.create(
     messages=[{"role": "user", "content": "Analyze this CSV..."}],
 )
 ```
+
+**Using OpenCode with minRLM:** see the [OpenCode + minRLM tutorial](../docs/opencode-minrlm-tutorial.md) for config (`opencode.json`) and an example run (e.g. *"Explain what is the first prime number after 1 million"*).
 
 ## Visualizer
 
