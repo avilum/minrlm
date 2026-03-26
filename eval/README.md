@@ -1,18 +1,18 @@
 # Benchmark Results
 
-4,800 evaluations across 3 models, 12 tasks, and up to 3 runners per model.
+6,600 evaluations across 4 models, 12 tasks, and up to 3 runners per model.
 
 ## Model Scaling
 
-| | GPT-5-nano | GPT-5-mini | GPT-5.2 |
-|---|---|---|---|
-| **minRLM Accuracy** | 53.7% | **72.7%** | **78.2%** |
-| **Vanilla Accuracy** | 63.2% | 69.5% | 48.2% |
-| **Official RLM Accuracy** | 43.3% | 69.7% | - |
-| **minRLM vs Vanilla** | -9.5pp | +3.2pp | **+30.0pp** |
-| **Evaluations** | 1,800 | 1,800 | 1,200 |
+| | GPT-5-nano | GPT-5-mini | GPT-5.4-mini | GPT-5.2 |
+|---|---|---|---|---|
+| **minRLM Accuracy** | 53.7% | **72.7%** | **69.5%** | **78.2%** |
+| **Vanilla Accuracy** | 63.2% | 69.5% | 47.2% | 48.2% |
+| **Official RLM Accuracy** | 43.3% | 69.7% | 50.2% | - |
+| **minRLM vs Vanilla** | -9.5pp | +3.2pp | **+22.3pp** | **+30.0pp** |
+| **Evaluations** | 1,800 | 1,800 | 1,800 | 1,200 |
 
-The RLM advantage grows with model capability: from -9.5pp on the small model, to +3.2pp on the mid-tier, to +30pp on the frontier model.
+The RLM advantage grows with model capability: from -9.5pp on the small model, to +3.2pp on the mid-tier, to +22.3pp on the newer mid-tier (where vanilla regressed), to +30pp on the frontier model.
 
 ---
 
@@ -176,6 +176,47 @@ minRLM wins 10 of 12 tasks. Vanilla wins only on RepoQA (full-context retrieval)
 
 ---
 
+## GPT-5.4-mini
+
+**Model**: gpt-5.4-mini | **Evaluations**: 1,800 | **Tasks**: 12 | **Iterations**: 50 per task per runner | **Date**: 2026-03-27
+
+Three runners compared: **minRLM**, **Vanilla**, **Official RLM**.
+
+### Summary
+
+| | minRLM | Vanilla LLM | Official RLM |
+|---|---|---|---|
+| **Accuracy** | **69.5%** | 47.2% | 50.2% |
+| **Avg Tokens** | **9,388** | 15,072 | 47,439 |
+| **Avg Latency** | 8.8s | 2.6s | 22.3s |
+| **Total Cost (600 evals)** | $7.23 | **$7.15** | $23.44 |
+
+**minRLM vs Vanilla**: 1.6x fewer tokens, +22.3pp accuracy
+**minRLM vs Official**: 5.1x fewer tokens, 3.2x cheaper, +19.3pp accuracy
+
+GPT-5.4-mini appears to produce shorter, terser outputs by default - vanilla and official both regressed significantly vs GPT-5-mini (vanilla: 69.5% → 47.2%, official: 69.7% → 50.2%). minRLM held steady (72.7% → 69.5%), showing the REPL-based approach is resilient to model regressions in raw prompting.
+
+### Accuracy by Task
+
+| Task | minRLM | Vanilla | Official | N |
+|------|--------|---------|----------|---|
+| SNIAH | **96%** | 100% | 96% | 50 |
+| OOLONG | **92%** | 52% | 86% | 50 |
+| MMLU-Pro | **92%** | 38% | 24% | 50 |
+| GDP Val | **82%** | 52% | 52% | 50 |
+| IFEval | **82%** | 80% | 52% | 50 |
+| AIME 2025 | **80%** | 0% | 46% | 50 |
+| GPQA Diamond | **64%** | 42% | 28% | 50 |
+| RepoQA | 60% | **96%** | 84% | 50 |
+| CodeQA | **54%** | 28% | 26% | 50 |
+| BrowseComp | **52%** | 14% | 72% | 50 |
+| LongBench V2 | **52%** | 30% | 30% | 50 |
+| LiveCodeBench | 28% | **34%** | 6% | 50 |
+
+minRLM wins on 8 of 12 tasks. The AIME result mirrors GPT-5.2 - vanilla scores 0% while minRLM scores 80%. The vanilla runner outputs a bare number with no reasoning; the REPL forces computation via code. RepoQA and LiveCodeBench remain the weak spots.
+
+---
+
 ## GPT-5-nano
 
 **Model**: gpt-5-nano | **Evaluations**: 1,800 | **Tasks**: 12 | **Iterations**: 50 per task per runner | **Date**: 2026-03-14
@@ -312,7 +353,7 @@ uv run python eval/run.py \
     --runs 50 --parallel 12 --task-parallel 12 \
     --output-dir logs/my_eval
 
-# Cross-model (swap --model for gpt-5-nano or gpt-5.2)
+# Cross-model (swap --model for gpt-5-nano, gpt-5.4-mini, or gpt-5.2)
 uv run python eval/run.py \
     --model gpt-5.2 \
     --tasks all \
@@ -323,5 +364,6 @@ uv run python eval/run.py \
 
 Raw data:
 - GPT-5-mini: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-mini-50-runs-BEST/eval_20260313_195547.json)
+- GPT-5.4-mini: [`logs/12-tasks-all-runners-gpt-5.4-mini-50-runs-2/eval_20260327_001353.json`](../logs/12-tasks-all-runners-gpt-5.4-mini-50-runs-2/eval_20260327_001353.json)
 - GPT-5.2: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5.2-50-runs-after-opus-46/eval_20260315_184830.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5.2-50-runs-after-opus-46/eval_20260315_184830.json)
 - GPT-5-nano: [`BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-nano-50-runs-after-opus-46/eval_20260314_024652.json`](../BEST_EVALS/BEST_new-entropy-prompts-12-tasks-all-runners-gpt-5-nano-50-runs-after-opus-46/eval_20260314_024652.json)
