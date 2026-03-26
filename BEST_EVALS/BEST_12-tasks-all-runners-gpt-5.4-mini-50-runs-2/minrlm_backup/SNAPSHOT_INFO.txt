@@ -1,0 +1,10 @@
+# minrlm/ snapshot taken at: 2026-03-26 23:14:28
+# Original path: /Users/avi/git/research/recursive-language-model/minrlm
+# Evaluation run: 12-tasks-all-runners-gpt-5.4-mini-50-runs-2
+
+This backup captures the exact prompts and code used for this evaluation.
+Key files:
+  - prompts_reasoning.py: Reasoning-enhanced prompts
+  - prompts.py: Standard prompts
+  - core.py: RLM implementation
+  - core_reasoning.py: Reasoning RLM wrapper

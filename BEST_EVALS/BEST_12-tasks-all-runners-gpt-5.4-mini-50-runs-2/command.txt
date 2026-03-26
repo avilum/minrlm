@@ -1,0 +1,5 @@
+# Command used to generate this evaluation
+# Run from: /Users/avi/git/research/recursive-language-model
+# Date: 2026-03-26 23:14:28
+
+/Users/avi/git/research/recursive-language-model/eval/run.py --tasks all --model gpt-5.4-mini --runners minrlm-reasoning,vanilla,official --runs 50 --parallel 5 --task-parallel 5 --official-max-samples 600 --output-dir logs/12-tasks-all-runners-gpt-5.4-mini-50-runs-2 --log-dir logs/12-tasks-all-runners-gpt-5.4-mini-50-runs-2/logs
