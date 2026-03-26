@@ -242,12 +242,14 @@
   .tab-panel { display: none; padding: 14px 16px; }
   #tab-mini:checked ~ .tab-bar label[for="tab-mini"],
   #tab-nano:checked ~ .tab-bar label[for="tab-nano"],
-  #tab-52:checked ~ .tab-bar label[for="tab-52"] {
+  #tab-52:checked ~ .tab-bar label[for="tab-52"],
+  #tab-54mini:checked ~ .tab-bar label[for="tab-54mini"] {
     background: #f0fdf4; color: #111; border-bottom: 2px solid #16a34a;
   }
   #tab-mini:checked ~ .tab-panel.panel-mini,
   #tab-nano:checked ~ .tab-panel.panel-nano,
-  #tab-52:checked ~ .tab-panel.panel-52 { display: block; }
+  #tab-52:checked ~ .tab-panel.panel-52,
+  #tab-54mini:checked ~ .tab-panel.panel-54mini { display: block; }
   .tab-panel .tab-note { font-size: 0.8rem; color: #555; margin-top: 8px; line-height: 1.5; }
 </style>
 </head>
@@ -278,7 +280,8 @@
     <a href="https://arxiv.org/abs/2512.24601">Recursive Language Models</a>, benchmarked across
     12 tasks against a vanilla LLM and <a href="https://github.com/alexzhang13/rlm">the reference
     implementation</a>. On GPT-5-mini it scores 72.7% (vs 69.7% official, 69.5% vanilla) using
-    <strong>3.6× fewer tokens</strong>. On GPT-5.2 the gap grows to +30pp over vanilla, winning
+    <strong>3.6× fewer tokens</strong>. On GPT-5.4-mini the gap widens to +22.3pp over vanilla as
+    raw prompting regresses but the REPL holds steady. On GPT-5.2 the gap grows to +30pp over vanilla, winning
     11 of 12 tasks. The data never enters the prompt. The cost stays roughly flat regardless of
     context size. Every intermediate step is Python code you can read, rerun, and debug.
   </p>
@@ -289,10 +292,12 @@
      ========================================================= -->
 <div class="result-tabs">
   <input type="radio" name="model-tab" id="tab-mini" checked>
+  <input type="radio" name="model-tab" id="tab-54mini">
   <input type="radio" name="model-tab" id="tab-52">
   <input type="radio" name="model-tab" id="tab-nano">
   <div class="tab-bar">
     <label for="tab-mini">GPT-5-mini</label>
+    <label for="tab-54mini">GPT-5.4-mini</label>
     <label for="tab-52">GPT-5.2</label>
     <label for="tab-nano">GPT-5-nano</label>
   </div>
@@ -309,6 +314,22 @@
     </table>
     <div class="tab-note">
       minRLM wins overall: +3.2pp accuracy, 2.6× fewer tokens than vanilla, 3.6× fewer than official.
+    </div>
+  </div>
+
+  <div class="tab-panel panel-54mini">
+    <strong style="font-size: 0.85rem;">12 tasks · 1,800 evaluations · 3 runners</strong>
+    <table style="margin: 8px 0 0; font-size: 0.85rem;">
+      <thead><tr><th></th><th>Accuracy</th><th>Tokens/query</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td><strong>minRLM</strong></td><td class="win">69.5%</td><td class="win">9,388</td><td>$7.23</td></tr>
+        <tr><td>official RLM</td><td>50.2%</td><td>47,439</td><td>$23.44</td></tr>
+        <tr><td>vanilla</td><td>47.2%</td><td>15,072</td><td>$7.15</td></tr>
+      </tbody>
+    </table>
+    <div class="tab-note">
+      Largest minRLM advantage on a mini-class model: +22.3pp over vanilla, +19.3pp over official.
+      Vanilla and official both regressed vs GPT-5-mini; the REPL-based approach held steady.
     </div>
   </div>
 
@@ -1347,13 +1368,13 @@ def main():
   </tbody>
 </table>
 
-<p><em>50 runs per task per runner (1,800 evaluations total). GPT-5-nano and GPT-5.2 results below.</em></p>
+<p><em>50 runs per task per runner (1,800 evaluations total). GPT-5-nano, GPT-5.4-mini, and GPT-5.2 results below.</em></p>
 
 
 <!-- =========================================================
      SCALING
      ========================================================= -->
-<h2 id="scaling">Model Scaling <span style="font-size: 0.65rem; font-weight: 400; color: #999; letter-spacing: 0.02em;">GPT-5-nano &amp; GPT-5.2</span></h2>
+<h2 id="scaling">Model Scaling <span style="font-size: 0.65rem; font-weight: 400; color: #999; letter-spacing: 0.02em;">GPT-5-nano, GPT-5.4-mini &amp; GPT-5.2</span></h2>
 
 <p>
   Same 12 tasks, same prompts, different models. The advantage grows with capability - but not uniformly.
@@ -1366,6 +1387,7 @@ def main():
   <tbody>
     <tr><td>GPT-5-nano (small)</td><td>53.7%</td><td>63.2%</td><td class="loss">&minus;9.5</td><td>4 of 12</td></tr>
     <tr><td>GPT-5-mini (mid)</td><td>72.7%</td><td>69.5%</td><td class="win">+3.2</td><td>7 of 12</td></tr>
+    <tr><td>GPT-5.4-mini (mid, newer)</td><td>69.5%</td><td>47.2%</td><td class="win">+22.3</td><td>8 of 12</td></tr>
     <tr><td>GPT-5.2 (frontier)</td><td>78.2%</td><td>48.2%</td><td class="win">+30.0</td><td>11 of 12</td></tr>
   </tbody>
 </table>
@@ -1420,6 +1442,62 @@ def main():
   <strong>Takeaway:</strong> RLM helps small models on structured decomposition (BrowseComp, GDP Val, CodeQA, OOLONG).
   But nano can't write correct Python for code-heavy tasks, so the REPL hurts there.
   Still beats official scaffolding at 3.6&times; lower cost.
+</div>
+
+<h3>GPT-5.4-mini <span style="font-weight: 400; color: #888; font-size: 0.82rem;">(mid model, newer)</span></h3>
+
+<p>
+  1,800 evaluations (50 per task &times; 12 tasks &times; 3 runners).
+</p>
+
+<table>
+  <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Cost</th><th>Cost Efficiency</th></tr></thead>
+  <tbody>
+    <tr><td><strong>minRLM (reasoning)</strong></td><td class="win"><strong>69.5%</strong></td><td class="win">9,388</td><td>$7.23</td><td><strong>0.99&times;</strong></td></tr>
+    <tr><td>official RLM</td><td>50.2%</td><td>47,439</td><td>$23.44</td><td>0.30&times;</td></tr>
+    <tr><td>vanilla GPT-5.4-mini</td><td>47.2%</td><td>15,072</td><td>$7.15</td><td>1.00&times;</td></tr>
+  </tbody>
+</table>
+
+<p>
+  GPT-5.4-mini appears to produce shorter, terser outputs by default - vanilla and official both
+  regressed significantly vs GPT-5-mini (vanilla: 69.5% &rarr; 47.2%, official: 69.7% &rarr; 50.2%).
+  minRLM held steady (72.7% &rarr; 69.5%), showing the REPL-based approach is resilient to model
+  regressions in raw prompting.
+</p>
+
+<h4 style="font-size: 0.85rem; color: #16a34a;">Where RLM helps GPT-5.4-mini</h4>
+
+<table>
+  <thead><tr><th>Task</th><th>minRLM</th><th>Vanilla</th><th>&Delta;</th></tr></thead>
+  <tbody>
+    <tr><td>AIME 2025 (math)</td><td><strong>80%</strong></td><td>0%</td><td class="win">+80</td></tr>
+    <tr><td>MMLU Pro (knowledge)</td><td><strong>92%</strong></td><td>38%</td><td class="win">+54</td></tr>
+    <tr><td>OOLONG (structured data)</td><td><strong>92%</strong></td><td>52%</td><td class="win">+40</td></tr>
+    <tr><td>BrowseComp (multi-hop)</td><td><strong>52%</strong></td><td>14%</td><td class="win">+38</td></tr>
+    <tr><td>GDP Val (open-ended)</td><td><strong>82%</strong></td><td>52%</td><td class="win">+30</td></tr>
+    <tr><td>CodeQA (code reasoning)</td><td><strong>54%</strong></td><td>28%</td><td class="win">+26</td></tr>
+    <tr><td>LongBench V2 (long doc)</td><td><strong>52%</strong></td><td>30%</td><td class="win">+22</td></tr>
+    <tr><td>GPQA Diamond (science MCQ)</td><td><strong>64%</strong></td><td>42%</td><td class="win">+22</td></tr>
+  </tbody>
+</table>
+
+<h4 style="font-size: 0.85rem; color: #dc2626;">Where vanilla GPT-5.4-mini wins</h4>
+
+<table>
+  <thead><tr><th>Task</th><th>minRLM</th><th>Vanilla</th><th>&Delta;</th></tr></thead>
+  <tbody>
+    <tr><td>RepoQA (code retrieval)</td><td>60%</td><td><strong>96%</strong></td><td class="loss">&minus;36</td></tr>
+    <tr><td>LiveCodeBench (code gen)</td><td>28%</td><td><strong>34%</strong></td><td class="loss">&minus;6</td></tr>
+    <tr><td>SNIAH (needle-in-haystack)</td><td>96%</td><td><strong>100%</strong></td><td class="loss">&minus;4</td></tr>
+  </tbody>
+</table>
+
+<div class="callout green">
+  <strong>Takeaway:</strong> The AIME result mirrors GPT-5.2 - vanilla scores 0% while minRLM scores 80%.
+  The vanilla runner outputs a bare number with no reasoning; the REPL forces computation via code.
+  This is the largest minRLM advantage on any mini-class model (+22.3pp), reinforcing that the
+  REPL-based approach is insulated from regressions in raw prompting behavior.
 </div>
 
 <h3>GPT-5.2 <span style="font-weight: 400; color: #888; font-size: 0.82rem;">(frontier model)</span></h3>
@@ -1635,7 +1713,7 @@ uv run python eval/run.py \
 <hr>
 
 <p style="color: #888; font-size: 0.82rem;">
-  Primary benchmark on GPT-5-mini; cross-model results on GPT-5-nano and GPT-5.2.
+  Primary benchmark on GPT-5-mini; cross-model results on GPT-5-nano, GPT-5.4-mini, and GPT-5.2.
   Code samples lightly abridged; full source at <a href="https://github.com/avilum/minrlm">github.com/avilum/minrlm</a>.
 </p>
 
