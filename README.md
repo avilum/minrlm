@@ -4,7 +4,7 @@
 
 **3.6× fewer tokens** than the official RLM. **+30pp accuracy** over vanilla on GPT-5.2, winning **11 of 12 tasks**. On AIME 2025: **96% vs 0%** vanilla.
 
-**[Read the full blog post](https://avilum.github.io/minrlm/recursive-language-model.html)** — 12 tasks, 3 models, 4,800 evaluations, all the details.
+**[Read the full blog post](https://avilum.github.io/minrlm/recursive-language-model.html)** — 12 tasks, 4 models, 6,600 evaluations, all the details.
 
 ## How it works
 
@@ -69,12 +69,14 @@ When a query fails, you see exactly which search missed, which filter was wrong,
 |-------|--------|---------|---|---------------------|
 | GPT-5-nano (small) | 53.7% | 63.2% | −9.5 | 4 of 12 |
 | GPT-5-mini (mid) | 72.7% | 69.5% | +3.2 | 7 of 12 |
+| GPT-5.4-mini (mid, newer) | 69.5% | 47.2% | +22.3 | 8 of 12 |
 | GPT-5.2 (frontier) | **78.2%** | 48.2% | **+30.0** | **11 of 12** |
 
 > **The REPL isn't a crutch for weak models — it's a lever that better models pull harder.**
 
 - **GPT-5-nano:** Vanilla wins on accuracy, but minRLM still beats official by +10.4pp at 3.6× lower cost. RLM helps most on structured decomposition (BrowseComp, GDP Val, CodeQA).
 - **GPT-5-mini:** minRLM wins overall — +3.2pp accuracy, 2.6× fewer tokens than vanilla, 3.6× fewer than official. $2.86 vs $7.92.
+- **GPT-5.4-mini:** Largest minRLM advantage on a mini-class model — +22.3pp over vanilla, 8 of 12 tasks. Vanilla and official both regressed vs GPT-5-mini; the REPL-based approach held steady (72.7% → 69.5%). AIME: 80% vs 0%.
 - **GPT-5.2:** +30pp accuracy, 11 of 12 tasks. AIME 96% vs 0% — vanilla outputs 4 tokens (just a guess); the REPL forces the model to actually compute the answer via code. RepoQA remains the one consistent weak spot.
 
 | | | |
@@ -234,7 +236,7 @@ OPENCODE_CONFIG=opencode.json opencode run "Explain what is the first prime numb
 |-----------|----------|-------------|
 | **Client** | [`minrlm/`](minrlm/) | `RLM` class — the LLM ↔ REPL loop |
 | **DockerREPL** | [`minrlm/docker_repl.py`](minrlm/docker_repl.py) | Sandboxed execution via Docker + seccomp |
-| **Evals** | [`eval/`](eval/) | 12-task benchmark framework, 3 model sizes |
+| **Evals** | [`eval/`](eval/) | 12-task benchmark framework, 4 model sizes |
 | **Examples** | [`examples/`](examples/) | Quickstart, proxy server, Gradio UI |
 
 ### DockerREPL
