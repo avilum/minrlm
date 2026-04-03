@@ -12,6 +12,9 @@ Official tasks from the paper:
 - RepoQA: Function retrieval from code repositories
 - BrowseComp+: Deep research / multi-hop retrieval (Chen et al., 2025)
 
+Additional tasks:
+- Sudoku Extreme: Constraint-satisfaction puzzles (sapientinc/sudoku-extreme)
+
 To add a new task, subclass BaseTask and use @register_task decorator.
 """
 
@@ -2046,6 +2049,123 @@ class OfficialLiveCodeBenchTask(BaseTask):
 
         _, passed, total = _execute_against_tests(code, test_cases)
         return passed / total if total > 0 else 0.0
+
+
+@register_task("official_sudoku_extreme")
+class OfficialSudokuExtremeTask(BaseTask):
+    """Official Sudoku Extreme - 4.25M puzzles rated by backtrack difficulty.
+
+    Dataset: https://huggingface.co/datasets/sapientinc/sudoku-extreme
+    Puzzles are 81-char strings (dots = blanks), solutions are 81-char digit strings.
+    Rating = number of backtracks needed by tdoku solver (higher = harder).
+    """
+
+    description = "Sudoku Extreme (hard constraint-satisfaction puzzles)"
+    difficulty = "hard"
+    dataset_name = "sapientinc/sudoku-extreme"
+    default_split = "test"
+
+    def __init__(
+        self,
+        data_dir: str = "evals/data",
+        max_samples: int | None = None,
+        min_rating: int | None = None,
+        max_rating: int | None = None,
+        **_,
+    ):
+        self.data_dir = Path(data_dir)
+        self.max_samples = max_samples
+        self.min_rating = min_rating
+        self.max_rating = max_rating
+        self._records: list[dict] | None = None
+
+    def _get_records(self) -> list[dict]:
+        if self._records is not None:
+            return self._records
+
+        parquet_path = self.data_dir / "sudoku_extreme" / "test.parquet"
+        if not parquet_path.exists():
+            raise FileNotFoundError(
+                f"Sudoku dataset not found at {parquet_path}. "
+                "Download it with: uv run python -c \""
+                "import requests, io, pandas as pd; "
+                "r = requests.get('https://huggingface.co/api/datasets/sapientinc/sudoku-extreme/parquet/default/test/0.parquet'); "
+                "pd.read_parquet(io.BytesIO(r.content)).to_parquet('evals/data/sudoku_extreme/test.parquet', index=False)\""
+            )
+
+        import pandas as pd
+
+        df = pd.read_parquet(parquet_path)
+
+        if self.min_rating is not None:
+            df = df[df["rating"] >= self.min_rating]
+        if self.max_rating is not None:
+            df = df[df["rating"] <= self.max_rating]
+        if self.max_samples:
+            df = df.head(self.max_samples)
+
+        self._records = df.to_dict("records")
+        return self._records
+
+    @staticmethod
+    def _format_grid(puzzle: str) -> str:
+        """Format 81-char puzzle string as a readable 9x9 grid."""
+        lines = []
+        for r in range(9):
+            row = puzzle[r * 9 : (r + 1) * 9]
+            cells = [row[c] if row[c] != "." else "_" for c in range(9)]
+            lines.append(" ".join(cells[0:3]) + " | " + " ".join(cells[3:6]) + " | " + " ".join(cells[6:9]))
+            if r in (2, 5):
+                lines.append("------+-------+------")
+        return "\n".join(lines)
+
+    def generate(self, seed: int = 42, **kwargs) -> TaskInstance:
+        records = self._get_records()
+        idx = _select_index(seed, len(records))
+        row = records[idx]
+
+        puzzle = str(row.get("question", "")).strip()
+        answer = str(row.get("answer", "")).strip()
+        rating = row.get("rating", 0)
+
+        grid = self._format_grid(puzzle)
+
+        task = (
+            "Solve this Sudoku puzzle. Each row, column, and 3x3 box must contain digits 1-9 exactly once.\n\n"
+            f"{grid}\n\n"
+            f"Raw puzzle: {puzzle}\n\n"
+            "Return ONLY the completed 81-digit solution string (no spaces, no newlines)."
+        )
+
+        return TaskInstance(
+            task=task,
+            context="",
+            expected=answer,
+            metadata={
+                "source": row.get("source"),
+                "rating": rating,
+                "puzzle": puzzle,
+            },
+        )
+
+    def check(self, response: str, expected: str) -> bool:
+        digits = re.sub(r"[^1-9]", "", response)
+        if len(digits) < 81:
+            return False
+        # Take the first 81 digits found
+        return digits[:81] == expected
+
+    def check_partial(self, response: str, expected: str) -> float:
+        digits = re.sub(r"[^1-9]", "", response)
+        if len(digits) < 81:
+            if not digits:
+                return 0.0
+            # Partial credit for however many digits match
+            matching = sum(1 for a, b in zip(digits, expected) if a == b)
+            return matching / 81.0
+        candidate = digits[:81]
+        matching = sum(1 for a, b in zip(candidate, expected) if a == b)
+        return matching / 81.0
 
 
 # =============================================================================
