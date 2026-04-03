@@ -3,7 +3,62 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>minRLM: A Token-Efficient Recursive Language Model Implementation and Benchmark</title>
+<title>Recursive Language Models (RLM): Practical Guide, Python Code, and Benchmarks - minRLM</title>
+<meta name="description" content="minRLM is a token-efficient Recursive Language Model (RLM) implementation in Python. Process unlimited context with 3.6x fewer tokens. Benchmarked across 13 tasks and 4 models with open-source code.">
+<meta name="keywords" content="recursive language model, RLM, minRLM, recursive LLM, token efficient LLM, RLM Python, context window, context rot, RLM vs RAG, RLM implementation, large context LLM, Python REPL LLM, LLM code execution">
+<link rel="canonical" href="https://avilum.github.io/minrlm/recursive-language-model.html">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Recursive Language Models (RLM): Practical Guide + Code + Benchmarks">
+<meta property="og:description" content="minRLM - process unlimited context with 3.6x fewer tokens. Open-source Python implementation with 6,600+ evaluations across 4 models.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://avilum.github.io/minrlm/recursive-language-model.html">
+<meta property="og:image" content="https://avilum.github.io/minrlm/summary_dashboard.png">
+<meta property="article:author" content="Avi Lumelsky">
+<meta property="article:published_time" content="2026-03-01">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Recursive Language Models (RLM): Practical Guide + Code + Benchmarks">
+<meta name="twitter:description" content="minRLM - process unlimited context with 3.6x fewer tokens. 6,600+ evaluations, open-source Python.">
+<meta name="twitter:image" content="https://avilum.github.io/minrlm/summary_dashboard.png">
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "minRLM: A Token-Efficient Recursive Language Model (RLM) Implementation and Benchmark",
+  "description": "Practical guide to Recursive Language Models (RLMs) with open-source Python code and benchmarks. Process unlimited context with 3.6x fewer tokens than the reference implementation.",
+  "author": {
+    "@type": "Person",
+    "name": "Avi Lumelsky",
+    "url": "https://ports.sh/"
+  },
+  "datePublished": "2026-03-01",
+  "dateModified": "2026-03-30",
+  "url": "https://avilum.github.io/minrlm/recursive-language-model.html",
+  "image": "https://avilum.github.io/minrlm/summary_dashboard.png",
+  "keywords": ["recursive language model", "RLM", "minRLM", "token efficiency", "Python", "LLM", "context window", "REPL", "code execution"],
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "minRLM",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "programmingLanguage": "Python",
+    "url": "https://github.com/avilum/minrlm",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://avilum.github.io/minrlm/recursive-language-model.html"
+  }
+}
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -267,7 +322,7 @@
     <span>~15 min read</span>
   </div>
 
-  <h1>minRLM: A Token-Efficient<br>Recursive Language Model Implementation and Benchmark</h1>
+  <h1>minRLM: A Token-Efficient Recursive Language Model (RLM)<br>Implementation, Benchmark, and Practical Guide</h1>
 </div>
 
 <!-- =========================================================
@@ -278,7 +333,7 @@
   <p>
     <strong>minRLM</strong> is a token and latency efficient implementation of
     <a href="https://arxiv.org/abs/2512.24601">Recursive Language Models</a>, benchmarked across
-    12 tasks against a vanilla LLM and <a href="https://github.com/alexzhang13/rlm">the reference
+    13 tasks against a vanilla LLM and <a href="https://github.com/alexzhang13/rlm">the reference
     implementation</a>. On GPT-5-mini it scores 72.7% (vs 69.7% official, 69.5% vanilla) using
     <strong>3.6× fewer tokens</strong>. On GPT-5.4-mini the gap widens to +22.3pp over vanilla as
     raw prompting regresses but the REPL holds steady. On GPT-5.2 the gap grows to +30pp over vanilla, winning
@@ -371,6 +426,9 @@
 <nav class="toc-sidebar" id="toc">
   <span class="toc-title">Contents</span>
   <ol>
+    <li><a href="#what-is-rlm">What Is an RLM?</a></li>
+    <li><a href="#context-rot">Why Context Windows Fail</a></li>
+    <li><a href="#rlm-vs-rag">RLM vs RAG</a></li>
     <li><a href="#background">Background</a></li>
     <li><a href="#related">Related Work</a></li>
     <li><a href="#implementation">minRLM Implementation</a></li>
@@ -392,6 +450,7 @@
         <li><a href="#mmlu">MMLU Pro</a></li>
         <li><a href="#ifeval">IFEval</a></li>
         <li><a href="#livecodebench">LiveCodeBench</a></li>
+        <li><a href="#sudoku">Sudoku Extreme</a></li>
       </ul>
     </li>
     <li><a href="#results">Full Results</a></li>
@@ -407,11 +466,14 @@
 <nav class="toc-inline" style="display:none; margin-bottom: 32px; font-size: 0.875rem;">
   <strong style="display: block; margin-bottom: 6px; color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;">Contents</strong>
   <ol style="padding-left: 18px; margin: 0; line-height: 1.75; color: #333;">
+    <li><a href="#what-is-rlm">What Is an RLM?</a></li>
+    <li><a href="#context-rot">Why Context Windows Fail</a></li>
+    <li><a href="#rlm-vs-rag">RLM vs RAG</a></li>
     <li><a href="#background">Background</a></li>
     <li><a href="#related">Related Work</a></li>
     <li><a href="#implementation">minRLM Implementation</a></li>
     <li><a href="#eval">Experimental Setup</a></li>
-    <li><a href="#tasks">Tasks &amp; Results</a></li>
+    <li><a href="#tasks">Tasks &amp; Results (13 tasks)</a></li>
     <li><a href="#results">Full Results</a></li>
     <li><a href="#scaling">Model Scaling</a></li>
     <li><a href="#limits">Limitations</a></li>
@@ -421,6 +483,92 @@
     <li><a href="#references">References</a></li>
   </ol>
 </nav>
+
+<!-- =========================================================
+     WHAT IS A RECURSIVE LANGUAGE MODEL (RLM)?
+     ========================================================= -->
+<h2 id="what-is-rlm">What Is a Recursive Language Model (RLM)?</h2>
+
+<p>
+  A <strong>Recursive Language Model</strong> (RLM) is a pattern where the LLM never sees your raw data.
+  Instead of pasting a 500K-character document into the context window, the data is stored as a variable
+  in a Python REPL. The model writes code to query it - search, filter, count, extract - and only the
+  results enter the prompt. Attention runs on search hits, not the entire input.
+</p>
+<p>
+  The concept was introduced by
+  <a href="https://arxiv.org/abs/2512.24601">Zhang, Kraska, and Khattab (2025)</a>.
+  <strong>minRLM</strong> is a practical, open-source Python implementation that achieves
+  3.6x fewer tokens than the reference implementation while matching or exceeding its accuracy.
+</p>
+
+<h3>Quick start: install and run</h3>
+<pre><code><span class="cm"># Zero-install CLI via uvx</span>
+uvx minrlm <span class="str">"Find all errors in the last hour"</span> ./server.log
+
+<span class="cm"># Or pip install</span>
+pip install minrlm
+
+<span class="cm"># Python API</span>
+<span class="kw">from</span> minrlm <span class="kw">import</span> RLM
+client = RLM(model=<span class="str">"gpt-5-mini"</span>)
+answer = client.completion(task=<span class="str">"your question"</span>, context=open(<span class="str">"big_file.txt"</span>).read())</code></pre>
+
+
+<!-- =========================================================
+     WHY CONTEXT WINDOWS FAIL
+     ========================================================= -->
+<h2 id="context-rot">Why Context Windows Fail (Context Rot Explained)</h2>
+
+<p>
+  Bigger context windows sound like the answer to processing large documents. They're not.
+  <a href="https://arxiv.org/abs/2509.21361">Luo et al. (2025)</a> demonstrated that LLM accuracy
+  degrades as context length increases - even when the answer is present in the input. This is known
+  as <strong>context window rot</strong>.
+</p>
+<p>
+  The problem is attention dilution: as the input grows, the model spreads attention across more tokens,
+  making it harder to focus on the relevant parts.
+  <a href="https://arxiv.org/abs/2404.02060">Liu et al. (2024)</a> showed that information in the
+  middle of long contexts is systematically missed ("lost in the middle"). Anyone who has used AI
+  coding agents has
+  <a href="https://www.reddit.com/r/LocalLLaMA/comments/1rr5fo5/">seen this firsthand</a>.
+</p>
+<p>
+  RLMs sidestep this entirely. The model never attends over the raw input - it writes code to
+  extract exactly what it needs. A 10MB log file costs the same tokens as a 10KB one.
+</p>
+
+
+<!-- =========================================================
+     RLM VS RAG
+     ========================================================= -->
+<h2 id="rlm-vs-rag">RLM vs RAG: How Recursive Language Models Compare to Retrieval-Augmented Generation</h2>
+
+<p>
+  <strong>RAG</strong> (Retrieval-Augmented Generation) pre-indexes documents into vector embeddings,
+  then retrieves the top-k chunks at query time and feeds them into the prompt. It works well for
+  semantic similarity search but has limitations:
+</p>
+<ul>
+  <li><strong>Indexing overhead</strong> - RAG requires an embedding pipeline, vector database, and
+      chunk-size tuning before you can ask a single question.</li>
+  <li><strong>Semantic mismatch</strong> - counting, filtering, and exact-match tasks don't map well
+      to vector similarity. "How many errors in the last hour?" needs code, not embeddings.</li>
+  <li><strong>Chunk boundaries</strong> - answers that span multiple chunks get split. The retriever
+      might return the wrong half.</li>
+</ul>
+<p>
+  <strong>RLMs</strong> take a different approach: no indexing, no embeddings, no vector database.
+  The model writes Python code to query the data directly - regex, string search, parsing, aggregation.
+  For structured data, analytical queries, and exact-match retrieval, this is faster and more accurate.
+</p>
+<p>
+  The tradeoff: RAG is better for open-ended semantic search across large document collections.
+  RLMs are better for precise queries over a single large input - logs, codebases, CSVs, long documents.
+  They can complement each other: use RAG to find the right document, then an RLM to answer the question.
+</p>
+
 
 <!-- =========================================================
      BACKGROUND
@@ -461,7 +609,7 @@
 
 <p>
   The original paper validated this on a few tasks. This post extends the evaluation to
-  12 tasks across 3 model sizes, describes a leaner inference loop, and reports
+  13 tasks across 4 model sizes, describes a leaner inference loop, and reports
   accuracy, token usage, latency, and cost per query for everything. Code is open-source.
 </p>
 
@@ -603,7 +751,7 @@ answer = client.completion(
 <h2 id="eval">Experimental Setup</h2>
 
 <p>
-  The eval framework (<code>eval/</code> in the repo) runs any RLM strategy against 12 tasks
+  The eval framework (<code>eval/</code> in the repo) runs any RLM strategy against 13 tasks
   and records accuracy, token count, latency, and cost per query. Any runner implementing the
   interface can be plugged in. Primary benchmark: <strong>gpt-5-mini</strong>, three runners,
   50 queries per task (1,800 evaluations). Cross-model results in
@@ -1305,6 +1453,92 @@ def main():
   </div></details>
 </div>
 
+<div class="task" id="sudoku">
+  <details>
+  <summary>
+    <span class="task-num">Task 13</span>
+    <span class="task-name">Sudoku Extreme - Constraint Satisfaction via Code</span>
+  </summary>
+  <div class="task-body">
+  <p class="task-desc">
+    4.25M Sudoku puzzles rated by backtrack difficulty. No context - the puzzle is the task.
+    Vanilla LLMs can't solve Sudoku by pattern-matching tokens - the constraint propagation is too deep.
+    The REPL turns this into what it actually is: a search problem solvable by code.
+    <a class="dataset-link" href="https://huggingface.co/datasets/sapientinc/sudoku-extreme" target="_blank">↗ sapientinc/sudoku-extreme</a>
+  </p>
+  <div class="question-box">
+    "Solve this Sudoku puzzle. Each row, column, and 3x3 box must contain digits 1-9 exactly once."
+<pre style="background: none; border: none; padding: 0; margin: 6px 0; font-size: 0.82rem; color: #555;">
+2 _ _ | _ 9 _ | 8 _ _
+_ _ _ | _ 8 _ | 1 _ _
+9 _ 8 | 2 _ _ | 5 6 _
+------+-------+------
+5 _ _ | _ _ 2 | _ _ _
+_ 9 _ | _ _ _ | _ 4 _
+_ _ 3 | _ _ 9 | _ _ 7
+------+-------+------
+7 _ _ | _ _ 3 | _ 5 _
+_ _ 5 | 6 7 _ | _ _ _
+_ 6 _ | 4 _ _ | _ _ 1</pre>
+    <em>Raw puzzle: <code>2...9.8......8.1..9.82..56.5....2....9.....4...3..9..77....3.5...567.....6.4....1</code></em>
+  </div>
+
+  <h3>minRLM's code</h3>
+<pre><code><span class="cm"># REASONING: Parse the Sudoku grid and solve with constraint propagation + backtracking.</span>
+<span class="kw">import</span> re
+
+puzzle = <span class="str">"2...9.8......8.1..9.82..56.5....2....9.....4...3..9..77....3.5...567.....6.4....1"</span>
+grid = [<span class="builtin">list</span>(puzzle[i*<span class="num">9</span>:(i+<span class="num">1</span>)*<span class="num">9</span>]) <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">9</span>)]
+
+<span class="kw">def</span> <span class="fn">candidates</span>(r, c, g):
+    used = <span class="builtin">set</span>(g[r][j] <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">9</span>) <span class="kw">if</span> g[r][j] != <span class="str">'.'</span>)
+    used |= <span class="builtin">set</span>(g[i][c] <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">9</span>) <span class="kw">if</span> g[i][c] != <span class="str">'.'</span>)
+    br, bc = (r//<span class="num">3</span>)*<span class="num">3</span>, (c//<span class="num">3</span>)*<span class="num">3</span>
+    used |= <span class="builtin">set</span>(g[i][j] <span class="kw">for</span> i <span class="kw">in</span> <span class="builtin">range</span>(br, br+<span class="num">3</span>) <span class="kw">for</span> j <span class="kw">in</span> <span class="builtin">range</span>(bc, bc+<span class="num">3</span>) <span class="kw">if</span> g[i][j] != <span class="str">'.'</span>)
+    <span class="kw">return</span> <span class="builtin">set</span>(<span class="str">"123456789"</span>) - used
+
+<span class="kw">def</span> <span class="fn">solve</span>(g):
+    best, best_cands = <span class="builtin">None</span>, <span class="builtin">None</span>
+    <span class="kw">for</span> r <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">9</span>):
+        <span class="kw">for</span> c <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">9</span>):
+            <span class="kw">if</span> g[r][c] == <span class="str">'.'</span>:
+                cands = candidates(r, c, g)
+                <span class="kw">if not</span> cands: <span class="kw">return</span> <span class="builtin">None</span>
+                <span class="kw">if</span> best <span class="kw">is</span> <span class="builtin">None</span> <span class="kw">or</span> <span class="builtin">len</span>(cands) < <span class="builtin">len</span>(best_cands):
+                    best, best_cands = (r, c), cands
+    <span class="kw">if</span> best <span class="kw">is</span> <span class="builtin">None</span>: <span class="kw">return</span> g
+    r, c = best
+    <span class="kw">for</span> v <span class="kw">in</span> <span class="builtin">sorted</span>(best_cands):
+        ng = [row[:] <span class="kw">for</span> row <span class="kw">in</span> g]
+        ng[r][c] = v
+        <span class="cm"># Propagate forced cells, then recurse</span>
+        res = solve(ng)
+        <span class="kw">if</span> res <span class="kw">is not</span> <span class="builtin">None</span>: <span class="kw">return</span> res
+    <span class="kw">return</span> <span class="builtin">None</span>
+
+sol = solve(grid)
+<span class="fn">FINAL</span>(<span class="str">""</span>.join(<span class="str">""</span>.join(row) <span class="kw">for</span> row <span class="kw">in</span> sol))</code></pre>
+
+  <p><strong>Result: <code>251396874436785192978214563547132986192867345683549217714923658825671439369458721</code></strong> ✓ &nbsp; 5,615 tokens, 5.3s. Constraint propagation + backtracking, executes in milliseconds.</p>
+
+  <table>
+    <thead><tr><th>Runner</th><th>Accuracy</th><th>Avg Tokens</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>minRLM</strong></td><td class="win">80%</td><td>7,598</td><td>Writes a complete solver</td></tr>
+      <tr><td>Official RLM</td><td>70%</td><td>30,175</td><td>Also writes code, 4x more tokens</td></tr>
+      <tr><td>Vanilla</td><td class="lose">0%</td><td>269</td><td>Outputs 81 wrong digits</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.78rem; color: #888;">GPT-5.4-mini, 20 runs per runner.</p>
+  <div class="callout green">
+    Sudoku is unsolvable by token prediction alone - the constraint propagation is too deep for
+    pattern matching. Vanilla outputs confident-looking 81-digit strings that violate basic
+    Sudoku rules. The REPL turns it into what it actually is: a search problem. minRLM writes a
+    backtracking solver and runs it.
+  </div>
+  </div></details>
+</div>
+
 
 <!-- =========================================================
      FULL RESULTS
@@ -1699,7 +1933,7 @@ uv run python examples/visualizer.py  <span class="cm"># http://localhost:7860</
 <pre><code>uv sync --extra eval
 <span class="kw">export</span> OPENAI_API_KEY=<span class="str">"sk-..."</span>
 
-<span class="cm"># All 12 tasks, all 3 runners, 50 runs</span>
+<span class="cm"># All 13 tasks, all 3 runners, 50 runs</span>
 uv run python eval/run.py \
   --tasks all \
   --runners minrlm-reasoning,vanilla,official \
@@ -1756,6 +1990,7 @@ uv run python eval/run.py \
   <li id="ref-mmlu">MMLU Pro. <a href="https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro">TIGER-Lab/MMLU-Pro</a></li>
   <li id="ref-ifeval">IFEval. <a href="https://huggingface.co/datasets/google/IFEval">google/IFEval</a></li>
   <li id="ref-livecodebench">LiveCodeBench. <a href="https://livecodebench.github.io/">livecodebench.github.io</a></li>
+  <li id="ref-sudoku">Sudoku Extreme. <a href="https://huggingface.co/datasets/sapientinc/sudoku-extreme">sapientinc/sudoku-extreme</a></li>
 </ol>
 
 

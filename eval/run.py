@@ -22,6 +22,7 @@ Official Datasets:
 - official_mmlu_pro: Hard 10-choice knowledge questions
 - official_ifeval: Instruction following (verifiable constraints)
 - official_livecodebench: Competitive programming (code execution)
+- official_sudoku_extreme: Sudoku constraint-satisfaction puzzles
 
 Usage:
     # Quick start
