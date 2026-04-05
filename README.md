@@ -50,6 +50,21 @@ uvx minrlm "Return all primes up to 1,000,000, reversed."
 
 # Pipe anything
 cat huge_dataset.csv | uvx minrlm "Which product had the highest return rate?"
+
+# Chain: solve a Sudoku, then pipe the solution to verify it
+uvx minrlm -s "Solve this Sudoku:
+  ..3|.1.|...
+  .4.|...|8..
+  ...|..6|.2.
+  ---+---+---
+  .8.|.5.|..1
+  ...|...|...
+  5..|.8.|.6.
+  ---+---+---
+  .7.|6..|...
+  ..2|...|.5.
+  ...|.3.|9.." \
+  | uvx minrlm -s 'Verify this sudoku board, is it valid? return {"board":str, "valid": bool}'
 ```
 
 ```python
