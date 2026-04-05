@@ -1,9 +1,9 @@
 # minrlm - Recursive Language Model
 
 ## Project Overview
-minRLM is a token-efficient implementation of Recursive Language Models (RLMs). Data never enters the prompt - it's stored in a Python REPL variable (`input_0`), and the model writes code to query it. 4,800 evaluations across 3 models (GPT-5-nano, GPT-5-mini, GPT-5.2), 12 tasks.
+minRLM is a token-efficient implementation of Recursive Language Models (RLMs). Data never enters the prompt - it's stored in a Python REPL variable (`input_0`), and the model writes code to query it. 6,600+ evaluations across 4 models (GPT-5-nano, GPT-5-mini, GPT-5.4-mini, GPT-5.2), 13 tasks.
 
-**Key results**: GPT-5-mini: 72.7% accuracy, 3.6x fewer tokens than official RLM. GPT-5.2: +30pp over vanilla, 11/12 tasks won. RepoQA is the consistent weak spot across all models.
+**Key results**: GPT-5-mini: 72.7% accuracy, 3.6x fewer tokens than official RLM. GPT-5.2: +30pp over vanilla, 11/12 tasks won. Sudoku Extreme (GPT-5.4-mini): minRLM 80%, vanilla 0% - REPL writes a constraint solver. RepoQA is the consistent weak spot across all models.
 
 ## Running Commands
 - Always use `uv run` not `python3`
@@ -24,7 +24,7 @@ minRLM is a token-efficient implementation of Recursive Language Models (RLMs). 
 ### Evals
 - `eval/run.py` - Benchmark runner with parallelism
 - `eval/runners.py` - Runner implementations: `vanilla`, `minrlm-reasoning`, `official`
-- `eval/tasks.py` - 12 benchmark tasks
+- `eval/tasks.py` - 13 benchmark tasks
 - `eval/README.md` - Full results for all 3 models
 
 ### Blog & Docs

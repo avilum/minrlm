@@ -13,28 +13,35 @@ from __future__ import annotations
 import sys
 
 
-def _step_printer(event: str, data: dict) -> None:
-    """Print RLM steps to stderr as they happen."""
-    err = sys.stderr
-    if event == "thinking":
-        print(f"\n{'=' * 60}", file=err)
-        print(f"  Iteration {data['iteration']}", file=err)
-        print(f"{'=' * 60}", file=err)
-    elif event == "reasoning":
-        print(f"\n  Reasoning: {data['reasoning']}", file=err)
-    elif event == "executing":
-        print(f"\n  Code:\n{'─' * 40}", file=err)
-        for line in data["code"].splitlines():
-            print(f"  │ {line}", file=err)
-        print(f"{'─' * 40}", file=err)
-    elif event == "executed":
-        stdout = data.get("stdout", "")
-        error = data.get("error")
-        if error:
-            print(f"  Error: {error}", file=err)
-        elif stdout:
-            preview = stdout[:500] + ("..." if len(stdout) > 500 else "")
-            print(f"  Output: {preview}", file=err)
+def _make_step_printer(verbose: bool = False):
+    """Create a step printer. With verbose=True, also prints generated code."""
+
+    def _step_printer(event: str, data: dict) -> None:
+        err = sys.stderr
+        if event == "thinking":
+            print(f"\n{'=' * 60}", file=err)
+            print(f"  Iteration {data['iteration']}", file=err)
+            print(f"{'=' * 60}", file=err)
+        elif event == "reasoning":
+            print(f"\n  Reasoning: {data['reasoning']}", file=err)
+        elif event == "executing" and verbose:
+            print(f"\n  Code:\n{'─' * 40}", file=err)
+            for line in data["code"].splitlines():
+                # Skip # REASONING: lines - already printed separately
+                if line.strip().upper().startswith("# REASONING:"):
+                    continue
+                print(f"  │ {line}", file=err)
+            print(f"{'─' * 40}", file=err)
+        elif event == "executed":
+            stdout = data.get("stdout", "")
+            error = data.get("error")
+            if error:
+                print(f"  Error: {error}", file=err)
+            elif stdout and verbose:
+                preview = stdout[:500] + ("..." if len(stdout) > 500 else "")
+                print(f"  Output: {preview}", file=err)
+
+    return _step_printer
 
 
 def main() -> None:
@@ -52,8 +59,8 @@ def main() -> None:
     )
     parser.add_argument("-m", "--model", default="gpt-5-mini", help="Model name (default: gpt-5-mini)")
     parser.add_argument("--no-docker", action="store_true", help="Disable Docker sandbox")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Show token usage and timing")
-    parser.add_argument("-s", "--steps", action="store_true", help="Show generated code and execution steps")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show generated code, execution output, and token stats")
+    parser.add_argument("-s", "--steps", action="store_true", help="Show reasoning steps")
 
     args = parser.parse_args()
 
@@ -78,7 +85,7 @@ def main() -> None:
         model=args.model,
         use_docker=not args.no_docker,
         debug=args.verbose,
-        on_step=_step_printer if args.steps else None,
+        on_step=_make_step_printer(verbose=args.verbose) if args.steps else None,
     )
 
     result = client.completion(task=args.task, context=context)

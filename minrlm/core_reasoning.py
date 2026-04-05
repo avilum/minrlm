@@ -125,20 +125,24 @@ class RLMReasoning(RLM):
             input_tokens += t_in
             output_tokens += t_out
 
-            # Extract reasoning on first iteration
-            if iteration == 1:
-                # Look for # REASONING: comment in the code
-                # Extract from code block if present
-                code_block_match = re.search(r"```(?:python)?\s*\n(.*?)```", response_text, re.DOTALL)
-                if code_block_match:
-                    code_content = code_block_match.group(1)
-                    # Look for # REASONING: at the start of the code
-                    reasoning_match = re.match(r"#\s*REASONING:\s*(.+?)(?:\n|$)", code_content, re.IGNORECASE)
-                    if reasoning_match:
-                        self._reasoning = reasoning_match.group(1).strip()
-                        self._log("reasoning_extracted", {"reasoning": self._reasoning[:500]})
-                        if self.on_step:
-                            self.on_step("reasoning", {"reasoning": self._reasoning})
+            # Extract reasoning from # REASONING: comments in the code
+            reasoning_text = ""
+            code_block_match = re.search(r"```(?:python)?\s*\n(.*?)```", response_text, re.DOTALL)
+            if code_block_match:
+                code_content = code_block_match.group(1)
+                # Collect all # REASONING: lines (may span multiple comment lines)
+                reasoning_lines = []
+                for line in code_content.splitlines():
+                    m = re.match(r"^#\s*REASONING:\s*(.+)$", line, re.IGNORECASE)
+                    if m:
+                        reasoning_lines.append(m.group(1).strip())
+                if reasoning_lines:
+                    reasoning_text = " ".join(reasoning_lines)
+                    if iteration == 1:
+                        self._reasoning = reasoning_text
+                    self._log("reasoning_extracted", {"reasoning": reasoning_text[:500]})
+                    if self.on_step:
+                        self.on_step("reasoning", {"reasoning": reasoning_text})
 
             # Log response - full response for debugging (not truncated)
             code = self._extract_code(response_text)
