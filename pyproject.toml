@@ -1,7 +1,7 @@
 [project]
 name = "minrlm"
 version = "0.1.2"
-description = "Minimal Recursive Language Model - Let LLMs think through code"
+description = "Stop forcing LLMs to answer in one pass. Give them a runtime."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
