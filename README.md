@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/minrlm-demo.gif" alt="minRLM demo - LLM writes code, REPL executes, answer returned" width="700">
+  <img src="docs/sudoku.gif" alt="minRLM demo - LLM writes code, REPL executes, answer returned" width="700">
 </p>
 
 Took a base model. Wrapped it in a tiny recursive loop: **generate code - execute - refine - repeat**.
