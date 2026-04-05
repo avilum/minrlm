@@ -88,12 +88,15 @@ def main() -> None:
         on_step=_make_step_printer(verbose=args.verbose) if args.steps else None,
     )
 
+    if args.steps:
+        print(f"\n  Task: {args.task}", file=sys.stderr)
+        if context:
+            print(f"  Context: {len(context):,} chars", file=sys.stderr)
+
     result = client.completion(task=args.task, context=context)
 
     if args.steps:
-        print(f"\n{'=' * 60}", file=sys.stderr)
-        print("  Answer:", file=sys.stderr)
-        print(f"{'=' * 60}", file=sys.stderr)
+        print(f"\n  Answer: {result.response}", file=sys.stderr)
 
     print(result.response)
 
