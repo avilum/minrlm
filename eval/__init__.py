@@ -1,11 +1,15 @@
 """
-RLM Evaluation Suite
+RLM-Bench - a small, reproducible benchmark for Recursive Language Models.
 
-A reproducible benchmark for comparing RLM implementations.
+12 tasks from the RLM paper (Zhang, Kraska & Khattab 2025) plus one
+constraint-satisfaction puzzle, behind a one-method plugin interface.
 
-Quick Start:
+Full spec, leaderboard, and submission instructions: eval/BENCHMARK.md
+
+Quick start:
+    rlm-bench --tasks all --runners minrlm-reasoning,vanilla --runs 50
     uv run python eval/quickstart.py
-    uv run python eval/run.py --model gpt-4o-mini --tasks official_sniah,official_oolong --runs 3
+    uv run python eval/run.py --model gpt-5-mini --tasks official_sniah --runs 3
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.5"

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Recursive Language Models (RLM): Practical Guide, Python Code, and Benchmarks - minRLM</title>
-<meta name="description" content="minRLM is a token-efficient Recursive Language Model (RLM) implementation in Python. Process unlimited context with 3.6x fewer tokens. Benchmarked across 13 tasks and 4 models with open-source code.">
+<meta name="description" content="minRLM is a small, token-efficient Recursive Language Model (RLM) implementation in Python. Process large context with up to 3.6x fewer tokens. 12 tasks, 4 models, open-source code, an interactive visualizer, and a benchmark (RLM-Bench) for plugging in your own RLM.">
 <meta name="keywords" content="recursive language model, RLM, minRLM, recursive LLM, token efficient LLM, RLM Python, context window, context rot, RLM vs RAG, RLM implementation, large context LLM, Python REPL LLM, LLM code execution">
 <link rel="canonical" href="https://avilum.github.io/minrlm/recursive-language-model.html">
 
@@ -331,14 +331,20 @@
 <div class="abstract">
   <div class="abstract-label">Abstract</div>
   <p>
-    <strong>minRLM</strong> is a token and latency efficient implementation of
+    <strong>minRLM</strong> is a small, token-efficient implementation of
     <a href="https://arxiv.org/abs/2512.24601">Recursive Language Models</a>, benchmarked across
-    13 tasks against a vanilla LLM and <a href="https://github.com/alexzhang13/rlm">the reference
+    12 tasks against a vanilla LLM and <a href="https://github.com/alexzhang13/rlm">the reference
     implementation</a>. On GPT-5-mini it scores 72.7% (vs 69.7% official, 69.5% vanilla) using
     <strong>3.6× fewer tokens</strong>. On GPT-5.4-mini the gap widens to +22.3pp over vanilla as
     raw prompting regresses but the REPL holds steady. On GPT-5.2 the gap grows to +30pp over vanilla, winning
-    11 of 12 tasks. The data never enters the prompt. The cost stays roughly flat regardless of
-    context size. Every intermediate step is Python code you can read, rerun, and debug.
+    11 of 12 tasks. The picture is not uniformly positive: on GPT-5-nano the recursion costs −9.5pp of accuracy
+    because the small model can't reliably write the code &mdash; that result is included rather than dropped.
+    The data never enters the prompt, the cost stays roughly flat regardless of context size, and every
+    intermediate step is Python you can read, rerun, and debug. The same eval harness is shipped as
+    <a href="https://github.com/avilum/minrlm/blob/master/eval/BENCHMARK.md"><strong>RLM-Bench</strong></a>
+    so any other RLM can be benchmarked head-to-head, and a
+    <a href="#visualizer">Gradio visualizer</a> lets you watch the recursive loop and a vanilla LLM
+    run the same task side-by-side.
   </p>
 </div>
 
@@ -432,7 +438,8 @@
     <li><a href="#background">Background</a></li>
     <li><a href="#related">Related Work</a></li>
     <li><a href="#implementation">minRLM Implementation</a></li>
-    <li><a href="#eval">Experimental Setup</a></li>
+    <li><a href="#visualizer">Visualizer</a></li>
+    <li><a href="#eval">Experimental Setup &amp; RLM-Bench</a></li>
     <li><a href="#tasks">Tasks &amp; Results</a>
       <ul class="toc-sub">
         <li class="toc-group">Large-context retrieval</li>
@@ -472,8 +479,9 @@
     <li><a href="#background">Background</a></li>
     <li><a href="#related">Related Work</a></li>
     <li><a href="#implementation">minRLM Implementation</a></li>
-    <li><a href="#eval">Experimental Setup</a></li>
-    <li><a href="#tasks">Tasks &amp; Results (13 tasks)</a></li>
+    <li><a href="#visualizer">Visualizer</a></li>
+    <li><a href="#eval">Experimental Setup &amp; RLM-Bench</a></li>
+    <li><a href="#tasks">Tasks &amp; Results (12 tasks)</a></li>
     <li><a href="#results">Full Results</a></li>
     <li><a href="#scaling">Model Scaling</a></li>
     <li><a href="#limits">Limitations</a></li>
@@ -609,7 +617,7 @@ answer = client.completion(task=<span class="str">"your question"</span>, contex
 
 <p>
   The original paper validated this on a few tasks. This post extends the evaluation to
-  13 tasks across 4 model sizes, describes a leaner inference loop, and reports
+  12 tasks across 4 model sizes, describes a leaner inference loop, and reports
   accuracy, token usage, latency, and cost per query for everything. Code is open-source.
 </p>
 
@@ -746,16 +754,54 @@ answer = client.completion(
 
 
 <!-- =========================================================
-     EXPERIMENTAL SETUP
+     VISUALIZER
      ========================================================= -->
-<h2 id="eval">Experimental Setup</h2>
+<h2 id="visualizer">Visualizer</h2>
+
+<p class="section-intro">
+  Reading about a recursive loop is not the same as watching one. minRLM ships with a
+  Gradio visualizer that runs the recursive loop and a vanilla one-shot LLM on the
+  <em>same</em> task instance, side by side, with the generated Python, token counts,
+  and pass/fail verdict streaming live.
+</p>
+
+<a class="fig" href="visualizer.png"><img src="visualizer.png" alt="minRLM Visualizer - Gradio UI comparing minRLM vs vanilla LLM side-by-side, with the generated Python, token counters, pass/fail pills, and a tokens-used bar chart"></a>
+<div class="img-caption">minRLM Visualizer: the recursive loop on the left (Python + 6,258 tokens + PASS), the vanilla one-shot LLM on the right (20,967 tokens + FAIL), tokens-used chart below.</div>
+
+<ul>
+  <li><strong>Every RLM-Bench task</strong> is in the dropdown, auto-discovered from the task registry.</li>
+  <li><strong>Scaling variants</strong> of SNIAH, CodeQA, and BrowseComp from 8K up to 10M characters &mdash; the same plots that produce the long-context curves.</li>
+  <li><strong>Live code panel</strong> for the recursive loop &mdash; you see the exact Python the model wrote, what it printed, and how many iterations it took.</li>
+  <li><strong>Token, cost, and latency counters</strong> for both runners, updating as they finish.</li>
+  <li><strong>Bring your own model</strong> &mdash; <code>--base-url</code> and <code>--api-key</code> flags point at any OpenAI-compatible endpoint (vLLM, Ollama, Hugging Face, etc.).</li>
+</ul>
+
+<pre><code><span class="kw">git clone</span> https://github.com/avilum/minrlm &amp;&amp; <span class="kw">cd</span> minrlm
+uv sync --extra visualizer
+uv run python examples/visualizer.py   <span class="cm"># opens http://localhost:7860</span></code></pre>
 
 <p>
-  The eval framework (<code>eval/</code> in the repo) runs any RLM strategy against 13 tasks
-  and records accuracy, token count, latency, and cost per query. Any runner implementing the
-  interface can be plugged in. Primary benchmark: <strong>gpt-5-mini</strong>, three runners,
-  50 queries per task (1,800 evaluations). Cross-model results in
-  <a href="#scaling">Model Scaling</a>.
+  It is the fastest way to get an intuition for <em>when the recursive loop helps and when it
+  doesn&rsquo;t</em>. Pick a small model and a short-context task &mdash; vanilla often wins. Pick a
+  long-context retrieval task &mdash; minRLM&rsquo;s code path collapses 500K characters into a
+  one-line regex.
+</p>
+
+
+<!-- =========================================================
+     EXPERIMENTAL SETUP
+     ========================================================= -->
+<h2 id="eval">Experimental Setup &amp; RLM-Bench</h2>
+
+<p>
+  The eval harness (<code>eval/</code> in the repo, shipped as
+  <a href="https://github.com/avilum/minrlm/blob/master/eval/BENCHMARK.md"><strong>RLM-Bench</strong></a>)
+  runs any RLM strategy against 12 tasks and records accuracy, token count, latency, and cost per
+  query. Any runner implementing a one-method <code>BaseRunner</code> interface can be plugged in &mdash;
+  the same harness produces the numbers below and the
+  <a href="https://github.com/avilum/minrlm/blob/master/eval/BENCHMARK.md#headline-leaderboard">leaderboard</a>.
+  Primary benchmark: <strong>gpt-5-mini</strong>, three runners, 50 queries per task (1,800 evaluations).
+  Cross-model results in <a href="#scaling">Model Scaling</a>.
 </p>
 
 <div class="runner-legend">
@@ -1627,7 +1673,8 @@ sol = solve(grid)
 </table>
 
 <div class="callout green">
-  The REPL isn't a crutch for weak models - it's a lever that better models pull harder.
+  The REPL is less useful on smaller models and more useful on stronger ones. The scaling trend
+  goes the opposite way of what "scaffolding helps weak models" intuition would predict.
 </div>
 
 <h3>GPT-5-nano <span style="font-weight: 400; color: #888; font-size: 0.82rem;">(small model)</span></h3>
@@ -1851,12 +1898,12 @@ sol = solve(grid)
 <h2 id="conclusion">Conclusion</h2>
 
 <p>
-  The results speak for themselves - check the tables above. What I find more interesting than
-  the numbers: every intermediate step is Python code, not hidden attention patterns.
-  When a query fails, I can read the generated code and see exactly which search missed,
-  which filter was too strict, which assumption was wrong. That's something you can't do with
-  a vanilla LLM call. It's not full explainability - but it's a real step toward it.
-  RLM outputs are Software 1.0: deterministic, testable, reproducible.
+  The numbers are in the tables above and the losses are kept in. What I find more interesting
+  than the headline figures: every intermediate step is Python code, not hidden attention
+  patterns. When a query fails, I can read the generated code and see exactly which search
+  missed, which filter was too strict, which assumption was wrong. That is not full
+  explainability, but it is a real, debuggable step toward it &mdash; RLM outputs are closer
+  to Software 1.0: deterministic, testable, reproducible.
 </p>
 <p>
   Context window rot is real
@@ -1923,17 +1970,32 @@ answer = client.completion(
 
 <h3>Visualizer</h3>
 
+<p>
+  See the <a href="#visualizer">Visualizer section</a> above for a full description and a screenshot.
+  Quick-start:
+</p>
+
 <pre><code><span class="cm"># Interactive side-by-side comparison UI (minRLM vs vanilla)</span>
 git clone https://github.com/avilum/minrlm &amp;&amp; cd minrlm
 uv sync --extra visualizer
 uv run python examples/visualizer.py  <span class="cm"># http://localhost:7860</span></code></pre>
+
+<h3>RLM-Bench (run the benchmark on your own RLM)</h3>
+
+<pre><code><span class="cm"># Install &amp; smoke-test</span>
+pip install <span class="str">"minrlm[eval]"</span>
+<span class="kw">export</span> OPENAI_API_KEY=<span class="str">"sk-..."</span>
+rlm-bench --tasks official_sniah --runs 3
+
+<span class="cm"># Plug in your own runner - see eval/BENCHMARK.md</span>
+rlm-bench --tasks all --runners my-rlm,vanilla,minrlm-reasoning --runs 50</code></pre>
 
 <h3>Reproduce the benchmark</h3>
 
 <pre><code>uv sync --extra eval
 <span class="kw">export</span> OPENAI_API_KEY=<span class="str">"sk-..."</span>
 
-<span class="cm"># All 13 tasks, all 3 runners, 50 runs</span>
+<span class="cm"># All 12 tasks, all 3 runners, 50 runs</span>
 uv run python eval/run.py \
   --tasks all \
   --runners minrlm-reasoning,vanilla,official \

@@ -23,4 +23,4 @@ __all__ = [
     "DockerREPL",
     "check_docker_available",
 ]
-__version__ = "0.1.0"
+__version__ = "0.1.5"

@@ -1,7 +1,7 @@
 [project]
 name = "minrlm"
-version = "0.1.4"
-description = "Stop forcing LLMs to answer in one pass. Give them a runtime."
+version = "0.1.5"
+description = "A small Recursive Language Model (RLM) that lets any LLM run code on its context instead of stuffing it into the prompt. Includes RLM-Bench."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -56,6 +56,7 @@ all = [
 
 [project.scripts]
 minrlm = "minrlm.__main__:main"
+rlm-bench = "eval.run:main"
 
 [project.urls]
 Homepage = "https://github.com/avilum/minrlm"
@@ -67,7 +68,10 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["minrlm*"]
+# `eval*` ships the RLM-Bench harness so `rlm-bench ...` works after
+# `pip install minrlm[eval]` without cloning the repo. Datasets are still
+# downloaded at runtime (some require HF login - see eval/BENCHMARK.md).
+include = ["minrlm*", "eval*"]
 
 # =============================================================================
 # Ruff - Fast Python linter and formatter
